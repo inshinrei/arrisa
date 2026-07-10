@@ -1,0 +1,102 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  line-height: 1.45;
+  --pg-border: color-mix(in srgb, CanvasText 18%, transparent);
+  --pg-muted: color-mix(in srgb, CanvasText 55%, transparent);
+  --pg-accent: #3b6cf5;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 1.25rem 1.5rem 3rem;
+  background: Canvas;
+  color: CanvasText;
+}
+
+.pg-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+}
+
+.pg-sub {
+  margin: 0 0 1rem;
+  color: var(--pg-muted);
+  font-size: 0.95rem;
+}
+
+.pg-tabs {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.pg-tab {
+  border: 1px solid var(--pg-border);
+  background: transparent;
+  color: inherit;
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+.pg-tab.is-active {
+  border-color: var(--pg-accent);
+  background: color-mix(in srgb, var(--pg-accent) 14%, transparent);
+}
+
+.pg-panel[hidden] { display: none; }
+
+.pg-hint {
+  color: var(--pg-muted);
+  font-size: 0.9rem;
+}
+
+.pg-hint code {
+  font-size: 0.85em;
+}
+
+.pg-editor {
+  min-height: 220px;
+  border: 1px solid var(--pg-border);
+  border-radius: 10px;
+  padding: 0.5rem;
+  background: color-mix(in srgb, Canvas 92%, CanvasText 4%);
+}
+
+.pg-editor-chat {
+  min-height: 120px;
+  max-width: 36rem;
+}
+
+.pg-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.pg-actions button,
+#btn-refresh-inspect {
+  cursor: pointer;
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  color: inherit;
+}
+
+.pg-out {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--pg-border);
+  background: color-mix(in srgb, Canvas 88%, CanvasText 6%);
+  font-size: 0.8rem;
+  overflow: auto;
+  max-height: 240px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

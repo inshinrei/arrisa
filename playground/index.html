@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Arrisa playground</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <header class="pg-header">
+      <h1>Arrisa playground</h1>
+      <p class="pg-sub">
+        Manual QA for document + messenger editor modes.
+      </p>
+      <nav class="pg-tabs" role="tablist">
+        <button type="button" class="pg-tab is-active" data-tab="doc" role="tab" aria-selected="true">
+          Document
+        </button>
+        <button type="button" class="pg-tab" data-tab="chat" role="tab" aria-selected="false">
+          Messenger
+        </button>
+        <button type="button" class="pg-tab" data-tab="inspect" role="tab" aria-selected="false">
+          Inspect
+        </button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="panel-doc" class="pg-panel is-active" role="tabpanel">
+        <h2>Document mode</h2>
+        <p class="pg-hint">
+          <code>fullSchema()</code> + <code>menuBar()</code> — sticky toolbar, paragraphs/headings OK.
+        </p>
+        <div id="editor-doc" class="pg-editor"></div>
+      </section>
+
+      <section id="panel-chat" class="pg-panel" role="tabpanel" hidden>
+        <h2>Messenger mode</h2>
+        <p class="pg-hint">
+          <code>messengerSchema()</code> + <code>floatingMenu()</code> — single textblock, toolbar above selection.
+        </p>
+        <div id="editor-chat" class="pg-editor pg-editor-chat"></div>
+        <div class="pg-actions">
+          <button type="button" id="btn-send">Send (log HTML)</button>
+          <button type="button" id="btn-clear-chat">Clear</button>
+        </div>
+        <pre id="chat-out" class="pg-out" aria-live="polite"></pre>
+      </section>
+
+      <section id="panel-inspect" class="pg-panel" role="tabpanel" hidden>
+        <h2>Inspect active editor</h2>
+        <p class="pg-hint">Shows selection + serialized HTML for the last focused editor.</p>
+        <pre id="inspect-out" class="pg-out"></pre>
+        <button type="button" id="btn-refresh-inspect">Refresh</button>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

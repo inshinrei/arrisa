@@ -1,0 +1,15 @@
+{
+    "files": [],
+    "references": [
+        { "path": "packages/doc" },
+        { "path": "packages/types" },
+        { "path": "packages/state" },
+        { "path": "packages/phrases" },
+        { "path": "packages/history" },
+        { "path": "packages/command" },
+        { "path": "packages/editor" },
+        { "path": "packages/schema" },
+        { "path": "packages/table" },
+        { "path": "packages/collab" }
+    ]
+}
