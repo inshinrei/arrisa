@@ -70,6 +70,18 @@ body {
 .pg-editor-chat {
   min-height: 120px;
   max-width: 36rem;
+  /* Compact messenger field — override menu layout vars for chat chrome */
+  --arrisa-menu-gap: 2px;
+  --arrisa-menu-padding: 4px 6px;
+  --arrisa-menu-item-size: 22px;
+  --arrisa-floating-radius: 10px;
+  --arrisa-floating-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
+}
+
+/* Demo: host-custom floating toolbar look (class from floatingMenu config) */
+.pg-chat-formatter.arrisa-floating-menu,
+arrisa-tooltip .pg-chat-formatter {
+  border-radius: var(--arrisa-floating-radius, 10px);
 }
 
 .pg-actions {

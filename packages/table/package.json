@@ -1,32 +1,40 @@
 {
-  "name": "@arrisa/table",
-  "version": "0.0.0",
-  "description": "Arrisa — table",
-  "license": "MIT",
-  "type": "module",
-  "sideEffects": false,
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+    "name": "@arrisa/table",
+    "version": "0.0.1",
+    "description": "Arrisa — table editing: cell selection, structure commands, paste, menu",
+    "license": "MIT",
+    "type": "module",
+    "sideEffects": false,
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": ["dist"],
+    "scripts": {
+        "build": "vite build",
+        "dev": "vite build --watch",
+        "test": "vitest run",
+        "typecheck": "tsc -p tsconfig.json --noEmit"
+    },
+    "dependencies": {
+        "@arrisa/command": "workspace:*",
+        "@arrisa/doc": "workspace:*",
+        "@arrisa/editor": "workspace:*",
+        "@arrisa/phrases": "workspace:*",
+        "@arrisa/state": "workspace:*",
+        "@arrisa/types": "workspace:*"
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/inshinrei/arrisa.git",
+        "directory": "packages/table"
     }
-  },
-  "files": ["dist"],
-  "scripts": {
-    "build": "vite build",
-    "dev": "vite build --watch",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/inshinrei/arrisa.git",
-    "directory": "packages/table"
-  }
 }

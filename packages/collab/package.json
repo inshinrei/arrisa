@@ -1,7 +1,7 @@
 {
   "name": "@arrisa/collab",
-  "version": "0.0.0",
-  "description": "Arrisa — collab",
+  "version": "0.0.1",
+  "description": "Arrisa — collaborative editing (OT pipeline + corrections)",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -20,6 +20,10 @@
     "dev": "vite build --watch",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@arrisa/doc": "workspace:*",
+    "@arrisa/state": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

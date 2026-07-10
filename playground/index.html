@@ -10,7 +10,8 @@
     <header class="pg-header">
       <h1>Arrisa playground</h1>
       <p class="pg-sub">
-        Manual QA for document + messenger editor modes.
+        Manual QA for document + messenger editor modes via
+        <code>@arrisa/schema</code> presets.
       </p>
       <nav class="pg-tabs" role="tablist">
         <button type="button" class="pg-tab is-active" data-tab="doc" role="tab" aria-selected="true">
@@ -29,7 +30,8 @@
       <section id="panel-doc" class="pg-panel is-active" role="tabpanel">
         <h2>Document mode</h2>
         <p class="pg-hint">
-          <code>fullSchema()</code> + <code>menuBar()</code> — sticky toolbar, paragraphs/headings OK.
+          <code>basicSchema()</code> + lists/quote + <code>menuBar()</code> + history — sticky
+          toolbar, paragraphs/headings/lists/marks.
         </p>
         <div id="editor-doc" class="pg-editor"></div>
       </section>
@@ -37,7 +39,9 @@
       <section id="panel-chat" class="pg-panel" role="tabpanel" hidden>
         <h2>Messenger mode</h2>
         <p class="pg-hint">
-          <code>messengerSchema()</code> + <code>floatingMenu()</code> — single textblock, toolbar above selection.
+          <code>messengerSchema()</code> + <code>floatingMenu()</code> — spoiler, bold, italic,
+          underline, strike, mono, link. Select text for the toolbar.
+          Keys: Mod-b/i/u/` / , Mod-Shift-p (spoiler), Mod-k (link).
         </p>
         <div id="editor-chat" class="pg-editor pg-editor-chat"></div>
         <div class="pg-actions">

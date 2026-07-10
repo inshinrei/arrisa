@@ -1,6 +1,6 @@
 {
   "name": "@arrisa/command",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Arrisa — command",
   "license": "MIT",
   "type": "module",
@@ -20,6 +20,12 @@
     "dev": "vite build --watch",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@arrisa/doc": "workspace:*",
+    "@arrisa/phrases": "workspace:*",
+    "@arrisa/state": "workspace:*",
+    "@arrisa/types": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

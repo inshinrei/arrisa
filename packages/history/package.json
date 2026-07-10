@@ -1,7 +1,7 @@
 {
   "name": "@arrisa/history",
-  "version": "0.0.0",
-  "description": "Arrisa — history",
+  "version": "0.0.1",
+  "description": "Arrisa — undo/redo history for editor state",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -20,6 +20,10 @@
     "dev": "vite build --watch",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@arrisa/doc": "workspace:*",
+    "@arrisa/state": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

@@ -1,0 +1,126 @@
+/**
+ * Editor selection model — public static factories on {@link EditorSelection}.
+ *
+ * Concrete subclasses import {@link ./base} to avoid circular init; this module
+ * attaches factories and nested type aliases used as `EditorSelection.Text`, etc.
+ */
+import {type Leaf, type Plot, Pos} from "@arrisa/doc"
+import {TextblockMap} from "../textblock"
+import {SelectionType} from "./type"
+import {EditorSelection} from "./base"
+import {Text as Text_} from "./text"
+import {Node as Node_, setNodeNearFallback} from "./node"
+import {Resolved as Resolved_} from "./resolved"
+import {cursorAtStart, scanNormalFrom, skipWord as skipWordMotion} from "./motion"
+
+// Ensure Resolved wiring runs even if consumers only import this module.
+void Resolved_
+
+/** Empty text selection (cursor) at `pos`. */
+function cursor(pos: number, side?: -1 | 1, goalColumn?: number) {
+    return Text_.createInner(pos, pos, side, goalColumn)
+}
+
+/** Text selection from `anchor` to `head` (defaults to a cursor at anchor). */
+function range(anchor: number, head?: number, headSide?: -1 | 1, goalColumn?: number) {
+    return Text_.createInner(anchor, head ?? anchor, headSide, goalColumn)
+}
+
+/** Select a selectable leaf node starting at document position `pos`. */
+function node(pos: number, leaf: Leaf, goalColumn?: number) {
+    return Node_.create(pos, leaf, goalColumn)
+}
+
+/** Closest valid text cursor near `pos`, preferring `bias` direction. */
+function near(cx: EditorSelection.Context, pos: number, bias: -1 | 1 = 1): Text_ {
+    let norm =
+        scanNormalFrom(cx, pos, bias, bias > 0, false) ??
+        scanNormalFrom(cx, pos, -bias as -1 | 1, bias < 0, false) ?? {pos: pos, side: -1}
+    return cursor(norm.pos, norm.side)
+}
+
+/** Cursor at the visual start of the document or of `block`. */
+function atStart(cx: EditorSelection.Context, block?: Pos.Plot) {
+    return cursorAtStart(cx, block)
+}
+
+/** Cursor at the visual end of the document or of `block`. */
+function atEnd(cx: EditorSelection.Context, block?: Pos.Plot) {
+    let found = block
+        ? TextblockMap.get(block.start, block.node, cx.config.textblockLTR(block.node)).visualSide(false)
+        : cx.doc.inlineContent
+          ? TextblockMap.get(0, cx.doc, cx.config.textblockLTR(cx.doc)).visualSide(false)
+          : (scanNormalFrom(cx, cx.doc.length, -1, false, false) ?? {pos: cx.doc.length, side: -1})
+    return cursor(found.pos, found.side)
+}
+
+function define<T extends EditorSelection, JSON extends object>(
+    tag: string,
+    cls: {new (...args: any[]): T},
+    toJSON: (sel: T) => JSON,
+    fromJSON: (doc: Plot.Doc, json: JSON) => T,
+) {
+    return EditorSelection.selectionType.of(new SelectionType(tag, cls, toJSON as any, fromJSON as any)) as any
+}
+
+// Attach static API to the base class.
+Object.assign(EditorSelection, {
+    cursor,
+    range,
+    node,
+    near,
+    atStart,
+    atEnd,
+    define,
+    Text: Text_,
+    Node: Node_,
+    Resolved: Resolved_,
+})
+
+setNodeNearFallback(near)
+
+EditorSelection.prototype.nextNormalCursor = function (this: EditorSelection, cx, forward = true) {
+    let found = scanNormalFrom(cx, this.head, this.headSide, forward, true)
+    return found && cursor(found.pos, found.side)
+}
+
+EditorSelection.prototype.normalCursorAtBound = function (this: EditorSelection, cx, forward = true) {
+    let found = scanNormalFrom(cx, forward ? this.to : this.from, forward ? -1 : 1, forward, false)
+    return found && cursor(found.pos, found.side)
+}
+
+EditorSelection.prototype.skipWord = function (this: EditorSelection, cx, forward = true) {
+    let found = skipWordMotion(cx, this.head, this.headSide, forward)
+    return found && cursor(found.pos, found.side)
+}
+
+export {EditorSelection}
+
+declare module "./base" {
+    interface EditorSelection {
+        nextNormalCursor(cx: EditorSelection.Context, forward?: boolean): Text_ | null
+        normalCursorAtBound(cx: EditorSelection.Context, forward?: boolean): Text_ | null
+        skipWord(cx: EditorSelection.Context, forward?: boolean): Text_ | null
+    }
+    namespace EditorSelection {
+        function cursor(pos: number, side?: -1 | 1, goalColumn?: number): Text_
+        function range(anchor: number, head?: number, headSide?: -1 | 1, goalColumn?: number): Text_
+        function node(pos: number, node: Leaf, goalColumn?: number): Node_
+        function near(cx: EditorSelection.Context, pos: number, bias?: -1 | 1): Text_
+        function atStart(cx: EditorSelection.Context, block?: Pos.Plot): Text_
+        function atEnd(cx: EditorSelection.Context, block?: Pos.Plot): Text_
+        function define<T extends EditorSelection, JSON extends object>(
+            tag: string,
+            cls: {new (...args: any[]): T},
+            toJSON: (sel: T) => JSON,
+            fromJSON: (doc: Plot.Doc, json: JSON) => T,
+        ): any
+        // Value constructors (class + nested namespace) attached via Object.assign
+        const Text: typeof Text_
+        const Node: typeof Node_
+        // Runtime class; type alias lives on the base namespace
+        const Resolved: {
+            create(doc: import("@arrisa/doc").Plot.Doc, selection: EditorSelection): import("./resolved").Resolved
+        }
+    }
+}

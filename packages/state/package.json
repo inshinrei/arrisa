@@ -1,6 +1,6 @@
 {
   "name": "@arrisa/state",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Arrisa — state",
   "license": "MIT",
   "type": "module",
@@ -28,5 +28,8 @@
     "type": "git",
     "url": "https://github.com/inshinrei/arrisa.git",
     "directory": "packages/state"
+  },
+  "dependencies": {
+    "@arrisa/doc": "workspace:*"
   }
 }

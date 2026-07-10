@@ -12,7 +12,10 @@
     "@arrisa/schema": "workspace:*",
     "@arrisa/history": "workspace:*",
     "@arrisa/command": "workspace:*",
-    "@arrisa/state": "workspace:*"
+    "@arrisa/state": "workspace:*",
+    "@arrisa/types": "workspace:*",
+    "@arrisa/doc": "workspace:*",
+    "@arrisa/phrases": "workspace:*"
   },
   "devDependencies": {
     "typescript": "7.0.2",

@@ -33,43 +33,149 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.1)(tsx@4.23.0))
 
-  packages/collab: {}
+  packages/collab:
+    dependencies:
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
 
-  packages/command: {}
+  packages/command:
+    dependencies:
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
+      '@arrisa/phrases':
+        specifier: workspace:*
+        version: link:../phrases
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
+      '@arrisa/types':
+        specifier: workspace:*
+        version: link:../types
 
   packages/doc: {}
 
-  packages/editor: {}
+  packages/editor:
+    dependencies:
+      '@arrisa/command':
+        specifier: workspace:*
+        version: link:../command
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
+      '@arrisa/phrases':
+        specifier: workspace:*
+        version: link:../phrases
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
 
-  packages/history: {}
+  packages/history:
+    dependencies:
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
 
-  packages/phrases: {}
+  packages/phrases:
+    dependencies:
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
+    devDependencies:
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
 
-  packages/schema: {}
+  packages/schema:
+    dependencies:
+      '@arrisa/command':
+        specifier: workspace:*
+        version: link:../command
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
+      '@arrisa/editor':
+        specifier: workspace:*
+        version: link:../editor
+      '@arrisa/history':
+        specifier: workspace:*
+        version: link:../history
+      '@arrisa/phrases':
+        specifier: workspace:*
+        version: link:../phrases
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
+      '@arrisa/types':
+        specifier: workspace:*
+        version: link:../types
 
-  packages/state: {}
+  packages/state:
+    dependencies:
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
 
-  packages/table: {}
+  packages/table:
+    dependencies:
+      '@arrisa/command':
+        specifier: workspace:*
+        version: link:../command
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
+      '@arrisa/editor':
+        specifier: workspace:*
+        version: link:../editor
+      '@arrisa/phrases':
+        specifier: workspace:*
+        version: link:../phrases
+      '@arrisa/state':
+        specifier: workspace:*
+        version: link:../state
+      '@arrisa/types':
+        specifier: workspace:*
+        version: link:../types
 
-  packages/types: {}
+  packages/types:
+    dependencies:
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../doc
 
   playground:
     dependencies:
       '@arrisa/command':
         specifier: workspace:*
         version: link:../packages/command
+      '@arrisa/doc':
+        specifier: workspace:*
+        version: link:../packages/doc
       '@arrisa/editor':
         specifier: workspace:*
         version: link:../packages/editor
       '@arrisa/history':
         specifier: workspace:*
         version: link:../packages/history
+      '@arrisa/phrases':
+        specifier: workspace:*
+        version: link:../packages/phrases
       '@arrisa/schema':
         specifier: workspace:*
         version: link:../packages/schema
       '@arrisa/state':
         specifier: workspace:*
         version: link:../packages/state
+      '@arrisa/types':
+        specifier: workspace:*
+        version: link:../packages/types
     devDependencies:
       typescript:
         specifier: 7.0.2

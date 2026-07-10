@@ -21,6 +21,12 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
+  "dependencies": {
+    "@arrisa/state": "workspace:*"
+  },
+  "devDependencies": {
+    "@arrisa/doc": "workspace:*"
+  },
   "publishConfig": {
     "access": "public"
   },

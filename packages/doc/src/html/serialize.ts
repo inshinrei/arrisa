@@ -1,0 +1,201 @@
+/**
+ * Serialize document nodes and slices to virtual DOM ({@link Elt}).
+ */
+import {Node, Leaf, Plot} from "../model/node"
+import {Mark} from "../model/mark"
+import {Slice, Token} from "../model/slice"
+import {Elt} from "../shape/elt"
+import {Attributes} from "../shape/attributes"
+
+class SerializeContext {
+    readonly emitNewlines: boolean
+    readonly override: ((tag: Node.Tag) => Elt | null) | undefined
+    constructor(
+        options: serialize.Options,
+        readonly openAttr?: string,
+    ) {
+        this.emitNewlines = options.emitNewlines !== false
+        this.override = options.override
+    }
+}
+
+export function serialize(doc: Plot.Doc, options: serialize.Options = {}): Elt.Fragment {
+    return Elt.Fragment.create(serializeChildren(doc.content, new SerializeContext(options)))
+}
+
+export namespace serialize {
+    export interface Options {
+        emitNewlines?: boolean
+        override?: (tag: Node.Tag) => Elt | null
+    }
+
+    export function node(node: Node, options: serialize.Options): Elt | string {
+        return serializeChildren([node], new SerializeContext(options))[0]
+    }
+
+    export function slice(slice: Slice, options: slice.Options): Elt.Fragment {
+        return Elt.Fragment.create(
+            serializeChildren(
+                flattenSlice(slice.content, options.context || [], options.includeContext || 0, !!options.openAttr),
+                new SerializeContext(options, options.openAttr),
+            ),
+        )
+    }
+
+    export namespace slice {
+        export interface Options extends serialize.Options {
+            openAttr?: string
+            context?: readonly Plot.Tag[]
+            includeContext?: number
+        }
+    }
+}
+
+const genericTag = Plot.define("generic", {
+    blockContent: Node.Group.All,
+    shape: {element: "div"},
+})
+
+const openMark = Mark.Type.define<"start" | "end" | "start end">("Open", {
+    shape: {attribute: "arrisa-open", value: 0},
+    target: Node.Group.All,
+})
+
+function flattenSlice(
+    content: readonly Token[],
+    context: readonly Plot.Tag[],
+    includeContext: number,
+    markOpen: boolean,
+): readonly Node[] {
+    let depth = 0,
+        i = 0,
+        scan = (inner: boolean): readonly Node[] => {
+            let result: Node[] = []
+            for (; i < content.length;) {
+                let tok = content[i++]
+                if (tok.tokenType == Token.Type.Close) {
+                    if (inner) break
+                    let tag = depth < context.length ? context[depth++] : genericTag
+                    if (markOpen) tag = tag.withMarks(openMark.of("start").addToSet(tag.marks))
+                    result = [tag.create(result)]
+                } else if (tok.tokenType == Token.Type.Open) {
+                    let inner = scan(true),
+                        tag = tok
+                    if (markOpen) tag = tag.withMarks(openMark.of("end").addToSet(tag.marks))
+                    result.push(tag.create(inner))
+                } else {
+                    result.push(tok)
+                }
+            }
+            return result
+        }
+    let result = scan(false)
+    while (depth < includeContext && depth < context.length) {
+        let tag = context[depth++]
+        if (markOpen) tag = tag.withMarks(openMark.of("start end").addToSet(tag.marks))
+        result = [tag.create(result)]
+    }
+    return result
+}
+
+function serializeNodeInner(node: Node, cx: SerializeContext): Elt | string {
+    let markAttrs: Attributes = Attributes.none,
+        targeted: {attrs: Attributes; target: Elt.Selector}[] | undefined
+    for (let mark of node.tag.marks)
+        if (mark.type.attribute) {
+            if (mark.type == openMark) {
+                if (cx.openAttr) markAttrs = Attributes.merge(markAttrs, [cx.openAttr, mark.value as string])
+            } else {
+                let {target, get} = mark.type.attribute,
+                    attrs = get(mark.value)
+                if (target && !node.isText) {
+                    ;(targeted || (targeted = [])).push({attrs, target})
+                } else if (!node.isText || mark.spanning) {
+                    markAttrs = Attributes.merge(markAttrs, attrs)
+                }
+            }
+        }
+    if (node.is(Leaf.Text)) return markAttrs.length ? Elt.create("span", markAttrs, [node.param]) : node.param
+    let children: readonly (string | Elt)[]
+    if (node.isLeaf) {
+        children = []
+    } else {
+        let {content} = node
+        if (cx.emitNewlines && node.type.preserveWhitespace) content = lineBreaksToNewlines(content)
+        children = serializeChildren(content, cx)
+    }
+    let elt = (cx.override && cx.override(node.tag)) || node.type.shape.create(node.tag.param)
+    if (markAttrs.length) elt = elt.addAttrs(markAttrs)
+    if (targeted) for (let {attrs, target} of targeted) elt = elt.addAttrs(attrs, target)
+    return elt.hasContent ? withContent(elt, children) : elt
+}
+
+function withContent(elt: Elt, content: readonly (string | Elt)[]): Elt<string> {
+    let children: (string | Elt)[] = []
+    for (let ch of elt.children) {
+        if (ch === 0) for (let inner of content) children.push(inner)
+        else if (typeof ch == "string") children.push(ch)
+        else children.push(withContent(ch, content))
+    }
+    return Elt.create(elt.tagName, elt.attrs, children)
+}
+
+function lineBreaksToNewlines(nodes: readonly Node[]) {
+    if (!nodes.some((n) => n.type.hasRole(Node.Role.LineBreak))) return nodes
+    let result: Node[] = [],
+        lastText = false
+    for (let node of nodes) {
+        let next = node.type.hasRole(Node.Role.LineBreak) ? Leaf.text("\n", node.marks) : node
+        if (lastText && next instanceof Plot) next.pushTo(result as Plot[])
+        else result.push(next)
+        lastText = next.isText
+    }
+    return result
+}
+
+class EltCx {
+    children: (Elt | string)[] = []
+    constructor(
+        readonly tagName: string,
+        readonly attrs: Attributes,
+        readonly parent: EltCx | null,
+    ) {}
+    pop() {
+        let repr = Elt.create(this.tagName, this.attrs, this.children)
+        let parent = this.parent!
+        parent.children.push(repr)
+        return parent
+    }
+}
+
+function serializeChildren(children: readonly Node[], cx: SerializeContext): readonly (string | Elt)[] {
+    let active: Mark[] = [],
+        top = new EltCx("", Attributes.none, null)
+    for (let child of children) {
+        if (active.length || child.marks.some((p) => p.type.element)) {
+            let keep = 0,
+                rendered = 0,
+                eltMarks = []
+            for (let mark of child.marks) if (mark.type.element) eltMarks.push(mark)
+            while (keep < active.length && rendered < eltMarks.length) {
+                let next = eltMarks[rendered]
+                if (!next.eq(active[keep]) || !next.type.spanning) break
+                keep++
+                rendered++
+            }
+            while (keep < active.length) {
+                top = top.pop()
+                active.pop()
+            }
+            while (rendered < eltMarks.length) {
+                let add = eltMarks[rendered++]
+                let repr = add.type.element!
+                top = new EltCx(repr.name, repr.attrs(add.value), top)
+                active.push(add)
+            }
+        }
+        top.children.push(serializeNodeInner(child, cx))
+    }
+    for (let i = 0; i < active.length; i++) top = top.pop()
+    return top.children
+}

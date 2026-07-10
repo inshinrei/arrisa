@@ -1,7 +1,7 @@
 {
   "name": "@arrisa/editor",
-  "version": "0.0.0",
-  "description": "Arrisa — editor",
+  "version": "0.0.1",
+  "description": "Arrisa \u2014 editor",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
@@ -14,7 +14,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
@@ -28,5 +30,11 @@
     "type": "git",
     "url": "https://github.com/inshinrei/arrisa.git",
     "directory": "packages/editor"
+  },
+  "dependencies": {
+    "@arrisa/doc": "workspace:*",
+    "@arrisa/state": "workspace:*",
+    "@arrisa/command": "workspace:*",
+    "@arrisa/phrases": "workspace:*"
   }
 }

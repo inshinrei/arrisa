@@ -1,0 +1,211 @@
+/**
+ * Inline mark extensions: spoiler, strong, emphasis, code, underline, strike, super/sub.
+ *
+ * Each factory registers the mark type from `@arrisa/types`, a toggle menu
+ * button under the inline group, and a key binding that runs `toggleMark`.
+ * Link and color marks live in separate modules (`link`, `color`).
+ *
+ * Merged namespaces expose `button` and `keyBinding` for re-ranking or
+ * partial install.
+ */
+import {Command, Menu, toggleMark} from "@arrisa/command"
+import {Arrisa, KeyBinding} from "@arrisa/editor"
+import {phrases} from "@arrisa/phrases"
+import {EditorState} from "@arrisa/state"
+import {
+    Code,
+    Emphasis,
+    Spoiler,
+    Strong,
+    Strikethrough,
+    Subscript,
+    Superscript,
+    Underline,
+} from "@arrisa/types"
+
+/** Spoiler / hidden text. Default: Mod-Shift-p. */
+export function spoiler(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Spoiler), spoiler.button, spoiler.keyBinding, spoiler.theme]
+}
+
+export namespace spoiler {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-Shift-p",
+        run: Command.bind(toggleMark, Spoiler),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Spoiler,
+        parent: Menu.Group.inline,
+        rank: 5,
+        description: phrases.ref("toggle_spoiler"),
+        label: {
+            // eye-closed
+            icon: "M50 30c-18 0-33 12-40 20 7 8 22 20 40 20s33-12 40-20c-7-8-22-20-40-20zm0 32c-7 0-12-5-12-12s5-12 12-12 12 5 12 12-5 12-12 12zm-28-8 56-28 4 8-56 28-4-8z",
+        },
+    })
+
+    export const theme: EditorState.Extension = Arrisa.styles({
+        "span.arrisa-spoiler": {
+            borderRadius: "3px",
+            // Dotted “hidden” cue in compose; hosts can restyle for reveal UX
+            backgroundImage: "radial-gradient(currentColor 0.9px, transparent 1px)",
+            backgroundSize: "3px 3px",
+            backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+        },
+    })
+}
+
+/** Strong / bold (`strong`). Default: Mod-b. */
+export function strong(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Strong), strong.button, strong.keyBinding]
+}
+
+export namespace strong {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-b",
+        run: Command.bind(toggleMark, Strong),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Strong,
+        parent: Menu.Group.inline,
+        rank: 10,
+        description: phrases.ref("toggle_strong"),
+        label: {
+            icon: "M51 81c13 0 21-7 21-18 0-8-6-14-14-15v0a14 14 0 0 0 12-13c0-9-7-15-19-15H24V81zM37 29h11c6 0 10 3 10 8 0 5-4 8-11 8H37V29zm0 42V54h11c8 0 12 3 12 9 0 6-4 9-11 9H37z",
+        },
+    })
+}
+
+/** Emphasis / italic (`em`). Default: Mod-i. */
+export function emphasis(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Emphasis), emphasis.button, emphasis.keyBinding]
+}
+
+export namespace emphasis {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-i",
+        run: Command.bind(toggleMark, Emphasis),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Emphasis,
+        parent: Menu.Group.inline,
+        rank: 15,
+        description: phrases.ref("toggle_em"),
+        label: {
+            icon: "M50 73 60 28c1-4 2-4 8-5l1-3H45l-1 3c7 1 7 1 6 5L41 73c-1 4-2 4-8 5l-1 3h24l1-3c-7-1-7-1-7-5z",
+        },
+    })
+}
+
+/** Inline code span (`code`). Default: Mod-`. */
+export function code(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Code), code.button, code.keyBinding]
+}
+
+export namespace code {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-`",
+        run: Command.bind(toggleMark, Code),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Code,
+        parent: Menu.Group.inline,
+        rank: 30,
+        description: phrases.ref("toggle_code"),
+        label: {
+            icon: "M37 30a2 2 0 1 0-4-4l-22 22a3 3 0 0 0 0 4l22 22a2 2 0 0 0 4-4L17 50zm27 0a2 2 0 0 1 4-4l22 22a3 3 0 0 1 0 4l-22 22a2 2 0 0 1-4-4L83 50z",
+        },
+    })
+}
+
+/** Underline (`u`). Default: Mod-u. */
+export function underline(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Underline), underline.button, underline.keyBinding]
+}
+
+export namespace underline {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-u",
+        run: Command.bind(toggleMark, Underline),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Underline,
+        parent: Menu.Group.inline,
+        rank: 60,
+        description: phrases.ref("toggle_underline"),
+        label: {
+            icon: "M33 20h-8V60c0 13 9 23 24 23s24-9 24-23V20h-8v40c0 9-6 16-17 16s-15-7-15-16M78 94h-56v-6h56z",
+        },
+    })
+}
+
+/** Strikethrough (`s`). Default: Mod-/. */
+export function strikethrough(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Strikethrough), strikethrough.button, strikethrough.keyBinding]
+}
+
+export namespace strikethrough {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-/",
+        run: Command.bind(toggleMark, Strikethrough),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Strikethrough,
+        parent: Menu.Group.inline,
+        rank: 65,
+        description: phrases.ref("toggle_strikethrough"),
+        label: {
+            icon: "M38 37c0 2 0 3 2 5H31a17 17 0 0 1-1-5c0-10 9-16 21-16 12 0 20 7 20 17h-7c-1-6-6-10-13-10-7 0-13 4-13 10zm13 44c-13 0-21-7-22-17h7c1 6 7 10 15 10c8 0 14-4 14-10c0-5-3-8-11-10L48 53h20c3 3 4 6 4 10 0 11-9 18-22 18M11 50v-6h75v6H11",
+        },
+    })
+}
+
+/** Superscript (`sup`). Default: Mod-. */
+export function superscript(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Superscript), superscript.button, superscript.keyBinding]
+}
+
+export namespace superscript {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-.",
+        run: Command.bind(toggleMark, Superscript),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Superscript,
+        parent: Menu.Group.inline,
+        rank: 70,
+        description: phrases.ref("toggle_super"),
+        label: {
+            icon: "m27 78 6-18H55l6 18H69L48 19H40L19 78zm17-50 9 26h-18l9-26zm32-11v0c4 -10 12 0 5 6l-11 11V38h22v-6h-12v0l6-6c3-3 5-5 5-10 0-5-4-9-11-9C72 6 69 11 69 16v0z",
+        },
+    })
+}
+
+/** Subscript (`sub`). Default: Mod-,. */
+export function subscript(): EditorState.Extension {
+    return [EditorState.schemaElement.of(Subscript), subscript.button, subscript.keyBinding]
+}
+
+export namespace subscript {
+    export const keyBinding = KeyBinding.of({
+        key: "Mod-,",
+        run: Command.bind(toggleMark, Subscript),
+    })
+
+    export const button = Menu.Button.toggleMark({
+        mark: Subscript,
+        parent: Menu.Group.inline,
+        rank: 75,
+        description: phrases.ref("toggle_sub"),
+        label: {
+            icon: "m21 78 6-18H49l6 18H63L41 19H34L13 78zm17-50 9 26h-18l9-26zm38 45v0c4 -10 12 0 5 6l-11 11V94h22v-6h-12v0l6-6c3-3 5-5 5-10 0-5-4-9-11-9-8 0-11 5-11 10v0z",
+        },
+    })
+}

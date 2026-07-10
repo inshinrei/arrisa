@@ -10,6 +10,7 @@
         { "path": "packages/editor" },
         { "path": "packages/schema" },
         { "path": "packages/table" },
-        { "path": "packages/collab" }
+        { "path": "packages/collab" },
+        { "path": "tooling" }
     ]
 }
