@@ -182,7 +182,7 @@ function applyInputRules(trs: readonly Transaction[], state: EditorState): Trans
             continue
         let indices = getGroupIndices(match)
         let docMatch: (InputRule.Match | null)[] = [],
-            parent = -1
+            parentNode: Node | null = null
         for (let i = 0; i < match.length; i++) {
             let text = match[i]
             if (text == null) {
@@ -192,9 +192,13 @@ function applyInputRules(trs: readonly Transaction[], state: EditorState): Trans
                 let from = state.doc.resolve(map.fromIndex(is[0]))
                 let to = state.doc.resolve(map.fromIndex(is[1]))
 
-                if (parent < 0) parent = from.parent.before
-                if (parent != from.parent.before || parent != to.parent.before) continue rules
-                if (!rule.inCode && from.parent.node.type.hasRole(Node.Role.Code)) continue rules
+                // Compare parent *nodes* (not `.before`) so InlineDoc / top-level
+                // textblocks work — the document root has no `before` position.
+                let pNode = from.parent?.node ?? null
+                if (!pNode || pNode != (to.parent?.node ?? null)) continue rules
+                if (parentNode == null) parentNode = pNode
+                else if (parentNode != pNode) continue rules
+                if (!rule.inCode && pNode.type.hasRole(Node.Role.Code)) continue rules
                 docMatch.push({from, to, text})
             }
         }

@@ -39,13 +39,13 @@
       <section id="panel-chat" class="pg-panel" role="tabpanel" hidden>
         <h2>Messenger mode</h2>
         <p class="pg-hint">
-          <code>messengerSchema()</code> + <code>floatingMenu()</code> — spoiler, bold, italic,
-          underline, strike, mono, link. Select text for the toolbar.
-          Keys: Mod-b/i/u/` / , Mod-Shift-p (spoiler), Mod-k (link).
+          <code>messengerCompose()</code> — formats, markdown type/paste, auto-entities on send,
+          <code>@alice</code>/<code>@bob</code> → mention. Select text for the toolbar.
+          Send dumps HTML + entity JSON (with auto-detect).
         </p>
         <div id="editor-chat" class="pg-editor pg-editor-chat"></div>
         <div class="pg-actions">
-          <button type="button" id="btn-send">Send (log HTML)</button>
+          <button type="button" id="btn-send">Send (HTML + entities)</button>
           <button type="button" id="btn-clear-chat">Clear</button>
         </div>
         <pre id="chat-out" class="pg-out" aria-live="polite"></pre>

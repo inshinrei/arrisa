@@ -19,6 +19,7 @@ export default defineConfig({
       "@arrisa/command": resolve(root, "packages/command/src"),
       "@arrisa/editor": resolve(root, "packages/editor/src"),
       "@arrisa/schema": resolve(root, "packages/schema/src"),
+      "@arrisa/message": resolve(root, "packages/message/src"),
       "@arrisa/table": resolve(root, "packages/table/src"),
       "@arrisa/collab": resolve(root, "packages/collab/src"),
     },

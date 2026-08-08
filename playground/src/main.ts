@@ -3,6 +3,7 @@
  */
 import {serialize} from "@arrisa/doc"
 import type {Arrisa} from "@arrisa/editor"
+import {docToFormattedText} from "@arrisa/message"
 import {createChatEditor, createDocEditor} from "./setup"
 
 let docMount = document.getElementById("editor-doc") as HTMLElement
@@ -29,6 +30,7 @@ function describeEditor(editor: Arrisa): string {
         .map((r, i) => `  [${i}] from=${r.from} to=${r.to}${r.from == r.to ? " (cursor)" : ""}`)
         .join("\n")
     let html = serialize(doc).toHTML()
+    let formatted = docToFormattedText(doc)
     return [
         `doc.length = ${doc.length}`,
         `selection = ${selection.from}…${selection.to}${selection.empty ? " (cursor)" : ""}`,
@@ -36,6 +38,9 @@ function describeEditor(editor: Arrisa): string {
         ``,
         `HTML:`,
         html,
+        ``,
+        `FormattedText:`,
+        JSON.stringify(formatted, null, 2),
     ].join("\n")
 }
 
@@ -77,10 +82,16 @@ for (let tab of tabs) {
 
 // —— Messenger actions ——
 document.getElementById("btn-send")!.addEventListener("click", () => {
-    let html = serialize(chatEditor.state.doc).toHTML()
-    let line = `[${new Date().toLocaleTimeString()}] ${html || "(empty)"}`
-    chatOut.textContent = (chatOut.textContent ? chatOut.textContent + "\n" : "") + line
-    console.log("chat send", html)
+    let doc = chatEditor.state.doc
+    let html = serialize(doc).toHTML()
+    let formatted = docToFormattedText(doc, {autoDetect: true})
+    let time = new Date().toLocaleTimeString()
+    let line = [
+        `[${time}] HTML: ${html || "(empty)"}`,
+        `entities: ${JSON.stringify(formatted, null, 2)}`,
+    ].join("\n")
+    chatOut.textContent = (chatOut.textContent ? chatOut.textContent + "\n\n" : "") + line
+    console.log("chat send", {html, formatted})
 })
 
 document.getElementById("btn-clear-chat")!.addEventListener("click", () => {

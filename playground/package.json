@@ -10,6 +10,7 @@
   "dependencies": {
     "@arrisa/editor": "workspace:*",
     "@arrisa/schema": "workspace:*",
+    "@arrisa/message": "workspace:*",
     "@arrisa/history": "workspace:*",
     "@arrisa/command": "workspace:*",
     "@arrisa/state": "workspace:*",

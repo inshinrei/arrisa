@@ -1,19 +1,18 @@
 /**
  * Playground chrome for document + messenger modes.
- * Uses `@arrisa/schema` presets (not hand-rolled mark wiring).
  */
 import {Command, Menu, undo as cmdUndo, redo as cmdRedo} from "@arrisa/command"
 import {history, undo as histUndo, redo as histRedo} from "@arrisa/history"
-import {Arrisa, menuBar, floatingMenu, placeholder} from "@arrisa/editor"
+import {Arrisa, menuBar} from "@arrisa/editor"
 import {
     basicSchema,
-    messengerSchema,
     bulletList,
     orderedList,
     blockquote,
     horizontalRule,
     codeBlock,
 } from "@arrisa/schema"
+import {messengerCompose} from "@arrisa/message"
 import {phrases} from "@arrisa/phrases"
 import type {EditorState} from "@arrisa/state"
 
@@ -63,19 +62,31 @@ export function docExtensions(): EditorState.Extension {
 }
 
 /**
- * Messenger mode: messenger format marks + floating selection toolbar.
- * `exclusivity: "none"` = free stacking; pass `"code-strike"` to isolate mono/strike.
+ * Messenger mode via `@arrisa/message` compose preset.
+ * Marks + floating toolbar + markdown shortcuts + history.
  */
+/** Demo username → id map for mention resolve on `@name `. */
+let DEMO_USERS: Record<string, string> = {
+    alice: "user-alice",
+    bob: "user-bob",
+}
+
 export function chatExtensions(): EditorState.Extension {
     return [
-        messengerSchema({exclusivity: "none"}),
-        historyChrome(),
-        floatingMenu({
-            template: Menu.Group.inline.template(),
-            above: true,
-            class: "pg-chat-formatter",
+        messengerCompose({
+            exclusivity: "none",
+            floating: {
+                template: Menu.Group.inline.template(),
+                above: true,
+                class: "pg-chat-formatter",
+            },
+            placeholder: "Message…",
+            markdown: true,
+            markdownPaste: true,
+            hostElements: true,
+            resolveMention: (name) => DEMO_USERS[name.toLowerCase()] ?? null,
         }),
-        placeholder("Message…"),
+        historyChrome(),
         Arrisa.label("Messenger compose"),
     ]
 }

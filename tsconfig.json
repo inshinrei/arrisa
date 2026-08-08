@@ -9,6 +9,7 @@
         { "path": "packages/command" },
         { "path": "packages/editor" },
         { "path": "packages/schema" },
+        { "path": "packages/message" },
         { "path": "packages/table" },
         { "path": "packages/collab" },
         { "path": "tooling" }
