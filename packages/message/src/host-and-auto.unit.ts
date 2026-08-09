@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Mark, Schema} from "@arrisa/doc"
-import {EditorSelection, EditorState} from "@arrisa/state"
+import {EditorSelection, EditorState, type Transaction} from "@arrisa/state"
 import {
     Code,
     Emphasis,
@@ -35,6 +35,11 @@ function fullInlineSchema() {
         CustomEmoji,
         MentionName,
     ])
+}
+
+function applySpec(state: EditorState, spec: false | Transaction.Spec): EditorState {
+    if (spec === false) throw new Error("expected transaction spec")
+    return state.update(spec).state
 }
 
 describe("parseMarkdownText", () => {
@@ -110,13 +115,11 @@ describe("insert helpers", () => {
             config: [EditorState.schemaElement.of(schema.elements)],
         })
         let mention = insertMentionSpec(state, {userId: "9", label: "@bob"})
-        expect(mention).not.toBe(false)
-        state = state.update(mention as any).state
+        state = applySpec(state, mention)
         expect(state.doc.textContent()).toContain("@bob")
 
         let emoji = insertCustomEmojiSpec(state, {documentId: "7", alt: "🎉"})
-        expect(emoji).not.toBe(false)
-        state = state.update(emoji as any).state
+        state = applySpec(state, emoji)
         let ft = docToFormattedText(state.doc)
         expect(ft.entities?.some((e) => e.type == "custom_emoji")).toBe(true)
     })
@@ -127,6 +130,14 @@ describe("docToFormattedText autoDetect", () => {
         let schema = fullInlineSchema()
         let doc = schema.doc([Leaf.text("go https://ex.com now")])
         let ft = docToFormattedText(doc, {autoDetect: true})
+        expect(ft.entities?.some((e) => e.type == "url")).toBe(true)
+    })
+
+    it("keeps url under bold style marks", () => {
+        let schema = fullInlineSchema()
+        let doc = schema.doc([Leaf.text("https://ex.com", [Strong])])
+        let ft = docToFormattedText(doc, {autoDetect: true})
+        expect(ft.entities?.some((e) => e.type == "bold")).toBe(true)
         expect(ft.entities?.some((e) => e.type == "url")).toBe(true)
     })
 })
@@ -158,4 +169,3 @@ describe("formattedTextToDoc mention", () => {
         expect(docToFormattedText(doc)).toEqual(ft)
     })
 })
-

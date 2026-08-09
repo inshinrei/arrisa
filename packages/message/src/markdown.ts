@@ -1,17 +1,13 @@
 /**
  * Markdown-style input rules for messenger compose.
  *
- * Patterns (closing delimiter typed at end of match):
- * - `**bold**`
- * - `__italic__`
- * - `~~strike~~`
- * - `||spoiler||`
- * - `` `code` `` (inline, no newlines)
+ * Patterns (closing delimiter typed at end of match) come from
+ * {@link MARKDOWN_INLINE_DELIMITERS}.
  */
 import {Leaf, Mark} from "@arrisa/doc"
 import {InputRule} from "@arrisa/editor"
 import {EditorState} from "@arrisa/state"
-import {Code, Emphasis, Spoiler, Strong, Strikethrough} from "@arrisa/types"
+import {MARKDOWN_INLINE_DELIMITERS} from "./markdown-delimiters"
 
 function markRule(expr: RegExp, mark: Mark): InputRule {
     return InputRule.define({
@@ -33,28 +29,26 @@ function markRule(expr: RegExp, mark: Mark): InputRule {
     })
 }
 
+const rules = MARKDOWN_INLINE_DELIMITERS.map((d) =>
+    markRule(new RegExp(d.inputSource), d.mark),
+)
+
 /** `**bold**` → strong. */
-export const markdownBold = markRule(/\*\*([^*\n]+)\*\*$/, Strong)
+export const markdownBold = rules[0]!
 
 /** `__italic__` → emphasis. */
-export const markdownItalic = markRule(/__([^_\n]+)__$/, Emphasis)
+export const markdownItalic = rules[1]!
 
 /** `~~strike~~` → strikethrough. */
-export const markdownStrike = markRule(/~~([^~\n]+)~~$/, Strikethrough)
+export const markdownStrike = rules[2]!
 
 /** `||spoiler||` → spoiler. */
-export const markdownSpoiler = markRule(/\|\|([^|\n]+)\|\|$/, Spoiler)
+export const markdownSpoiler = rules[3]!
 
 /** `` `code` `` → inline code (no newlines). */
-export const markdownCode = markRule(/`([^`\n]+)`$/, Code)
+export const markdownCode = rules[4]!
 
 /** All messenger markdown input rules as an extension. */
 export function markdownInputRules(): EditorState.Extension {
-    return [
-        markdownBold.extension,
-        markdownItalic.extension,
-        markdownStrike.extension,
-        markdownSpoiler.extension,
-        markdownCode.extension,
-    ]
+    return rules.map((r) => r.extension)
 }

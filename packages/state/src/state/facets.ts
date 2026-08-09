@@ -3,14 +3,10 @@
  */
 import type {Plot, Schema} from "@arrisa/doc"
 import {Facet} from "./facet"
-import type {Field} from "./field"
-import type {EditorState} from "./state"
 import {none} from "./ids"
 
-/** Override a field's `create` when building a state (e.g. JSON restore). */
-export const initField = Facet.define<{field: Field<unknown>; create: (state: EditorState) => unknown}>({
-    static: true,
-})
+/** Re-export — defined on field to break facet↔field init cycle. */
+export {initField} from "./field"
 
 /** Schema elements (doc/plot/mark types) used to build {@link Schema}. */
 export const schemaElement = Facet.define<Schema.Element | readonly Schema.Element[], readonly Schema.Element[]>({

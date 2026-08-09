@@ -11,10 +11,20 @@
  */
 import type {EditorState} from "./state"
 import type {Transaction} from "../transaction"
-import {Field} from "./field"
+import type {Field} from "./field"
 import {Facet} from "./facet"
 import type {Extension} from "./extension"
 import {allocID, sameArray} from "./ids"
+
+/** Duck-type Field without value-importing it (avoids facet↔slot↔field cycle). */
+function isField(dep: unknown): dep is Field<any> {
+    return (
+        !!dep &&
+        typeof dep == "object" &&
+        typeof (dep as Field<any>).slot == "function" &&
+        typeof (dep as Field<any>).init == "function"
+    )
+}
 
 export const enum SlotStatus {
     Unresolved = 0,
@@ -114,7 +124,7 @@ export class FacetProvider<Input> {
                         dependencies.every((dep) => {
                             return dep instanceof Facet
                                 ? oldState.facet(dep) === state.facet(dep)
-                                : dep instanceof Field
+                                : isField(dep)
                                   ? oldState.field(dep, false) == state.field(dep, false)
                                   : true
                         }) ||

@@ -9,7 +9,17 @@ import type {Extension} from "./extension"
 import type {DynamicSlot} from "./slot"
 import {SlotStatus} from "./slot"
 import {allocID} from "./ids"
-import {initField} from "./facets"
+import {Facet} from "./facet"
+
+/**
+ * Override a field's `create` when building a state (e.g. JSON restore).
+ * Lives here (not in `./facets`) so `field` does not import `facets` and
+ * complete the facets → facet → slot → field → facets cycle that can evaluate
+ * `Facet.define` before the Facet class exists in the library bundle.
+ */
+export const initField = Facet.define<{field: Field<unknown>; create: (state: EditorState) => unknown}>({
+    static: true,
+})
 
 export class Field<Value> {
     public provides: Extension | undefined = undefined

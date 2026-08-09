@@ -4,7 +4,14 @@
 import {type Leaf, type Mark, Node, type Plot} from "@arrisa/doc"
 import {CodeBlockLanguage} from "@arrisa/types"
 import {mergeAutoEntities, type AutoDetectOptions} from "./auto-entities"
-import type {FormattedText, MessageEntity} from "./entities"
+import {
+    blockquoteEntity,
+    customEmojiEntity,
+    entityFromPartial,
+    preEntity,
+    type FormattedText,
+    type MessageEntity,
+} from "./entities"
 import {isInlineEntityMark, markKey, markToEntityPartial} from "./mark-map"
 import type {CustomEmojiParam} from "./schema-elements"
 
@@ -16,6 +23,7 @@ export interface ToFormattedOptions {
     /**
      * Detect auto entities (url, email, hashtag, …) on the flattened text.
      * Pass `true` for defaults, or an options object.
+     * Style marks do not block auto detection (bold URL keeps both entities).
      */
     autoDetect?: boolean | AutoDetectOptions
     /**
@@ -45,12 +53,23 @@ export function docToFormattedText(doc: Plot.Doc, options: ToFormattedOptions = 
     return entities.length ? {text, entities} : {text}
 }
 
+type StructureKind = "pre" | "blockquote"
+
+type StructureFrame = {
+    kind: StructureKind
+    /** Content start; -1 until first block open / text after enter. */
+    start: number
+    language?: string
+}
+
 class Flattener {
     text = ""
     entities: MessageEntity[] = []
     startedBlocks = false
     readonly blockSep: string
     private runs = new Map<string, {start: number; mark: Mark}>()
+    /** Explicit structural open stack (enter/leave plot roles). */
+    private structure: StructureFrame[] = []
 
     constructor(
         blockSep: string,
@@ -71,10 +90,37 @@ class Flattener {
         } else {
             this.startedBlocks = true
         }
+        this.pinPendingStructure()
+    }
+
+    enterStructure(kind: StructureKind, language?: string) {
+        // Pending start: first openBlock/append inside pins the content offset
+        // (skips a leading blockSep added by the first child textblock).
+        this.structure.push({kind, start: -1, language})
+    }
+
+    leaveStructure(kind: StructureKind) {
+        let top = this.structure.pop()
+        if (!top || top.kind != kind) return
+        let start = top.start < 0 ? this.offset : top.start
+        let length = this.offset - start
+        if (length <= 0) return
+        if (kind == "pre") {
+            this.entities.push(preEntity(start, length, top.language))
+        } else {
+            this.entities.push(blockquoteEntity(start, length, this.blockquoteCanCollapse))
+        }
+    }
+
+    private pinPendingStructure() {
+        for (let s of this.structure) {
+            if (s.start < 0) s.start = this.offset
+        }
     }
 
     append(s: string, marks: Mark.Set) {
         if (!s) return
+        this.pinPendingStructure()
         let wanted = new Set<string>()
         for (let m of marks) {
             if (!isInlineEntityMark(m)) continue
@@ -91,23 +137,17 @@ class Flattener {
         this.text += s
     }
 
-    /** Append custom emoji atom (alt text + entity). */
-    appendCustomEmoji(param: CustomEmojiParam, marks: Mark.Set) {
+    /**
+     * Custom emoji is atomic: alt does not participate in surrounding mark runs.
+     * Close runs, emit plain alt, push entity, leave runs empty.
+     */
+    appendCustomEmoji(param: CustomEmojiParam) {
         this.closeAllRuns()
-        // Keep surrounding marks? emoji is atomic — close runs, emit plain alt under marks? 
-        // Spec: custom emoji is its own entity; alt is the text contribution.
+        this.pinPendingStructure()
         let start = this.offset
-        // Re-open mark runs for alt if needed — typically no marks on emoji
-        this.append(param.alt, marks)
-        this.closeAllRuns()
-        this.entities.push({
-            type: "custom_emoji",
-            offset: start,
-            length: param.alt.length,
-            documentId: param.documentId,
-        })
+        this.text += param.alt
+        this.entities.push(customEmojiEntity(start, param.alt.length, param.documentId))
     }
-
     finish() {
         this.closeAllRuns()
     }
@@ -122,7 +162,7 @@ class Flattener {
         if (!partial) return
         let length = this.offset - run.start
         if (length <= 0) return
-        this.entities.push({...partial, offset: run.start, length} as MessageEntity)
+        this.entities.push(entityFromPartial(partial, run.start, length))
     }
 }
 
@@ -133,7 +173,7 @@ function walk(node: Node, flat: Flattener) {
     }
     if (node.isLeaf) {
         if (node.type.name == "CustomEmoji") {
-            flat.appendCustomEmoji(node.param as CustomEmojiParam, node.marks)
+            flat.appendCustomEmoji(node.param as CustomEmojiParam)
             return
         }
         let t = node.type.spec.toText
@@ -147,35 +187,13 @@ function walk(node: Node, flat: Flattener) {
     let plot = node as Plot
     let isCode = plot.type.hasRole(Node.Role.Code)
     let isQuote = plot.type.name == "Blockquote"
-    let hadStarted = flat.startedBlocks
-    let beforeChildren = flat.offset
     if (plot.isTextblock) flat.openBlock()
-    let contentStart = flat.offset
-    for (let child of plot.content) walk(child, flat)
-    let contentEnd = flat.offset
-    if (contentEnd > contentStart) {
-        let start = contentStart
-        if (!plot.isTextblock && hadStarted && flat.text.startsWith(flat.blockSep, beforeChildren)) {
-            start = beforeChildren + flat.blockSep.length
-        }
-        if (contentEnd > start) {
-            if (isCode) {
-                let language = plot.tag.mark(CodeBlockLanguage)
-                let ent: MessageEntity = {type: "pre", offset: start, length: contentEnd - start}
-                if (typeof language == "string" && language) (ent as {language?: string}).language = language
-                flat.entities.push(ent)
-            }
-            if (isQuote) {
-                let ent: MessageEntity = {
-                    type: "blockquote",
-                    offset: start,
-                    length: contentEnd - start,
-                }
-                if (flat.blockquoteCanCollapse != null) {
-                    ;(ent as {canCollapse?: boolean}).canCollapse = flat.blockquoteCanCollapse
-                }
-                flat.entities.push(ent)
-            }
-        }
+    if (isCode) {
+        let language = plot.tag.mark(CodeBlockLanguage)
+        flat.enterStructure("pre", typeof language == "string" && language ? language : undefined)
     }
+    if (isQuote) flat.enterStructure("blockquote")
+    for (let child of plot.content) walk(child, flat)
+    if (isQuote) flat.leaveStructure("blockquote")
+    if (isCode) flat.leaveStructure("pre")
 }

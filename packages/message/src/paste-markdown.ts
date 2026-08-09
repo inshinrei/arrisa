@@ -5,6 +5,7 @@ import {Slice} from "@arrisa/doc"
 import {Arrisa} from "@arrisa/editor"
 import {EditorState} from "@arrisa/state"
 import {formattedTextToDoc} from "./from-formatted"
+import {textLooksLikeMarkdown} from "./markdown-delimiters"
 import {parseMarkdownText} from "./parse-markdown"
 
 /**
@@ -22,17 +23,7 @@ export function markdownClipboardParser(text: string, state: EditorState): Slice
 
 /** Heuristic: delimiters that our markdown parser understands. */
 export function looksLikeMarkdown(text: string): boolean {
-    if (!text) return false
-    return (
-        /\*\*[^*\n]+\*\*/.test(text) ||
-        /__[^_\n]+__/.test(text) ||
-        /~~[^~\n]+~~/.test(text) ||
-        /\|\|[^|\n]+\|\|/.test(text) ||
-        /`[^`\n]+`/.test(text) ||
-        /\[[^\]]+\]\([^)\s]+\)/.test(text) ||
-        /^```/m.test(text) ||
-        /^> /m.test(text)
-    )
+    return textLooksLikeMarkdown(text)
 }
 
 /** Extension: register {@link markdownClipboardParser}. */

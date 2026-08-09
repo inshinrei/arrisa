@@ -29,10 +29,28 @@ describe("detectAutoEntities", () => {
 })
 
 describe("mergeAutoEntities", () => {
-    it("does not overlap existing bold range", () => {
-        let text = "xx https://ex.com"
+    it("allows auto entities under style marks (bold URL)", () => {
+        let text = "https://ex.com"
         let merged = mergeAutoEntities(text, [{type: "bold", offset: 0, length: text.length}])
-        expect(merged.filter((e) => e.type == "url")).toEqual([])
+        expect(merged.some((e) => e.type == "url")).toBe(true)
         expect(merged.some((e) => e.type == "bold")).toBe(true)
+    })
+
+    it("does not duplicate an existing url entity", () => {
+        let text = "https://ex.com"
+        let merged = mergeAutoEntities(text, [{type: "url", offset: 0, length: text.length}])
+        expect(merged.filter((e) => e.type == "url")).toHaveLength(1)
+    })
+
+    it("skips auto detection under inline code", () => {
+        let text = "https://ex.com"
+        let merged = mergeAutoEntities(text, [{type: "code", offset: 0, length: text.length}])
+        expect(merged.filter((e) => e.type == "url")).toEqual([])
+    })
+
+    it("skips auto detection under pre", () => {
+        let text = "https://ex.com"
+        let merged = mergeAutoEntities(text, [{type: "pre", offset: 0, length: text.length}])
+        expect(merged.filter((e) => e.type == "url")).toEqual([])
     })
 })

@@ -103,4 +103,24 @@ describe("InputRule", () => {
         let chain = Transaction.append(tr)
         expect(chain[chain.length - 1].state.doc.textContent()).toBe("bar")
     })
+
+    it("matches on InlineDoc (root textblock with no .before)", () => {
+        // Parent-node identity check must use plot nodes, not `.before`, so
+        // messenger-style markdown rules work on InlineDoc roots.
+        let inline = Plot.defineDoc({inlineContent: true, shape: {element: "div"}})
+        let schema = Schema.define([inline])
+        let rule = InputRule.define({expr: /\*\*([^*\n]+)\*\*$/, apply: "X"})
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("**a*")]),
+            selection: EditorSelection.cursor(4),
+            config: [EditorState.schemaElement.of(schema.elements), rule.extension],
+        })
+        let tr = state.update({
+            changes: {from: 4, to: 4, insert: Slice.of([Leaf.text("*")])},
+            selection: EditorSelection.cursor(5),
+            userEvent: "input.type",
+        })
+        let chain = Transaction.append(tr)
+        expect(chain[chain.length - 1].state.doc.textContent()).toBe("X")
+    })
 })

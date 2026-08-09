@@ -27,11 +27,24 @@ import {
     resolveTransactionInner,
     mergeTransaction,
 } from "./resolve"
+import {installTransactionFacets} from "./install-facets"
 
 export class Transaction {
+    /**
+     * Facet: pure functions that may extend a transaction before apply.
+     * Installed on the package entry (`src/index.ts`) so tree-shaking cannot
+     * drop it and Facet is fully initialized (facet↔slot cycle).
+     */
+    static extender: Facet<(tr: Transaction) => Transaction.Spec | null>
+
+    /**
+     * Facet: after apply, may append further transactions (e.g. input rules).
+     * Installed on the package entry (`src/index.ts`) — see {@link extender}.
+     */
+    static appender: Facet<(trs: readonly Transaction[], state: EditorState) => Transaction.Spec | null>
+
     newSelection: EditorSelection
     newDoc: Plot.Doc
-
     private constructor(
         readonly startState: EditorState,
         readonly changes: ChangeSet,
@@ -119,23 +132,11 @@ export namespace Transaction {
     }
 
     /**
-     * Facet: pure functions that may extend a transaction before apply.
-     * Declared only — assigned in `state/index.ts` after Facet is initialized
-     * (avoids circular init and Vite/Oxc `export let` namespace limitations).
-     */
-    export declare let extender: Facet<(tr: Transaction) => Spec | null>
-
-    /**
-     * Facet: after apply, may append further transactions (e.g. collab).
-     * Declared only — assigned in `state/index.ts` (see {@link extender}).
-     */
-    export declare let appender: Facet<(trs: readonly Transaction[], state: EditorState) => Spec | null>
-
-    /**
      * Run appenders until fixed point. Each appender is fed only the
      * transactions it has not yet seen; appended specs get {@link appended}.
      */
     export function append(tr: Transaction): readonly Transaction[] {
+        installTransactionFacets()
         let result = [tr],
             top = tr.state
         let appenders = tr.startState.facet(Transaction.appender)

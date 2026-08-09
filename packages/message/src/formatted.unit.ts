@@ -165,11 +165,6 @@ describe("formattedTextToDoc", () => {
     it("imports pre as code block in block schema", () => {
         let schema = blockSchema()
         let ft: FormattedText = {
-            text: "hi\ncode\n",
-            entities: [{type: "pre", offset: 3, length: 4}],
-        }
-        // text "hi\ncode\n" — simplify
-        ft = {
             text: "hi\nx=1",
             entities: [{type: "pre", offset: 3, length: 3}],
         }
@@ -177,6 +172,48 @@ describe("formattedTextToDoc", () => {
         let out = docToFormattedText(doc)
         expect(out.text).toBe("hi\nx=1")
         expect(out.entities?.some((e) => e.type == "pre" && e.offset == 3 && e.length == 3)).toBe(true)
+    })
+
+    it("imports quote-only docs as Blockquote", () => {
+        let schema = blockSchema()
+        let ft: FormattedText = {
+            text: "a\nb",
+            entities: [{type: "blockquote", offset: 0, length: 3}],
+        }
+        let doc = formattedTextToDoc(ft, schema)
+        expect(doc.content.length).toBe(1)
+        expect(doc.content[0]!.type.name).toBe("Blockquote")
+        let out = docToFormattedText(doc)
+        expect(out.text).toBe("a\nb")
+        expect(out.entities?.some((e) => e.type == "blockquote" && e.offset == 0)).toBe(true)
+    })
+
+    it("imports partial mid-document blockquote", () => {
+        let schema = blockSchema()
+        // "hi\nq" — quote only covers "q"
+        let ft: FormattedText = {
+            text: "hi\nq",
+            entities: [{type: "blockquote", offset: 3, length: 1}],
+        }
+        let doc = formattedTextToDoc(ft, schema)
+        let names = doc.content.map((n) => n.type.name)
+        expect(names).toContain("Paragraph")
+        expect(names).toContain("Blockquote")
+        let out = docToFormattedText(doc)
+        expect(out.text).toBe("hi\nq")
+        expect(out.entities?.some((e) => e.type == "blockquote" && e.offset == 3 && e.length == 1)).toBe(true)
+    })
+
+    it("round-trips pre + blockquote export", () => {
+        let schema = blockSchema()
+        let original = schema.doc([
+            Paragraph.create([Leaf.text("hi")]),
+            CodeBlock.create([Leaf.text("x = 1")]),
+            Blockquote.create([Paragraph.create([Leaf.text("q")])]),
+        ])
+        let ft = docToFormattedText(original)
+        let back = formattedTextToDoc(ft, schema)
+        expect(docToFormattedText(back)).toEqual(ft)
     })
 })
 

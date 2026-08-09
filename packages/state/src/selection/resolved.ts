@@ -53,5 +53,5 @@ export class Resolved {
     }
 }
 
-// Wire base.resolve without a circular import at class-eval time.
-EditorSelection.createResolved = Resolved.create
+// createResolved is installed on EditorSelection in ./selection (export
+// initializer) so library tree-shaking cannot drop the wiring.

@@ -3,8 +3,16 @@
  */
 import {Leaf, Mark, type Node, type Plot, type Schema} from "@arrisa/doc"
 import {CodeBlockLanguage} from "@arrisa/types"
-import type {CustomEmojiEntity, FormattedText, MessageEntity} from "./entities"
-import {entityInBounds} from "./entities"
+import {
+    type BlockquoteEntity,
+    type CustomEmojiEntity,
+    type FormattedText,
+    type MessageEntity,
+    type PreEntity,
+    entityInBounds,
+    isAutoEntity,
+    isStructuralEntity,
+} from "./entities"
 import {entityToMark} from "./mark-map"
 import {CustomEmoji} from "./schema-elements"
 
@@ -22,6 +30,9 @@ export interface FromFormattedOptions {
  * - Block docs: paragraphs; `pre` → code block; `blockquote` wraps ranges.
  * - `custom_emoji` → {@link CustomEmoji} leaves when registered.
  * - `mention_name` → {@link MentionName} marks when registered.
+ *
+ * Marks that only partially overlap a `custom_emoji` atom are dropped for the
+ * non-atom segments (only fully-contained entities survive around atoms).
  */
 export function formattedTextToDoc(
     ft: FormattedText,
@@ -47,39 +58,40 @@ function inlineLeaves(text: string, entities: MessageEntity[], schema: Schema, s
         return runsToNodes(materializeRuns(text, entities, schema), schema, sep)
     }
 
-    // Split on custom_emoji atoms
-    let nodes: Node[] = []
-    let cursor = 0
-    let hasEmoji = !!schema.getNode("CustomEmoji")
-    for (let atom of atoms) {
-        if (atom.offset > cursor) {
-            let slice = text.slice(cursor, atom.offset)
-            let sliceEnt = shiftEntities(
-                entities.filter(
-                    (e) =>
-                        e.type != "custom_emoji" &&
-                        e.offset >= cursor &&
-                        e.offset + e.length <= atom.offset,
-                ),
-                cursor,
-            )
-            nodes.push(...runsToNodes(materializeRuns(slice, sliceEnt, schema), schema, sep))
-        }
-        let alt = text.slice(atom.offset, atom.offset + atom.length) || " "
-        if (hasEmoji) {
-            nodes.push(CustomEmoji.of({documentId: atom.documentId, alt}))
-        } else {
-            nodes.push(Leaf.text(alt))
-        }
-        cursor = atom.offset + atom.length
+    // Single interval scan over cut points at each atom boundary.
+    let cuts = new Set<number>([0, text.length])
+    for (let a of atoms) {
+        cuts.add(a.offset)
+        cuts.add(a.offset + a.length)
     }
-    if (cursor < text.length) {
-        let slice = text.slice(cursor)
+    let points = [...cuts].sort((a, b) => a - b)
+    let atomAt = new Map(atoms.map((a) => [a.offset, a]))
+    let nodes: Node[] = []
+    let hasEmoji = !!schema.getNode("CustomEmoji")
+
+    for (let i = 0; i < points.length - 1; i++) {
+        let from = points[i]!,
+            to = points[i + 1]!
+        if (from >= to) continue
+        let atom = atomAt.get(from)
+        if (atom && atom.offset + atom.length == to) {
+            let alt = text.slice(atom.offset, atom.offset + atom.length) || " "
+            if (hasEmoji) {
+                nodes.push(CustomEmoji.of({documentId: atom.documentId, alt}))
+            } else {
+                nodes.push(Leaf.text(alt))
+            }
+            continue
+        }
+        let slice = text.slice(from, to)
         let sliceEnt = shiftEntities(
             entities.filter(
-                (e) => e.type != "custom_emoji" && e.offset >= cursor && e.offset + e.length <= text.length,
+                (e) =>
+                    e.type != "custom_emoji" &&
+                    e.offset >= from &&
+                    e.offset + e.length <= to,
             ),
-            cursor,
+            from,
         )
         nodes.push(...runsToNodes(materializeRuns(slice, sliceEnt, schema), schema, sep))
     }
@@ -103,11 +115,19 @@ function runsToNodes(runs: Run[], schema: Schema, sep: string): Node[] {
     return nodes
 }
 
+/**
+ * Structural cut-set over pre + blockquote, then interval walker.
+ * Pre wins over quote on the same interval; quote can wrap pre segments.
+ */
 function blockChildren(text: string, entities: MessageEntity[], schema: Schema, sep: string): Node[] {
-    let preRanges = entities.filter((e) => e.type == "pre")
-    let quoteRanges = entities.filter((e) => e.type == "blockquote")
+    let preRanges = entities.filter((e): e is PreEntity => e.type == "pre")
+    let quoteRanges = entities.filter((e): e is BlockquoteEntity => e.type == "blockquote")
     let cuts = new Set<number>([0, text.length])
     for (let e of preRanges) {
+        cuts.add(e.offset)
+        cuts.add(e.offset + e.length)
+    }
+    for (let e of quoteRanges) {
         cuts.add(e.offset)
         cuts.add(e.offset + e.length)
     }
@@ -121,56 +141,97 @@ function blockChildren(text: string, entities: MessageEntity[], schema: Schema, 
     let quoteTag = quoteType?.isPlot ? quoteType.default : null
     if (!paraTag) throw new Error("Block schema requires a default Paragraph")
 
+    type Seg = {
+        from: number
+        to: number
+        pre: PreEntity | null
+        quote: boolean
+        nodes: Node[]
+    }
+
+    let segs: Seg[] = []
     for (let i = 0; i < points.length - 1; i++) {
-        let from = points[i],
-            to = points[i + 1]
+        let from = points[i]!,
+            to = points[i + 1]!
         if (from >= to) continue
-        let pre = preRanges.find((e) => e.offset == from && e.offset + e.length == to)
+        let exactPre = preRanges.find((e) => e.offset == from && e.offset + e.length == to)
+        let pre =
+            exactPre ??
+            preRanges.find((e) => e.offset <= from && e.offset + e.length >= to) ??
+            null
+        let quote = quoteRanges.some((q) => q.offset <= from && q.offset + q.length >= to)
         let slice = text.slice(from, to)
+        // Inter-block separators from export are not content (avoid empty paras).
+        if (!pre && (slice === "" || slice === sep)) continue
         let sliceEntities = shiftEntities(
             entities.filter(
                 (e) =>
-                    e.type != "pre" &&
-                    e.type != "blockquote" &&
+                    !isStructuralEntity(e) &&
                     e.offset >= from &&
                     e.offset + e.length <= to,
             ),
             from,
         )
+        let nodes: Node[]
         if (pre && codeTag) {
             let leaves = inlineLeaves(slice, sliceEntities, schema, sep)
             let tag = codeTag
-            let lang = (pre as {language?: string}).language
-            if (lang && schema.getMark("CodeBlockLanguage")) {
-                tag = tag.withMarks(CodeBlockLanguage.of(lang).addToSet(tag.marks))
+            if (pre.language && schema.getMark("CodeBlockLanguage")) {
+                tag = tag.withMarks(CodeBlockLanguage.of(pre.language).addToSet(tag.marks))
             }
-            children.push(tag.create(leaves))
+            nodes = [tag.create(leaves)]
         } else {
-            let lines = slice.length ? slice.split(sep) : [""]
-            if (lines.length > 1 && lines[lines.length - 1] === "" && slice.endsWith(sep)) lines.pop()
-            let lineStart = 0
-            let paras: Node[] = []
-            for (let li = 0; li < lines.length; li++) {
-                let line = lines[li]
-                let lineEntities = shiftEntities(
-                    sliceEntities.filter(
-                        (e) => e.offset >= lineStart && e.offset + e.length <= lineStart + line.length,
-                    ),
-                    lineStart,
-                )
-                let leaves = inlineLeaves(line, lineEntities, schema, sep) as Leaf[]
-                paras.push(paraTag.create(leaves))
-                lineStart += line.length + (li < lines.length - 1 ? sep.length : 0)
+            nodes = paragraphsFromSlice(slice, sliceEntities, schema, sep, paraTag)
+        }
+        segs.push({from, to, pre, quote, nodes})
+    }
+
+    // Group consecutive quote segments into one blockquote wrapper.
+    let i = 0
+    while (i < segs.length) {
+        let seg = segs[i]!
+        if (seg.quote && quoteTag) {
+            let wrapped: Node[] = [...seg.nodes]
+            let j = i + 1
+            while (j < segs.length && segs[j]!.quote) {
+                wrapped.push(...segs[j]!.nodes)
+                j++
             }
-            let coveredByQuote = quoteRanges.some((q) => q.offset <= from && q.offset + q.length >= to)
-            if (coveredByQuote && quoteTag) {
-                children.push(quoteTag.create(paras))
-            } else {
-                children.push(...paras)
-            }
+            children.push(quoteTag.create(wrapped))
+            i = j
+        } else {
+            children.push(...seg.nodes)
+            i++
         }
     }
+
     return children.length ? children : [schema.createDefault(schema.docTag.type)]
+}
+
+function paragraphsFromSlice(
+    slice: string,
+    sliceEntities: MessageEntity[],
+    schema: Schema,
+    sep: string,
+    paraTag: Plot.Tag,
+): Node[] {
+    let lines = slice.length ? slice.split(sep) : [""]
+    if (lines.length > 1 && lines[lines.length - 1] === "" && slice.endsWith(sep)) lines.pop()
+    let lineStart = 0
+    let paras: Node[] = []
+    for (let li = 0; li < lines.length; li++) {
+        let line = lines[li]!
+        let lineEntities = shiftEntities(
+            sliceEntities.filter(
+                (e) => e.offset >= lineStart && e.offset + e.length <= lineStart + line.length,
+            ),
+            lineStart,
+        )
+        let leaves = inlineLeaves(line, lineEntities, schema, sep) as Leaf[]
+        paras.push(paraTag.create(leaves))
+        lineStart += line.length + (li < lines.length - 1 ? sep.length : 0)
+    }
+    return paras
 }
 
 function shiftEntities(entities: MessageEntity[], delta: number): MessageEntity[] {
@@ -190,19 +251,7 @@ export function materializeRuns(text: string, entities: MessageEntity[], schema:
     type Ev = {at: number; open: boolean; mark: Mark}
     let events: Ev[] = []
     for (let e of entities) {
-        if (e.type == "custom_emoji" || e.type == "pre" || e.type == "blockquote") continue
-        // skip pure auto entities for import as marks
-        if (
-            e.type == "url" ||
-            e.type == "email" ||
-            e.type == "phone" ||
-            e.type == "hashtag" ||
-            e.type == "cashtag" ||
-            e.type == "bot_command" ||
-            e.type == "mention"
-        ) {
-            continue
-        }
+        if (e.type == "custom_emoji" || isStructuralEntity(e) || isAutoEntity(e)) continue
         let mark = entityToMark(e, schema)
         if (!mark || e.length <= 0) continue
         events.push({at: e.offset, open: true, mark})

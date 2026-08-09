@@ -2,9 +2,20 @@
  * Parse messenger-style markdown into {@link FormattedText}.
  * Used for paste and bulk conversion (not live typing — see markdown input rules).
  */
-import type {FormattedText, MessageEntity} from "./entities"
+import {
+    blockquoteEntity,
+    entityFromPartial,
+    preEntity,
+    textUrlEntity,
+    type FlagEntity,
+    type FormattedText,
+    type MessageEntity,
+} from "./entities"
+import {MARKDOWN_INLINE_DELIMITERS} from "./markdown-delimiters"
 
-type PartialEntity = Omit<MessageEntity, "offset" | "length">
+type PartialEntity =
+    | {type: FlagEntity["type"]}
+    | {type: "text_url"; url: string}
 
 /**
  * Convert markdown plain text to text + entities.
@@ -80,9 +91,7 @@ function parseMarkdownPipeline(source: string): FormattedText {
         if (seg.kind == "pre") {
             let start = text.length
             text += seg.value
-            let ent: MessageEntity = {type: "pre", offset: start, length: seg.value.length}
-            if (seg.language) (ent as {language?: string}).language = seg.language
-            entities.push(ent)
+            entities.push(preEntity(start, seg.value.length, seg.language))
         } else if (seg.kind == "quote") {
             let start = text.length
             let inner = applyInline(seg.value)
@@ -90,7 +99,7 @@ function parseMarkdownPipeline(source: string): FormattedText {
             for (let e of inner.entities || []) {
                 entities.push({...e, offset: e.offset + start})
             }
-            entities.push({type: "blockquote", offset: start, length: inner.text.length})
+            entities.push(blockquoteEntity(start, inner.text.length))
         } else {
             let start = text.length
             let inner = applyInline(seg.value)
@@ -115,11 +124,10 @@ function applyInline(input: string): FormattedText {
             re: /\[([^\]]+)\]\(([^)\s]+)\)/g,
             to: (m) => ({t: "ent", v: m[1]!, e: {type: "text_url", url: m[2]!}}),
         },
-        {re: /\*\*([^*\n]+)\*\*/g, to: (m) => ({t: "ent", v: m[1]!, e: {type: "bold"}})},
-        {re: /__([^_\n]+)__/g, to: (m) => ({t: "ent", v: m[1]!, e: {type: "italic"}})},
-        {re: /~~([^~\n]+)~~/g, to: (m) => ({t: "ent", v: m[1]!, e: {type: "strike"}})},
-        {re: /\|\|([^|\n]+)\|\|/g, to: (m) => ({t: "ent", v: m[1]!, e: {type: "spoiler"}})},
-        {re: /`([^`\n]+)`/g, to: (m) => ({t: "ent", v: m[1]!, e: {type: "code"}})},
+        ...MARKDOWN_INLINE_DELIMITERS.map((d) => ({
+            re: new RegExp(d.parseSource, "g"),
+            to: (m: RegExpExecArray): Tok => ({t: "ent", v: m[1]!, e: {type: d.entity}}),
+        })),
     ]
 
     for (let {re, to} of patterns) {
@@ -151,7 +159,11 @@ function applyInline(input: string): FormattedText {
         } else {
             let start = text.length
             text += tok.v
-            entities.push({...tok.e, offset: start, length: tok.v.length} as MessageEntity)
+            if (tok.e.type == "text_url") {
+                entities.push(textUrlEntity(start, tok.v.length, tok.e.url))
+            } else {
+                entities.push(entityFromPartial(tok.e, start, tok.v.length))
+            }
         }
     }
     return entities.length ? {text, entities} : {text}

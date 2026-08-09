@@ -95,7 +95,7 @@ import {
     messengerSchema,
     markExclusivity,
 } from "@arrisa/message"
-
+// Schema / command pieces are also available from @arrisa/schema and @arrisa/command.
 messengerCompose({
     exclusivity: "code-strike",
     floating: true,              // or FloatingMenuConfig | false
@@ -140,8 +140,9 @@ let doc2 = formattedTextToDoc(ft, schema, {blockSeparator: "\n"})
 ```
 
 - **Inline schemas** — single stream; `\n` becomes line breaks when present.
-- **Block schemas** — paragraphs; `pre` → code block; `blockquote` wraps ranges.
+- **Block schemas** — paragraphs; `pre` → code block; `blockquote` wraps ranges (cut-set over pre + blockquote; quote-only and partial quotes supported).
 - Out-of-range entities are dropped on import (`entityInBounds`).
+- **Custom emoji** — marks that only partially overlap a `custom_emoji` atom are dropped around the atom (fully-contained entities only).
 
 ### Auto entities
 
@@ -154,6 +155,7 @@ let auto = detectAutoEntities(text, {types: ["url", "email", "hashtag"]})
 
 Detects `url`, `email`, `phone`, `hashtag`, `cashtag`, `bot_command`, `mention` without overlapping skip ranges or each other.
 
+`mergeAutoEntities` / `autoDetect` skip only **exclusive** ranges (`pre`, inline `code`, `custom_emoji`, `text_url`, `mention_name`, existing autos) — **not** style marks. A bold URL gets both `bold` and `url`.
 ### Mark ↔ entity map
 
 ```ts

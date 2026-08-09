@@ -12,6 +12,7 @@ import type {EditorState} from "../state/state"
 import type {Configuration} from "../state/configuration"
 import {EditorSelection} from "../selection"
 import {Transaction} from "./transaction"
+import {installTransactionFacets} from "./install-facets"
 import {Effect} from "./effect"
 import {userEvent} from "./annotation"
 
@@ -84,6 +85,7 @@ export function resolveTransactionInner(
  * facets (highest priority last in the facet list → applied first here).
  */
 export function resolveTransaction(state: EditorState, spec: Transaction.Spec): Transaction {
+    installTransactionFacets()
     let s = resolveTransactionInner(state, null, spec)
     let extenders = state.facet(Transaction.extender),
         tr = Transaction.create(state, s)

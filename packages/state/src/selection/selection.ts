@@ -1,10 +1,12 @@
 /**
  * Editor selection model — public static factories on {@link EditorSelection}.
  *
- * Concrete subclasses import {@link ./base} to avoid circular init; this module
- * attaches factories and nested type aliases used as `EditorSelection.Text`, etc.
+ * Concrete subclasses import {@link ./base} to avoid circular init. Statics are
+ * installed by {@link installEditorSelectionStatics}, which the package entry
+ * calls so library tree-shaking cannot drop the wiring under `sideEffects: false`.
  */
 import {type Leaf, type Plot, Pos} from "@arrisa/doc"
+import {Facet} from "../state/facet"
 import {TextblockMap} from "../textblock"
 import {SelectionType} from "./type"
 import {EditorSelection} from "./base"
@@ -12,9 +14,6 @@ import {Text as Text_} from "./text"
 import {Node as Node_, setNodeNearFallback} from "./node"
 import {Resolved as Resolved_} from "./resolved"
 import {cursorAtStart, scanNormalFrom, skipWord as skipWordMotion} from "./motion"
-
-// Ensure Resolved wiring runs even if consumers only import this module.
-void Resolved_
 
 /** Empty text selection (cursor) at `pos`. */
 function cursor(pos: number, side?: -1 | 1, goalColumn?: number) {
@@ -63,36 +62,75 @@ function define<T extends EditorSelection, JSON extends object>(
     return EditorSelection.selectionType.of(new SelectionType(tag, cls, toJSON as any, fromJSON as any)) as any
 }
 
-// Attach static API to the base class.
-Object.assign(EditorSelection, {
-    cursor,
-    range,
-    node,
-    near,
-    atStart,
-    atEnd,
-    define,
-    Text: Text_,
-    Node: Node_,
-    Resolved: Resolved_,
-})
+let installed = false
 
-setNodeNearFallback(near)
+/**
+ * Attach factories, nested types, and `selectionType` on {@link EditorSelection}.
+ * Idempotent. Must run from the package entry so the call is not tree-shaken.
+ */
+export function installEditorSelectionStatics() {
+    if (installed) return EditorSelection
+    installed = true
 
-EditorSelection.prototype.nextNormalCursor = function (this: EditorSelection, cx, forward = true) {
-    let found = scanNormalFrom(cx, this.head, this.headSide, forward, true)
-    return found && cursor(found.pos, found.side)
+    let C = EditorSelection as typeof EditorSelection & {
+        cursor: typeof cursor
+        range: typeof range
+        node: typeof node
+        near: typeof near
+        atStart: typeof atStart
+        atEnd: typeof atEnd
+        define: typeof define
+        Text: typeof Text_
+        Node: typeof Node_
+        Resolved: typeof Resolved_
+    }
+
+    C.cursor = cursor
+    C.range = range
+    C.node = node
+    C.near = near
+    C.atStart = atStart
+    C.atEnd = atEnd
+    C.define = define
+    C.Text = Text_
+    C.Node = Node_
+    C.Resolved = Resolved_
+    C.createResolved = Resolved_.create
+
+    C.selectionType = Facet.define<SelectionType>({
+        combine(values) {
+            let types = [C.Text.type, C.Node.type, ...values]
+            for (let i = 0; i < types.length; i++)
+                for (let j = i + 1; j < types.length; j++) {
+                    if (types[i].tag == types[j].tag) throw new Error("Duplicate selection JSON tag: " + types[i].tag)
+                }
+            return types
+        },
+        static: true,
+    })
+
+    C.prototype.nextNormalCursor = function (this: EditorSelection, cx, forward = true) {
+        let found = scanNormalFrom(cx, this.head, this.headSide, forward, true)
+        return found && cursor(found.pos, found.side)
+    }
+
+    C.prototype.normalCursorAtBound = function (this: EditorSelection, cx, forward = true) {
+        let found = scanNormalFrom(cx, forward ? this.to : this.from, forward ? -1 : 1, forward, false)
+        return found && cursor(found.pos, found.side)
+    }
+
+    C.prototype.skipWord = function (this: EditorSelection, cx, forward = true) {
+        let found = skipWordMotion(cx, this.head, this.headSide, forward)
+        return found && cursor(found.pos, found.side)
+    }
+
+    setNodeNearFallback(near)
+    return C
 }
 
-EditorSelection.prototype.normalCursorAtBound = function (this: EditorSelection, cx, forward = true) {
-    let found = scanNormalFrom(cx, forward ? this.to : this.from, forward ? -1 : 1, forward, false)
-    return found && cursor(found.pos, found.side)
-}
-
-EditorSelection.prototype.skipWord = function (this: EditorSelection, cx, forward = true) {
-    let found = skipWordMotion(cx, this.head, this.headSide, forward)
-    return found && cursor(found.pos, found.side)
-}
+// Source / Vitest imports of this module need statics without the package entry.
+// Dist builds may drop this call under sideEffects:false; package entry re-calls.
+installEditorSelectionStatics()
 
 export {EditorSelection}
 
@@ -115,10 +153,8 @@ declare module "./base" {
             toJSON: (sel: T) => JSON,
             fromJSON: (doc: Plot.Doc, json: JSON) => T,
         ): any
-        // Value constructors (class + nested namespace) attached via Object.assign
         const Text: typeof Text_
         const Node: typeof Node_
-        // Runtime class; type alias lives on the base namespace
         const Resolved: {
             create(doc: import("@arrisa/doc").Plot.Doc, selection: EditorSelection): import("./resolved").Resolved
         }

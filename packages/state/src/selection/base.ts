@@ -11,9 +11,13 @@ import type {SelectionType} from "./type"
 import type {Resolved} from "./resolved"
 
 export abstract class EditorSelection {
+    /**
+     * Registry of selection kinds. Installed as a real static in `./selection`
+     * (export initializer) so library tree-shaking cannot drop it.
+     */
     declare static selectionType: import("../state/facet").Facet<SelectionType>
 
-    /** Filled by `./resolved` to avoid a base↔resolved import cycle. */
+    /** Installed in `./selection` export initializer (avoids base↔resolved cycle). */
     static createResolved: (doc: Plot.Doc, selection: EditorSelection) => Resolved
 
     protected constructor(

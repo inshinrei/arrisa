@@ -24,6 +24,18 @@ export {
     type CustomEmojiEntity,
     type AutoEntity,
     entityInBounds,
+    isAutoEntity,
+    isFlagEntity,
+    isStructuralEntity,
+    isAutoExclusive,
+    flagEntity,
+    preEntity,
+    blockquoteEntity,
+    textUrlEntity,
+    mentionNameEntity,
+    customEmojiEntity,
+    autoEntity,
+    entityFromPartial,
 } from "./entities"
 
 export {docToFormattedText, type ToFormattedOptions} from "./to-formatted"

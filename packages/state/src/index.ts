@@ -1,14 +1,19 @@
 /**
  * @arrisa/state — editor state, selection, transactions, textblock maps, bidi, corrections.
+ *
+ * Static facets and selection factories are installed in this **entry module**
+ * (not only via pure re-exports). Under `sideEffects: false`, Rollup drops
+ * mutations in intermediate modules when optimizing `export {X} from "./y"`;
+ * the entry body always runs.
  */
-export {EditorState} from "./state"
-export {Transaction} from "./transaction"
-export {EditorSelection} from "./selection"
-export {TextblockMap} from "./textblock"
-export {BidiSpan} from "./bidi"
-export {Correction} from "./correction"
-export {findClusterBreak} from "./find-cluster-break"
-export {
+import {EditorState} from "./state"
+import {Transaction, installTransactionFacets} from "./transaction"
+import {EditorSelection, installEditorSelectionStatics} from "./selection/selection"
+import {TextblockMap} from "./textblock"
+import {BidiSpan} from "./bidi"
+import {Correction} from "./correction"
+import {findClusterBreak} from "./find-cluster-break"
+import {
     htmlStringToElement,
     toAssignableHTML,
     wrapMap,
@@ -18,3 +23,22 @@ export {
     type DocSource,
     type ReadDocOptions,
 } from "./state"
+
+// Entry-body installs — retained in library dist under sideEffects: false.
+installEditorSelectionStatics()
+installTransactionFacets()
+
+export {
+    EditorState,
+    Transaction,
+    EditorSelection,
+    TextblockMap,
+    BidiSpan,
+    Correction,
+    findClusterBreak,
+    htmlStringToElement,
+    toAssignableHTML,
+    wrapMap,
+    readDoc,
+}
+export type {HtmlFromStringOptions, TrustedHTMLPolicy, DocSource, ReadDocOptions}

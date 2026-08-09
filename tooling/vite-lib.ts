@@ -16,19 +16,14 @@ function copyModuleAgentsPlugin(pkgDir: string): Plugin {
             let src = resolve(pkgDir, "agents-for-module.md")
             let dest = resolve(pkgDir, "dist", "AGENTS.md")
             if (!existsSync(src)) {
-                if (process.env.CI) {
-                    console.warn(
-                        `[copy-module-agents] missing ${src} — package will not ship dist/AGENTS.md`,
-                    )
-                }
-                return
+                throw new Error(
+                    `[copy-module-agents] missing ${src} — published packages must ship dist/AGENTS.md`,
+                )
             }
             try {
                 copyFileSync(src, dest)
             } catch (err) {
-                if (process.env.CI) {
-                    console.warn("[copy-module-agents] copy failed:", err)
-                }
+                throw new Error(`[copy-module-agents] copy failed: ${err}`)
             }
         },
     }
