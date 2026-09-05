@@ -1,6 +1,7 @@
 import {describe, expect, it} from "vitest"
 import {EditorSelection} from "@arrisa/state"
 import {
+    collapseSelection,
     moveByUnit,
     moveByWord,
     moveToDocSide,
@@ -67,5 +68,22 @@ describe("selectAll", () => {
         expect(result.applied).toBe(true)
         expect(result.state.selection.from).toBe(0)
         expect(result.state.selection.to).toBe(state.doc.length)
+    })
+})
+
+describe("collapseSelection", () => {
+    it("collapses a range 1..3 to a cursor at the head", () => {
+        let {state} = stateFromBlocks((s) => [para(s, "hello")], EditorSelection.range(1, 3))
+        let result = runPure(state, collapseSelection)
+        expect(result.applied).toBe(true)
+        expect(result.state.selection.empty).toBe(true)
+        expect(result.state.selection.head).toBe(3)
+        expect(result.state.selection.headSide).toBe(state.selection.headSide)
+        expect(result.spec).toMatchObject({userEvent: "select"})
+    })
+
+    it("returns false when the selection is already an empty cursor", () => {
+        let {state} = stateFromBlocks((s) => [para(s, "hello")], 1)
+        expect(collapseSelection({state}, null)).toBe(false)
     })
 })

@@ -53,6 +53,7 @@ export {
     moveToTextblockSide,
     moveToDocSide,
     selectAll,
+    collapseSelection,
 } from "./motion"
 
 export {undo, redo} from "./history"

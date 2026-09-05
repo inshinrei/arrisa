@@ -139,6 +139,7 @@ markExclusivity({isolating: [Code, Strikethrough]})
 | `moveToTextblockSide` | Textblock start/end |
 | `moveToDocSide` | Document start/end |
 | `selectAll` | Select entire document |
+| `collapseSelection` | Collapse a non-empty selection to a cursor at `head` (`false` if already empty) |
 
 ### History placeholders
 

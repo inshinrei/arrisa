@@ -79,6 +79,7 @@ import {Command, toggleStrong} from "@arrisa/command"
 KeyBinding.of({key: "Mod-b", run: toggleStrong})
 // KeyBinding.useDefaultKeymap.of(false) to drop defaults
 // composeKeymap() — compact subset (no page / emacs Ctrl bindings)
+// Escape (default + compose) collapses a range to a cursor at head
 composeKeymap()
 ```
 

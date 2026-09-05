@@ -155,3 +155,12 @@ export const selectAll: Command.Pure = ({state}) => {
         userEvent: "select.all",
     }
 }
+
+/** Collapse a non-empty selection to a cursor at `head`. */
+export const collapseSelection: Command.Pure = ({state}) => {
+    if (state.selection.empty) return false
+    return {
+        selection: EditorSelection.cursor(state.selection.head, state.selection.headSide),
+        userEvent: "select",
+    }
+}

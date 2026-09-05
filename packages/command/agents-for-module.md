@@ -133,6 +133,16 @@ Command.dispatch(editor, replaceDoc, next)
 
 Replaces `0..doc.length` with `next` content, places the cursor near the start, sets `userEvent: "set.doc"`, and annotates `Transaction.addToHistory.of(false)` so the change is not recorded in undo history.
 
+### Collapse selection
+
+```ts
+import {collapseSelection} from "@arrisa/command"
+
+Command.dispatch(editor, collapseSelection)
+```
+
+Returns `false` when the selection is already empty; otherwise a cursor at `head` with `userEvent: "select"`. The editor default keymap and `composeKeymap` bind this to Escape.
+
 ## Invariants / pitfalls
 
 1. **`undo` / `redo` from this package are stubs** — always return `false` until overridden or rebound to `@arrisa/history`.

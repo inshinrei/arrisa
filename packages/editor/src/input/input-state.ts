@@ -2,6 +2,7 @@
  * Per-editor input bookkeeping: DOM event handler registry, IME composition
  * target tracking, mouse selection, and focus/scroll timestamps.
  */
+import {Command, collapseSelection} from "@arrisa/command"
 import {EditorState, EditorSelection} from "@arrisa/state"
 import type {Mark} from "@arrisa/doc"
 import type {Arrisa} from "../editor"
@@ -12,6 +13,29 @@ import {Tile} from "../tile"
 import {eventHandler, eventObserver} from "./facets"
 import {eventBelongsToEditor, MouseSelection} from "./mouse"
 import {baseHandlers, baseObservers} from "./handlers"
+
+/** Chrome outside `editor.dom` that should not collapse a range. */
+export const outsidePointerChromeSelector =
+    "arrisa-tooltip, .arrisa-tooltip, arrisa-floating-menu, .arrisa-floating-menu, arrisa-link-prompt, .arrisa-link-prompt"
+
+type OutsidePointerTarget = {
+    closest?: (sel: string) => unknown
+    parentElement?: {closest?: (sel: string) => unknown} | null
+}
+
+/** True when a document `pointerdown` should collapse a non-empty selection. */
+export function shouldCollapseOnOutsidePointer(
+    editorDom: {contains(node: any): boolean},
+    target: EventTarget | OutsidePointerTarget | null,
+    selectionEmpty: boolean,
+): boolean {
+    if (selectionEmpty || !target) return false
+    if (editorDom.contains(target)) return false
+    let node = target as OutsidePointerTarget
+    let el = typeof node.closest == "function" ? node : node.parentElement
+    if (!el || typeof el.closest != "function") return true
+    return !el.closest(outsidePointerChromeSelector)
+}
 
 const LOG_input = false
 
@@ -52,9 +76,11 @@ export class InputState {
 
     constructor(readonly editor: Arrisa) {
         this.handleEvent = this.handleEvent.bind(this)
+        this.onOutsidePointer = this.onOutsidePointer.bind(this)
         this.notifiedFocused = editor.hasFocus
 
         if (browser.safari) editor.contentDOM.addEventListener("input", () => null)
+        editor.dom.ownerDocument.addEventListener("pointerdown", this.onOutsidePointer, true)
     }
 
     handleEvent(event: Event) {
@@ -173,10 +199,18 @@ export class InputState {
 
     connect() {
         this.ensureHandlers(this.editor.state)
+        this.editor.dom.ownerDocument.addEventListener("pointerdown", this.onOutsidePointer, true)
     }
 
     disconnect() {
         if (this.mouseSelection) this.mouseSelection.disconnect()
+        this.editor.dom.ownerDocument.removeEventListener("pointerdown", this.onOutsidePointer, true)
+    }
+
+    onOutsidePointer(event: PointerEvent) {
+        if (!shouldCollapseOnOutsidePointer(this.editor.dom, event.target, this.editor.state.selection.empty))
+            return
+        Command.dispatch(this.editor, collapseSelection)
     }
 }
 

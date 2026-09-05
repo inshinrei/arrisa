@@ -3,12 +3,13 @@
  *
  * Disables {@link KeyBinding.useDefaultKeymap} and installs a subset of
  * {@link KeyBinding.defaultKeymap}: enter/break, delete unit/word/line-end,
- * arrows (unit/line/word/doc), Home/End, select-all, undo/redo.
+ * arrows (unit/line/word/doc), Home/End, select-all, Escape (collapse), undo/redo.
  * Omits page motion, transpose, and macOS emacs-style Ctrl bindings.
  */
 import {EditorState} from "@arrisa/state"
 import {
     Command,
+    collapseSelection,
     deleteToLineEnd,
     deleteUnit,
     deleteWord,
@@ -105,6 +106,7 @@ const composeBindings: readonly KeyBinding.Spec[] = [
         shift: Command.bind(moveToDocSide, {side: "end", extend: true}),
     },
     {key: "Mod-a", run: selectAll},
+    {key: "Escape", run: collapseSelection},
     {key: "Mod-z", run: undo},
     {key: "Mod-y", mac: "Mod-Shift-z", run: redo},
     {linux: "Ctrl-Shift-z", run: redo},

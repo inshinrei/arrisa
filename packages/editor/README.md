@@ -48,9 +48,11 @@ editor.dispatch({
 
 ### Default keymap
 
-`KeyBinding` installs bindings. By default, the editor includes a full default keymap (Enter, delete unit/word, arrows, page, Home/End, select-all, Mod-z/y undo/redo stubs, macOS Ctrl-b/f/p/n, …). Disable with `KeyBinding.useDefaultKeymap.of(false)`.
+`KeyBinding` installs bindings. By default, the editor includes a full default keymap (Enter, delete unit/word, arrows, page, Home/End, select-all, Escape to collapse a range, Mod-z/y undo/redo stubs, macOS Ctrl-b/f/p/n, …). Disable with `KeyBinding.useDefaultKeymap.of(false)`.
 
-For single-field / compose UIs, use `composeKeymap()` instead: it turns off the default map and installs a compact subset (enter/break, delete, arrows, Home/End, select-all, undo/redo) without page motion or macOS emacs-style Ctrl bindings.
+For single-field / compose UIs, use `composeKeymap()` instead: it turns off the default map and installs a compact subset (enter/break, delete, arrows, Home/End, select-all, Escape, undo/redo) without page motion or macOS emacs-style Ctrl bindings.
+
+A non-empty selection also collapses on `pointerdown` outside `editor.dom`, except on tooltips (`arrisa-tooltip`), the floating menu, and the link prompt.
 
 ### Chrome
 

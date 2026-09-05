@@ -33,4 +33,10 @@ describe("composeKeymap", () => {
         expect(keys).not.toContain("PageDown")
         expect(keys).not.toContain("PageUp")
     })
+
+    it("includes Escape", () => {
+        let state = makeState(composeKeymap())
+        let keys = state.facet(KeyBinding.source).map((b) => b.spec.key)
+        expect(keys).toContain("Escape")
+    })
 })
