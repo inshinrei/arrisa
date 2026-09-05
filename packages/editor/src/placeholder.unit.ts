@@ -1,8 +1,11 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Plot, Schema} from "@arrisa/doc"
 import {EditorState} from "@arrisa/state"
-import {Decoration, PointSet} from "./decoration"
+import {Decoration, PointSet, WidgetDecoration} from "./decoration"
 import {placeholder} from "./placeholder"
+import {WidgetTile} from "./tile"
+import {TileFlag} from "./tile/flag"
+import {Widget} from "./decoration/widget"
 
 function schemaParts() {
     let paragraph = Plot.define("paragraph", {inlineContent: true, shape: {element: "p"}})
@@ -29,6 +32,33 @@ function placeholderPoints(state: EditorState): PointSet<Decoration.Point> {
     return PointSet.empty
 }
 
+/** Minimal document stub so widget render can run under Node. */
+function withMockDocument(run: () => void) {
+    let prev = (globalThis as any).document
+    ;(globalThis as any).document = {
+        createElement(name: string) {
+            return {
+                nodeType: 1,
+                tagName: name.toUpperCase(),
+                contentEditable: "inherit",
+                childNodes: [] as any[],
+                appendChild(child: any) {
+                    this.childNodes.push(child)
+                    return child
+                },
+            }
+        },
+        createTextNode(text: string) {
+            return {nodeType: 3, textContent: text}
+        },
+    }
+    try {
+        run()
+    } finally {
+        ;(globalThis as any).document = prev
+    }
+}
+
 describe("placeholder", () => {
     it("places a widget in an empty single-block doc", () => {
         let state = stateWithDoc((s) => [s.paragraph.create([])], placeholder("Type here"))
@@ -51,5 +81,24 @@ describe("placeholder", () => {
         // Non-empty content: no points
         let state = stateWithDoc((s) => [s.paragraph.create([Leaf.text("abc")])], placeholder("hint"))
         expect(placeholderPoints(state)).toBe(PointSet.empty)
+    })
+
+    it("renders placeholder as contentEditable=false so typing cannot enter the widget", () => {
+        let state = stateWithDoc((s) => [s.paragraph.create([])], placeholder("Type here"))
+        let deco = placeholderPoints(state).values[0] as WidgetDecoration
+        withMockDocument(() => {
+            let dom = deco.widget.type.render(deco.widget.value) as {contentEditable: string; tagName: string}
+            expect(dom.tagName).toBe("ARRISA-PLACEHOLDER")
+            expect(dom.contentEditable).toBe("false")
+        })
+    })
+})
+
+describe("WidgetTile contentEditable", () => {
+    it("forces contentEditable=false on element widgets", () => {
+        let el = {nodeType: 1, contentEditable: "inherit"} as any
+        let w = Widget.create({render: () => el})
+        new WidgetTile(w, null, TileFlag.Point)
+        expect(el.contentEditable).toBe("false")
     })
 })

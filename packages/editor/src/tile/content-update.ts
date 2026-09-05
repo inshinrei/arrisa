@@ -444,11 +444,29 @@ export class ContentUpdate {
     addBR() {
         let node = this.new.node
         if (node && node.isPlot && node.isTextblock) {
+            // Skip trailing point decorations (placeholders, etc.) — they are not
+            // real content. Without a trailing BR, empty textblocks whose only
+            // child is a contentEditable=false widget cannot host a caret and
+            // native typing fails (placeholder stays, cursor stuck).
             let i = this.new.children.length - 1
+            while (i >= 0) {
+                let ch = this.new.children[i]
+                if (ch instanceof WidgetTile && ch.widget.type == brHack.type) break
+                if (ch.isPoint && !ch.isNodeInner) {
+                    i--
+                    continue
+                }
+                break
+            }
             let last = i < 0 ? null : this.new.children[i]
             if (last instanceof WidgetTile && last.widget.type == brHack.type) {
-                let prev = i ? this.new.children[i - 1] : null
-                if (prev && prev.dom.nodeName != "BR") this.new.children.pop()
+                let j = i - 1
+                while (j >= 0 && this.new.children[j].isPoint && !this.new.children[j].isNodeInner) j--
+                let prev = j < 0 ? null : this.new.children[j]
+                if (prev && prev.dom.nodeName != "BR") {
+                    // Real content exists before the BR hack — drop it.
+                    this.new.children.splice(i, 1)
+                }
             } else if (!last || last.dom.nodeName == "BR") {
                 this.new.addChild(new WidgetTile(brHack, null, TileFlag.Point | TileFlag.PointAfter, 0))
             }

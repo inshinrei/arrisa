@@ -213,17 +213,29 @@ export class DOMObserver {
         let tile = this.editor.docTile.nearest(record.target)
         if (!tile || tile.ignoreMutations) return null
         tile.flags |= TileFlag.Dirty
+        let range: [number, number] | null = null
         if (record.type == "attributes" || record.type == "characterData") {
             if (tile.dom == record.target) {
-                return [tile.posBefore, tile.posAfter]
+                range = [tile.posBefore, tile.posAfter]
             } else {
-                return childRange(tile, record)
+                range = childRange(tile, record)
             }
         } else if (record.type == "childList") {
-            return childRange(tile, record)
-        } else {
-            return null
+            range = childRange(tile, record)
         }
+        // Empty textblocks with only zero-length widgets (e.g. placeholder) report
+        // zero-width dirty ranges when the browser inserts a free text node. Expand
+        // to the enclosing textblock so the view is rebuilt from the model and the
+        // unauthorized DOM is dropped (otherwise typed chars stick beside the
+        // placeholder and the model never updates).
+        if (range && range[0] >= range[1]) {
+            let doc = this.editor.flushedState.doc
+            let pos = Math.max(0, Math.min(range[0], doc.length))
+            let block = doc.resolve(pos).textblockParent
+            if (block) return [block.before, block.after]
+            if (pos < doc.length) return [pos, pos + 1]
+        }
+        return range
     }
 
     takeDirty() {

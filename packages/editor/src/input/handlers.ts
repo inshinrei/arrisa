@@ -72,6 +72,12 @@ export const inputTypeCommands: {[inputType: string]: Command.Bound | Command} =
 
 export function inputEventRange(event: InputEvent, editor: Arrisa, preferSel = false) {
     let range = event.getTargetRanges()[0]
+    // Some browsers / synthetic paths omit target ranges; fall back to selection
+    // so beforeinput insertText does not throw and leave the widget unhandled.
+    if (!range) {
+        let {from, to} = editor.state.selection
+        return {from, to}
+    }
     let from = editor.docTile.posFromDOM(range.startContainer, range.startOffset, -1)
     let to = range.collapsed ? from : editor.docTile.posFromDOM(range.endContainer, range.endOffset, 1)
     let {pending} = editor.viewState

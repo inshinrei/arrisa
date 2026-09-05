@@ -71,6 +71,16 @@ export class WidgetTile extends Tile {
     ) {
         super(dom || widget.type.render(widget.value), flags)
         this.length = length
+        // Non-text widgets are non-editable chrome (placeholders, hacks, atoms).
+        // Without contentEditable=false, the caret can enter the widget DOM and
+        // typing will not map to document changes.
+        if (
+            this.dom.nodeType == 1 &&
+            widget.type != Widget.EditableText &&
+            (this.dom as HTMLElement).contentEditable != "false"
+        ) {
+            ;(this.dom as HTMLElement).contentEditable = "false"
+        }
     }
 
     get isNodeOuter() {

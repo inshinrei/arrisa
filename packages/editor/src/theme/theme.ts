@@ -139,9 +139,17 @@ export const baseStyles = buildTheme(
 
         "arrisa-placeholder": {
             opacity: "0.6",
+            // Zero layout width so the caret sits on top of the hint text
+            // (typed characters replace the visual placeholder instead of
+            // appearing to the left of it).
             display: "inline-block",
+            width: "0",
+            overflow: "visible",
+            whiteSpace: "nowrap",
             verticalAlign: "top",
             userSelect: "none",
+            // Clicks should target the empty textblock, not the widget.
+            pointerEvents: "none",
         },
 
         "arrisa-dropcursor": {

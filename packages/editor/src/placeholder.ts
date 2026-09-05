@@ -11,6 +11,10 @@ import {Decoration, Widget, PointSet} from "./decoration"
 const placeholderWidget = Widget.define<() => Element | Text>({
     render(value) {
         let elt = document.createElement("arrisa-placeholder")
+        // Must not inherit contenteditable from the editor — otherwise the caret
+        // can land in the widget text, typing mutates the widget without a doc
+        // change, and selection inside WidgetTile is ignored (stuck cursor).
+        elt.contentEditable = "false"
         elt.appendChild(value())
         return elt
     },
