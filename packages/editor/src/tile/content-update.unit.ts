@@ -1,9 +1,37 @@
 import {describe, expect, it} from "vitest"
-import {separateComposition} from "./content-update"
+import {Attributes, Elt, Plot, Schema} from "@arrisa/doc"
+import {Widget} from "../decoration/widget"
 import type {CompositionInfo} from "../input/composition"
+import {ContentUpdate, separateComposition} from "./content-update"
+import {TileFlag} from "./flag"
+import {EltTile, WidgetTile} from "./leaves"
 
 function comp(fromB: number, toB: number, text = "x"): CompositionInfo {
     return {fromB, toB, text, target: null as any, wrapCursor: null}
+}
+
+function mockEl(tag: string): any {
+    return {
+        nodeType: 1,
+        nodeName: tag.toUpperCase(),
+        tagName: tag.toUpperCase(),
+        contentEditable: "inherit",
+        childNodes: [] as any[],
+    }
+}
+
+function withMockDocument(run: () => void) {
+    let prev = (globalThis as any).document
+    ;(globalThis as any).document = {
+        createElement(name: string) {
+            return mockEl(name)
+        },
+    }
+    try {
+        run()
+    } finally {
+        ;(globalThis as any).document = prev
+    }
 }
 
 describe("separateComposition", () => {
@@ -55,5 +83,36 @@ describe("separateComposition", () => {
     it("handles composition at the end of a keep", () => {
         let result = separateComposition([5, -1], comp(3, 5, "xy"))
         expect(result).toEqual([3, -1, 2, 2])
+    })
+})
+
+describe("ContentUpdate.addBR", () => {
+    it("skips trailing point decorations when deciding a textblock needs a BR", () => {
+        withMockDocument(() => {
+            let paragraph = Plot.define("paragraph", {inlineContent: true, shape: {element: "p"}})
+            let docType = Plot.defineDoc({blockContent: paragraph})
+            Schema.define([docType, paragraph])
+            let emptyPara = paragraph.create([])
+            let block = EltTile.of(
+                Elt.create("p", Attributes.none, Elt.hole),
+                emptyPara,
+                TileFlag.None,
+                2,
+                mockEl("p"),
+            )
+            let placeholder = Widget.create({render: () => mockEl("arrisa-placeholder")})
+            block.addChild(new WidgetTile(placeholder, null, TileFlag.Point | TileFlag.PointAfter, 0))
+
+            // Without skipping points, last would be the placeholder and no BR would be added.
+            let cu = Object.create(ContentUpdate.prototype) as ContentUpdate
+            cu.new = block as any
+            cu.addBR()
+
+            expect(block.children.length).toBe(2)
+            expect(block.children[0]).toBeInstanceOf(WidgetTile)
+            expect(block.children[0].dom.nodeName).toBe("ARRISA-PLACEHOLDER")
+            expect(block.children[1]).toBeInstanceOf(WidgetTile)
+            expect(block.children[1].dom.nodeName).toBe("BR")
+        })
     })
 })

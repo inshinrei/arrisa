@@ -62,6 +62,15 @@ describe("baseStyles cursor layer", () => {
     })
 })
 
+describe("baseStyles placeholder", () => {
+    it("gives arrisa-placeholder zero width and pointer-events none", () => {
+        let rule = baseStyles.rules.find((r) => /arrisa-placeholder \{/.test(r))
+        expect(rule).toBeTruthy()
+        expect(rule).toMatch(/width:\s*0/)
+        expect(rule).toMatch(/pointer-events:\s*none/)
+    })
+})
+
 describe("theme facets", () => {
     it("joins theme class names", () => {
         let state = makeState([theme.of("a"), theme.of("b")])
