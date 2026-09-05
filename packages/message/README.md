@@ -82,7 +82,7 @@ type FormattedText = {
 | `composeKeymap` (default keymap off) | always |
 | Mark exclusivity (`none` / `code-strike` / custom) | `"none"` |
 | Mention + custom emoji schema elements | `hostElements: false` |
-| Markdown input rules (`**bold**`, `` `code` ``, …) | `markdown: true` |
+| Markdown input rules (`**bold**`, `` `code` ``, …; no spoiler) | `markdown: true` |
 | Markdown plain-text paste | `markdownPaste: true` |
 | Floating selection toolbar (`Menu.Group.top`) | `floating: true` |
 | Embedded toolbar (`embeddedMenu`) | `false` |
@@ -111,7 +111,6 @@ composeField({
 | Feature | Default |
 |---------|---------|
 | `messengerSchema` (inline doc + marks) | always |
-| Fenced code blocks (`codeBlocks: true` → block `Doc` + `CodeBlock`) | `false` |
 | Mark exclusivity (`none` / `code-strike` / custom) | `"none"` |
 | Mention + custom emoji schema elements | `hostElements: true` |
 | Markdown input rules (`**bold**`, `` `code` ``, …) | `markdown: true` |
@@ -119,8 +118,6 @@ composeField({
 | Floating selection toolbar (inline group) | `floating: true` |
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
-
-With `codeBlocks: true`, the compose field uses a multi-block document (paragraphs + code blocks). Typing `` ```ts `` then space opens a fenced block; paste of markdown fences and FormattedText `pre` entities round-trip via the existing block I/O path.
 
 Does **not** include history — add `@arrisa/history` in the host.
 
@@ -130,6 +127,7 @@ Typing (input rules) and paste share messenger-style delimiters:
 
 - `**bold**`, `__italic__`, `~~strike~~`, `||spoiler||`, `` `code` ``
 - Paste also understands `[label](url)`, fenced code, and `> ` quotes via `parseMarkdownText`
+- `composeField` omits the spoiler input rule; paste/import skip spoiler entities when `Spoiler` is not in the schema
 
 ### Host atoms
 

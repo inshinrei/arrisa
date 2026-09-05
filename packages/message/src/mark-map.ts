@@ -89,7 +89,8 @@ export function entityToMark(entity: MessageEntity, schema: Schema): Mark | null
         entity.type == "code"
     ) {
         let fallback = FLAG_MARK_BY_ENTITY[entity.type]
-        let type = schema.getMark(fallback.name) || fallback.type
+        let type = schema.getMark(fallback.name)
+        if (!type) return null
         return type.default ?? null
     }
     return null

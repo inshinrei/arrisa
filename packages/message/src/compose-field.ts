@@ -14,7 +14,7 @@ import {
 } from "@arrisa/editor"
 import {composeSchema, type LinkConfig} from "@arrisa/schema"
 import {EditorState} from "@arrisa/state"
-import {markdownInputRules} from "./markdown"
+import {markdownBold, markdownCode, markdownItalic, markdownStrike} from "./markdown"
 import {mentionResolve} from "./mention-rule"
 import {markdownPaste} from "./paste-markdown"
 import {messengerHostElements} from "./schema-elements"
@@ -27,7 +27,7 @@ export interface ComposeFieldConfig {
     embedded?: false | EmbeddedMenuConfig
     /** Placeholder text when empty. Default `"Message…"`. Pass `false` to omit. */
     placeholder?: string | false
-    /** Install markdown delimiter input rules. Default true. */
+    /** Install markdown delimiter input rules (no spoiler). Default true. */
     markdown?: boolean
     /** Parse plain-text markdown on paste. Default true. */
     markdownPaste?: boolean
@@ -51,7 +51,7 @@ export interface ComposeFieldConfig {
  * - {@link composeKeymap} (default keymap off)
  * - optional exclusivity (`"none"` | `"code-strike"` | custom)
  * - optional host elements (`hostElements` default false)
- * - markdown input rules + paste parser
+ * - markdown input rules (no spoiler) + paste parser
  * - floating and/or embedded toolbar (`Menu.Group.top`)
  * - placeholder
  *
@@ -76,7 +76,8 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
     ]
 
     if (hostElements) ext.push(messengerHostElements())
-    if (markdown) ext.push(markdownInputRules())
+    if (markdown)
+        ext.push([markdownBold.extension, markdownItalic.extension, markdownStrike.extension, markdownCode.extension])
     if (mdPaste) ext.push(markdownPaste())
     if (resolveMention) ext.push(mentionResolve(resolveMention))
 
