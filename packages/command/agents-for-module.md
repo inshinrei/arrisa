@@ -122,6 +122,17 @@ Command.dispatch(editor, removeLinks)
 
 `applyLink` sanitizes via `sanitizeLinkHref` and returns `false` for empty selections or unsafe hrefs. Do not apply untrusted hrefs with raw `Link.of`.
 
+### Replace document
+
+```ts
+import {replaceDoc} from "@arrisa/command"
+
+let next = schema.doc([paragraph.create([Leaf.text("hello")])])
+Command.dispatch(editor, replaceDoc, next)
+```
+
+Replaces `0..doc.length` with `next` content, places the cursor near the start, sets `userEvent: "set.doc"`, and annotates `Transaction.addToHistory.of(false)` so the change is not recorded in undo history.
+
 ## Invariants / pitfalls
 
 1. **`undo` / `redo` from this package are stubs** — always return `false` until overridden or rebound to `@arrisa/history`.
@@ -131,6 +142,7 @@ Command.dispatch(editor, removeLinks)
 5. **Mark helpers assume schema content** — `setAlignment` / `setDirection` return `false` if the schema lacks those mark types. `applyLink` / `removeLinks` use `@arrisa/types` `Link`; `applyLink` rejects empty selections and hrefs that fail `sanitizeLinkHref`. `clearFormatting` clears stored marks at an empty cursor and strips marks on ranged nodes without unwrapping blocks.
 6. **Menu ranks** are clamped to `0…100` (default `100`). Lower ranks sort first within a group.
 7. **Layering** — this package must not import `@arrisa/editor` or higher packages.
+8. **`replaceDoc` opts out of history** — it always sets `Transaction.addToHistory.of(false)`. Callers that need undoable full-doc swaps must record history themselves.
 
 ## What not to do
 

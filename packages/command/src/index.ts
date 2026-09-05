@@ -11,6 +11,8 @@ export {Menu} from "./menu"
 
 export {insertText, insertLineBreak, enter, transposeChars} from "./insert"
 
+export {replaceDoc} from "./replace-doc"
+
 export {deleteUnit, deleteWord, deleteToLineEnd, deleteLine} from "./delete"
 
 export {

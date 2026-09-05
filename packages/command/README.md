@@ -77,6 +77,7 @@ Most high-level commands are pure. View-backed ones: `deleteToLineEnd`, `deleteL
 | `insertLineBreak` | Schema line-break node or `\n` in preserve-whitespace parents |
 | `enter` | Enter key: new textblock / lift empty / split |
 | `transposeChars` | Swap grapheme clusters around a cursor |
+| `replaceDoc` | Replace the whole document with another `Plot.Doc`; cursor near start; `userEvent: "set.doc"`; does not record history |
 
 ### Delete (high-level)
 
