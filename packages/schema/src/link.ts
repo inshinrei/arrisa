@@ -14,7 +14,7 @@ import {Command, Menu, applyLink, removeLinks} from "@arrisa/command"
 import {ChangeSet} from "@arrisa/doc"
 import {Arrisa, KeyBinding, Tooltip} from "@arrisa/editor"
 import {phrases} from "@arrisa/phrases"
-import {EditorState, Transaction} from "@arrisa/state"
+import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
 import {Link, sanitizeLinkHref, isSafeLinkHref} from "@arrisa/types"
 import {cr} from "./dom"
 
@@ -53,7 +53,10 @@ function closeLinkPrompt(editor: Arrisa) {
     editor.focus()
 }
 
-function applyPromptHref(editor: Arrisa, href: string) {
+function applyPromptHref(editor: Arrisa, href: string, from: number, to: number) {
+    let {selection} = editor.state
+    if (selection.from != from || selection.to != to)
+        editor.dispatch({selection: EditorSelection.range(from, to)})
     Command.dispatch(editor, Command.bind(applyLink, href))
     closeLinkPrompt(editor)
 }
@@ -72,7 +75,9 @@ function createLinkPromptView(editor: Arrisa): Tooltip.View {
             class: "arrisa-link-prompt",
             onsubmit: (event: Event) => {
                 event.preventDefault()
-                applyPromptHref(editor, input.value)
+                let open = editor.state.field(linkPromptField)
+                if (!open) return
+                applyPromptHref(editor, input.value, open.from, open.to)
             },
             onkeydown: (event: KeyboardEvent) => {
                 if (event.key != "Escape") return
@@ -147,7 +152,7 @@ let toggleLink: Command = (target) => {
     if (prompt === false) return false
     let from = selection.from,
         to = selection.to
-    const apply = (href: string) => applyPromptHref(editor, href)
+    const apply = (href: string) => applyPromptHref(editor, href, from, to)
     const cancel = () => closeLinkPrompt(editor)
     if (typeof prompt == "function") {
         prompt({editor, from, to, apply, cancel})

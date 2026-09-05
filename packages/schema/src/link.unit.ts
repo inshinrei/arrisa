@@ -100,6 +100,23 @@ describe("link.button.run", () => {
         expect(linkAt(editor.state)?.value).toBe("https://ok.example")
     })
 
+    it("applies the link to the original range after the selection moves", () => {
+        let req: LinkPromptRequest | undefined
+        let state = rangedState({
+            prompt: (r) => {
+                req = r
+            },
+        })
+        let editor = mockEditor(state)
+        expect(runToggle(editor)).toBe(true)
+        editor.dispatch({selection: EditorSelection.cursor(1)})
+        expect(editor.state.selection.empty).toBe(true)
+        req!.apply("https://ok.example")
+        expect(linkAt(editor.state)?.value).toBe("https://ok.example")
+        expect(editor.state.selection.from).toBe(1)
+        expect(editor.state.selection.to).toBe(6)
+    })
+
     it("returns false for prompt: false on an unmarked range", () => {
         let state = rangedState({prompt: false})
         let editor = mockEditor(state)
