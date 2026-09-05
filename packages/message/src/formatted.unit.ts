@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest"
 import {Leaf, Schema} from "@arrisa/doc"
 import {
     Blockquote,
+    BulletList,
     Code,
     CodeBlock,
     CodeBlockLanguage,
@@ -10,6 +11,8 @@ import {
     InlineDoc,
     LineBreak,
     Link,
+    ListItem,
+    OrderedList,
     Paragraph,
     Spoiler,
     Strong,
@@ -41,6 +44,9 @@ function blockSchema() {
         CodeBlock,
         CodeBlockLanguage,
         Blockquote,
+        BulletList,
+        OrderedList,
+        ListItem,
         LineBreak,
         Strong,
         Emphasis,
@@ -214,6 +220,45 @@ describe("formattedTextToDoc", () => {
         let ft = docToFormattedText(original)
         let back = formattedTextToDoc(ft, schema)
         expect(docToFormattedText(back)).toEqual(ft)
+    })
+
+    it("round-trips a bullet list", () => {
+        let schema = blockSchema()
+        let doc = schema.doc([
+            BulletList.create([
+                ListItem.create([Paragraph.create([Leaf.text("a")])]),
+                ListItem.create([Paragraph.create([Leaf.text("b")])]),
+            ]),
+        ])
+        let ft = docToFormattedText(doc)
+        expect(ft.text).toBe("a\nb")
+        expect(ft.entities?.some((e) => e.type == "unordered_list" && e.offset == 0 && e.length == ft.text.length)).toBe(
+            true,
+        )
+        let back = formattedTextToDoc(ft, schema)
+        expect(docToFormattedText(back).entities?.some((e) => e.type == "unordered_list")).toBe(true)
+        expect(back.firstChild!.type.name).toBe("BulletList")
+    })
+
+    it("exports ordered list startIndex when not 1", () => {
+        let schema = blockSchema()
+        let doc = schema.doc([
+            OrderedList.of(3).create([ListItem.create([Paragraph.create([Leaf.text("x")])])]),
+        ])
+        let ft = docToFormattedText(doc)
+        expect(ft.entities).toEqual(
+            expect.arrayContaining([{type: "ordered_list", offset: 0, length: 1, startIndex: 3}]),
+        )
+    })
+
+    it("wraps a list inside a blockquote", () => {
+        let schema = blockSchema()
+        let list = BulletList.create([ListItem.create([Paragraph.create([Leaf.text("q")])])])
+        let doc = schema.doc([Blockquote.create([list])])
+        let ft = docToFormattedText(doc)
+        let back = formattedTextToDoc(ft, schema)
+        expect(back.firstChild!.type.name).toBe("Blockquote")
+        expect(back.firstChild!.content[0]!.type.name).toBe("BulletList")
     })
 })
 

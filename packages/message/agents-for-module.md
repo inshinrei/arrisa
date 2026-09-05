@@ -45,7 +45,7 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 | Area | Exports |
 |------|---------|
 | Compose | `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
-| Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, …) |
+| Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/list/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
 | I/O | `docToFormattedText`, `formattedTextToDoc`, `materializeRuns`, option types |
 | Auto | `detectAutoEntities`, `mergeAutoEntities`, `AutoDetectOptions` |
 | Mark map | `markToEntityPartial`, `entityToMark`, `DEFAULT_FLAG_MARKS`, `markKey`, `isInlineEntityMark` |
@@ -57,7 +57,7 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 
 1. **UTF-16 offsets** — entity `offset` / `length` use JS string indices, not Unicode code points. Do not re-count with grapheme libraries without converting carefully.
 2. **`messengerCompose` does not include history** — always add `@arrisa/history` when undo is required.
-3. **Default schema is inline** (`InlineDoc` via `messengerSchema`) — not a multi-paragraph `Doc`. Block import paths in `formattedTextToDoc` apply when the schema is block-based.
+3. **Default schema is inline** (`InlineDoc` via `messengerSchema`) — not a multi-paragraph `Doc`. Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1).
 4. **`autoDetect` on export** — adds url/email/phone/hashtag/… entities; auto types are **not** re-applied as marks on import (`materializeRuns` skips them). Style marks (bold/italic/…) do **not** block auto detection; `pre` / inline `code` / `text_url` / `mention_name` / `custom_emoji` do (`isAutoExclusive`).
 5. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text.
 6. **`MentionName` is non-inclusive** — typing after a mention does not extend the mark.

@@ -52,7 +52,7 @@ type FormattedText = {
 ```
 
 - **Offsets and lengths are UTF-16 code units** (JavaScript string indices).
-- Entities include flag marks (`bold`, `italic`, …), `text_url`, `pre`, `blockquote`, `mention_name`, `custom_emoji`, and auto types (`url`, `email`, `hashtag`, …).
+- Entities include flag marks (`bold`, `italic`, …), `text_url`, `pre`, `blockquote`, `unordered_list`, `ordered_list`, `mention_name`, `custom_emoji`, and auto types (`url`, `email`, `hashtag`, …).
 
 ### Compose preset
 
@@ -119,6 +119,8 @@ import {
     type TextUrlEntity,
     type PreEntity,
     type BlockquoteEntity,
+    type UnorderedListEntity,
+    type OrderedListEntity,
     type MentionNameEntity,
     type CustomEmojiEntity,
     type AutoEntity,
@@ -140,7 +142,7 @@ let doc2 = formattedTextToDoc(ft, schema, {blockSeparator: "\n"})
 ```
 
 - **Inline schemas** — single stream; `\n` becomes line breaks when present.
-- **Block schemas** — paragraphs; `pre` → code block; `blockquote` wraps ranges (cut-set over pre + blockquote; quote-only and partial quotes supported).
+- **Block schemas** — paragraphs; `pre` → code block; `unordered_list` / `ordered_list` wrap as `BulletList` / `OrderedList` of `ListItem`s (one item per paragraph or code block); `blockquote` wraps ranges. Cut-set covers pre + lists + blockquote; **lists wrap before quotes** so a quote covering a whole list becomes `Blockquote > List`. Quote-only and partial quotes are supported. Ordered `startIndex` is omitted when 1. One-level lists are required.
 - Out-of-range entities are dropped on import (`entityInBounds`).
 - **Custom emoji** — marks that only partially overlap a `custom_emoji` atom are dropped around the atom (fully-contained entities only).
 

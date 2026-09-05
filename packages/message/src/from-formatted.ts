@@ -8,7 +8,9 @@ import {
     type CustomEmojiEntity,
     type FormattedText,
     type MessageEntity,
+    type OrderedListEntity,
     type PreEntity,
+    type UnorderedListEntity,
     entityInBounds,
     isAutoEntity,
     isStructuralEntity,
@@ -27,7 +29,7 @@ export interface FromFormattedOptions {
 /**
  * Build a document from plain text + entities.
  * - Inline docs: single inline stream with line breaks for `\\n`.
- * - Block docs: paragraphs; `pre` → code block; `blockquote` wraps ranges.
+ * - Block docs: paragraphs; `pre` → code block; lists wrap items; `blockquote` wraps ranges.
  * - `custom_emoji` → {@link CustomEmoji} leaves when registered.
  * - `mention_name` → {@link MentionName} marks when registered.
  *
@@ -115,13 +117,28 @@ function runsToNodes(runs: Run[], schema: Schema, sep: string): Node[] {
     return nodes
 }
 
+type ListEntity = UnorderedListEntity | OrderedListEntity
+
+type Seg = {
+    from: number
+    to: number
+    pre: PreEntity | null
+    quote: boolean
+    list: ListEntity | null
+    nodes: Node[]
+}
+
 /**
- * Structural cut-set over pre + blockquote, then interval walker.
- * Pre wins over quote on the same interval; quote can wrap pre segments.
+ * Structural cut-set over pre + lists + blockquote, then interval walker.
+ * Pre wins over quote on the same interval. Lists wrap before quotes so a
+ * quote covering a whole list becomes Blockquote > List.
  */
 function blockChildren(text: string, entities: MessageEntity[], schema: Schema, sep: string): Node[] {
     let preRanges = entities.filter((e): e is PreEntity => e.type == "pre")
     let quoteRanges = entities.filter((e): e is BlockquoteEntity => e.type == "blockquote")
+    let listRanges = entities.filter(
+        (e): e is ListEntity => e.type == "unordered_list" || e.type == "ordered_list",
+    )
     let cuts = new Set<number>([0, text.length])
     for (let e of preRanges) {
         cuts.add(e.offset)
@@ -131,23 +148,25 @@ function blockChildren(text: string, entities: MessageEntity[], schema: Schema, 
         cuts.add(e.offset)
         cuts.add(e.offset + e.length)
     }
+    for (let e of listRanges) {
+        cuts.add(e.offset)
+        cuts.add(e.offset + e.length)
+    }
     let points = [...cuts].sort((a, b) => a - b)
     let children: Node[] = []
     let paraType = schema.getNode("Paragraph")
     let codeType = schema.getNode("CodeBlock")
     let quoteType = schema.getNode("Blockquote")
+    let itemType = schema.getNode("ListItem")
+    let bulletType = schema.getNode("BulletList")
+    let orderedType = schema.getNode("OrderedList")
     let paraTag = paraType?.isPlot ? paraType.default : null
     let codeTag = codeType?.isPlot ? codeType.default : null
     let quoteTag = quoteType?.isPlot ? quoteType.default : null
+    let itemTag = itemType?.isPlot ? itemType.default : null
+    let bulletTag = bulletType?.isPlot ? bulletType.default : null
+    let orderedDefault = orderedType?.isPlot ? orderedType.default : null
     if (!paraTag) throw new Error("Block schema requires a default Paragraph")
-
-    type Seg = {
-        from: number
-        to: number
-        pre: PreEntity | null
-        quote: boolean
-        nodes: Node[]
-    }
 
     let segs: Seg[] = []
     for (let i = 0; i < points.length - 1; i++) {
@@ -160,6 +179,7 @@ function blockChildren(text: string, entities: MessageEntity[], schema: Schema, 
             preRanges.find((e) => e.offset <= from && e.offset + e.length >= to) ??
             null
         let quote = quoteRanges.some((q) => q.offset <= from && q.offset + q.length >= to)
+        let list = coveringList(from, to, listRanges)
         let slice = text.slice(from, to)
         // Inter-block separators from export are not content (avoid empty paras).
         if (!pre && (slice === "" || slice === sep)) continue
@@ -183,8 +203,12 @@ function blockChildren(text: string, entities: MessageEntity[], schema: Schema, 
         } else {
             nodes = paragraphsFromSlice(slice, sliceEntities, schema, sep, paraTag)
         }
-        segs.push({from, to, pre, quote, nodes})
+        segs.push({from, to, pre, quote, list, nodes})
     }
+
+    // Wrap lists before quotes: consecutive segments sharing a list range
+    // become one list of ListItems (paragraph or code block per node).
+    segs = wrapListSegments(segs, itemTag, bulletTag, orderedType, orderedDefault)
 
     // Group consecutive quote segments into one blockquote wrapper.
     let i = 0
@@ -206,6 +230,71 @@ function blockChildren(text: string, entities: MessageEntity[], schema: Schema, 
     }
 
     return children.length ? children : [schema.createDefault(schema.docTag.type)]
+}
+
+function coveringList(from: number, to: number, ranges: ListEntity[]): ListEntity | null {
+    let best: ListEntity | null = null
+    for (let e of ranges) {
+        if (e.offset > from || e.offset + e.length < to) continue
+        // Outermost covering range (one-level lists; avoid splitting an outer list).
+        if (!best || e.length > best.length) best = e
+    }
+    return best
+}
+
+function listTagFor(
+    list: ListEntity,
+    bulletTag: Plot.Tag | null,
+    orderedType: ReturnType<Schema["getNode"]>,
+    orderedDefault: Plot.Tag | null,
+): Plot.Tag | null {
+    if (list.type == "unordered_list") return bulletTag
+    if (!orderedType?.isPlot) return orderedDefault
+    let start = list.startIndex ?? 1
+    if (start == 1) return orderedDefault
+    return (orderedType as Plot.Type<number>).of(start)
+}
+
+function wrapListSegments(
+    segs: Seg[],
+    itemTag: Plot.Tag | null,
+    bulletTag: Plot.Tag | null,
+    orderedType: ReturnType<Schema["getNode"]>,
+    orderedDefault: Plot.Tag | null,
+): Seg[] {
+    if (!itemTag) return segs
+    let out: Seg[] = []
+    let i = 0
+    while (i < segs.length) {
+        let seg = segs[i]!
+        let list = seg.list
+        let tag = list ? listTagFor(list, bulletTag, orderedType, orderedDefault) : null
+        if (!list || !tag) {
+            out.push(seg)
+            i++
+            continue
+        }
+        let group: Seg[] = [seg]
+        let j = i + 1
+        while (j < segs.length && segs[j]!.list == list) {
+            group.push(segs[j]!)
+            j++
+        }
+        let items: Node[] = []
+        for (let g of group) {
+            for (let n of g.nodes) items.push(itemTag.create([n]))
+        }
+        out.push({
+            from: group[0]!.from,
+            to: group[group.length - 1]!.to,
+            pre: null,
+            quote: group.every((g) => g.quote),
+            list,
+            nodes: [tag.create(items)],
+        })
+        i = j
+    }
+    return out
 }
 
 function paragraphsFromSlice(

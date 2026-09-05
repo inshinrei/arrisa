@@ -35,6 +35,21 @@ export type BlockquoteEntity = {
     canCollapse?: boolean
 }
 
+/** Unordered (bullet) list spanning one or more items. */
+export type UnorderedListEntity = {
+    type: "unordered_list"
+    offset: number
+    length: number
+}
+
+/** Ordered list spanning one or more items. `startIndex` omitted when 1. */
+export type OrderedListEntity = {
+    type: "ordered_list"
+    offset: number
+    length: number
+    startIndex?: number
+}
+
 /** Host-resolved mention (Phase C). */
 export type MentionNameEntity = {
     type: "mention_name"
@@ -63,6 +78,8 @@ export type MessageEntity =
     | TextUrlEntity
     | PreEntity
     | BlockquoteEntity
+    | UnorderedListEntity
+    | OrderedListEntity
     | MentionNameEntity
     | CustomEmojiEntity
     | AutoEntity
@@ -105,14 +122,16 @@ export function isFlagEntity(e: MessageEntity): e is FlagEntity {
     return FLAG_TYPES.has(e.type as FlagEntity["type"])
 }
 
-export function isStructuralEntity(e: MessageEntity): e is PreEntity | BlockquoteEntity {
-    return e.type == "pre" || e.type == "blockquote"
+export function isStructuralEntity(
+    e: MessageEntity,
+): e is PreEntity | BlockquoteEntity | UnorderedListEntity | OrderedListEntity {
+    return e.type == "pre" || e.type == "blockquote" || e.type == "unordered_list" || e.type == "ordered_list"
 }
 
 /**
  * Ranges that must not receive overlapping auto-detection.
- * Style flags (bold/italic/…) and blockquote are **not** exclusive — wire
- * formats commonly allow a bold URL or hashtag inside a quote.
+ * Style flags (bold/italic/…), blockquote, and lists are **not** exclusive —
+ * wire formats commonly allow a bold URL or hashtag inside a quote or list.
  */
 export function isAutoExclusive(e: MessageEntity): boolean {
     return (
@@ -144,6 +163,21 @@ export const blockquoteEntity = (
     canCollapse != null
         ? {type: "blockquote", offset, length, canCollapse}
         : {type: "blockquote", offset, length}
+
+export const unorderedListEntity = (offset: number, length: number): UnorderedListEntity => ({
+    type: "unordered_list",
+    offset,
+    length,
+})
+
+export const orderedListEntity = (
+    offset: number,
+    length: number,
+    startIndex?: number,
+): OrderedListEntity =>
+    startIndex != null && startIndex != 1
+        ? {type: "ordered_list", offset, length, startIndex}
+        : {type: "ordered_list", offset, length}
 
 export const textUrlEntity = (offset: number, length: number, url: string): TextUrlEntity => ({
     type: "text_url",

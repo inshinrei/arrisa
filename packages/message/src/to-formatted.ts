@@ -8,7 +8,9 @@ import {
     blockquoteEntity,
     customEmojiEntity,
     entityFromPartial,
+    orderedListEntity,
     preEntity,
+    unorderedListEntity,
     type FormattedText,
     type MessageEntity,
 } from "./entities"
@@ -53,13 +55,14 @@ export function docToFormattedText(doc: Plot.Doc, options: ToFormattedOptions = 
     return entities.length ? {text, entities} : {text}
 }
 
-type StructureKind = "pre" | "blockquote"
+type StructureKind = "pre" | "blockquote" | "unordered_list" | "ordered_list"
 
 type StructureFrame = {
     kind: StructureKind
     /** Content start; -1 until first block open / text after enter. */
     start: number
     language?: string
+    startIndex?: number
 }
 
 class Flattener {
@@ -93,10 +96,10 @@ class Flattener {
         this.pinPendingStructure()
     }
 
-    enterStructure(kind: StructureKind, language?: string) {
+    enterStructure(kind: StructureKind, language?: string, startIndex?: number) {
         // Pending start: first openBlock/append inside pins the content offset
         // (skips a leading blockSep added by the first child textblock).
-        this.structure.push({kind, start: -1, language})
+        this.structure.push({kind, start: -1, language, startIndex})
     }
 
     leaveStructure(kind: StructureKind) {
@@ -107,8 +110,12 @@ class Flattener {
         if (length <= 0) return
         if (kind == "pre") {
             this.entities.push(preEntity(start, length, top.language))
-        } else {
+        } else if (kind == "blockquote") {
             this.entities.push(blockquoteEntity(start, length, this.blockquoteCanCollapse))
+        } else if (kind == "unordered_list") {
+            this.entities.push(unorderedListEntity(start, length))
+        } else {
+            this.entities.push(orderedListEntity(start, length, top.startIndex))
         }
     }
 
@@ -187,13 +194,22 @@ function walk(node: Node, flat: Flattener) {
     let plot = node as Plot
     let isCode = plot.type.hasRole(Node.Role.Code)
     let isQuote = plot.type.name == "Blockquote"
+    let isBullet = plot.type.name == "BulletList"
+    let isOrdered = plot.type.name == "OrderedList"
     if (plot.isTextblock) flat.openBlock()
     if (isCode) {
         let language = plot.tag.mark(CodeBlockLanguage)
         flat.enterStructure("pre", typeof language == "string" && language ? language : undefined)
     }
     if (isQuote) flat.enterStructure("blockquote")
+    if (isBullet) flat.enterStructure("unordered_list")
+    if (isOrdered) {
+        let startIndex = typeof plot.tag.param == "number" ? plot.tag.param : 1
+        flat.enterStructure("ordered_list", undefined, startIndex)
+    }
     for (let child of plot.content) walk(child, flat)
+    if (isOrdered) flat.leaveStructure("ordered_list")
+    if (isBullet) flat.leaveStructure("unordered_list")
     if (isQuote) flat.leaveStructure("blockquote")
     if (isCode) flat.leaveStructure("pre")
 }
