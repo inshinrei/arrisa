@@ -107,7 +107,7 @@ export const baseStyles = buildTheme(
             top: 0,
             right: 0,
             bottom: 0,
-            contain: "size style",
+            contain: "style",
             "& > *": {
                 position: "absolute",
             },

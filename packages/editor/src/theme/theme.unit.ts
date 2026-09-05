@@ -60,6 +60,12 @@ describe("baseStyles cursor layer", () => {
         expect(rule).toMatch(/pointer-events:\s*none/)
         expect(rule).toMatch(/position:\s*absolute/)
     })
+
+    it("does not use contain:size on arrisa-cursor-layer (overflow caret must paint)", () => {
+        let rule = baseStyles.rules.find((r) => /arrisa-cursor-layer \{/.test(r) && /pointer-events:/.test(r))
+        expect(rule).toBeTruthy()
+        expect(rule).not.toMatch(/contain:\s*[^;]*size/)
+    })
 })
 
 describe("baseStyles placeholder", () => {
