@@ -46,7 +46,7 @@ export {
 export {clearFormattingButton} from "./clear-formatting"
 export {strong, emphasis, code, underline, strikethrough, spoiler, superscript, subscript} from "./mark"
 export {color, backgroundColor, ColorPicker} from "./color"
-export {link, isLinkPasteUrl} from "./link"
+export {link, isLinkPasteUrl, type LinkConfig, type LinkPrompt, type LinkPromptRequest} from "./link"
 export {
     image,
     figure,

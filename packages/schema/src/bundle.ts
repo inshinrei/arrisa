@@ -35,7 +35,7 @@ import {
 import {clearFormattingButton} from "./clear-formatting"
 import {backgroundColor, color} from "./color"
 import {figure, image, imageResizing} from "./image"
-import {link} from "./link"
+import {link, type LinkConfig} from "./link"
 import {bulletList, orderedList} from "./list"
 import {code, emphasis, spoiler, strikethrough, strong, subscript, superscript, underline} from "./mark"
 
@@ -53,11 +53,10 @@ export function basicMarks(): EditorState.Extension {
  * Compose-field marks: bold, italic, underline, strikethrough, monospace
  * (code), and link, plus {@link clearFormattingButton}. No spoiler.
  *
- * `config.link` is reserved for {@link link} options; until that factory
- * accepts config, the field is ignored.
+ * `config.link` is forwarded to {@link link}.
  */
 export function composeMarks(config?: {link?: ComposeSchemaConfig["link"]}): EditorState.Extension {
-    return [strong(), emphasis(), underline(), strikethrough(), code(), link(), clearFormattingButton]
+    return [strong(), emphasis(), underline(), strikethrough(), code(), link(config?.link), clearFormattingButton]
 }
 
 /**
@@ -144,11 +143,8 @@ export interface ComposeSchemaConfig {
      * Mark exclusivity policy. Same values as {@link MessengerSchemaConfig.exclusivity}.
      */
     exclusivity?: MessengerSchemaConfig["exclusivity"]
-    /**
-     * Options forwarded to {@link link} when that factory accepts config.
-     * Until then, this field is ignored.
-     */
-    link?: {}
+    /** Options forwarded to {@link link} (`prompt` default `"floating"`). */
+    link?: LinkConfig
 }
 
 /**

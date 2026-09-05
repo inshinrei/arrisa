@@ -39,7 +39,7 @@ let config = [/* blockDoc(), paragraph(), strong(), … */]
 | Blocks | `blockDoc`, `inlineDoc`, `paragraph`, `heading`, `codeBlock`, `blockquote`, `horizontalRule`, `alignment`, `direction`, `lineBreak` |
 | Lists | `bulletList`, `orderedList` (`{blockItems?: boolean}`) |
 | Marks | `strong`, `emphasis`, `code`, `underline`, `strikethrough`, `spoiler`, `superscript`, `subscript` |
-| Link / color | `link`, `isLinkPasteUrl`, `color`, `backgroundColor`, `ColorPicker` |
+| Link / color | `link`, `link({prompt})`, `isLinkPasteUrl`, `LinkConfig`, `LinkPrompt`, `LinkPromptRequest`, `color`, `backgroundColor`, `ColorPicker` |
 | Media | `image`, `figure`, `imageResizing`, `imageUploader`, `activeImage`, `insertImage`, `imageDialog` |
 
 Factories return `EditorState.Extension` values. Pass them in `EditorState.create` / `Arrisa.create` `config`.
@@ -49,10 +49,10 @@ Factories return `EditorState.Extension` values. Pass them in `EditorState.creat
 1. **Not `@arrisa/doc`’s Schema class** — this package wires *types from `@arrisa/types`* into editor extensions. Do not invent a parallel schema API here.
 2. **Namespaces are partial install hooks** — e.g. `strong()` includes type + button + key; hosts can install `EditorState.schemaElement.of(Strong)` + only `strong.button` if needed.
 3. **`messengerSchema` is lean** — default inline doc + messenger marks only (includes spoiler). No headings, lists, or colors. Use `composeSchema` for block chat fields (lists/quotes/code, no spoiler); `fullSchema` for documents; `@arrisa/message` for chat I/O.
-4. **`messengerSchema({exclusivity, codeBlocks})` / `composeSchema({exclusivity})`** — `"none"` (default free stacking), `"code-strike"` (isolates Code + Strikethrough), or custom `{isolating: Mark.Type[]}`. `codeBlocks: true` (messenger only) switches to block `Doc` + paragraphs + fenced code blocks.
+4. **`messengerSchema({exclusivity, codeBlocks})` / `composeSchema({exclusivity, link})`** — `"none"` (default free stacking), `"code-strike"` (isolates Code + Strikethrough), or custom `{isolating: Mark.Type[]}`. `codeBlocks: true` (messenger only) switches to block `Doc` + paragraphs + fenced code blocks. `composeSchema({link})` is forwarded to `link({prompt})`.
 5. **Lists** — both `bulletList` and `orderedList` register a list-item type; default is block items. Use `{blockItems: false}` for inline-only items.
 6. **Images** — drop/file upload only runs when `imageUploader` facet is provided. Src values go through `sanitizeImageSrc`.
-7. **Links** — paste-as-link requires non-empty selection + `isLinkPasteUrl` (absolute safe href). Tooltip never turns unsafe legacy hrefs into clickable script URLs.
+7. **Links** — paste-as-link requires non-empty selection + `isLinkPasteUrl` (absolute safe href). Tooltip never turns unsafe legacy hrefs into clickable script URLs. Default add-link UI is a floating tooltip form (`prompt: "floating"`). `prompt: false` is remove-only. Custom `prompt` must call `req.apply` (not raw `Link.of`) so hrefs go through `applyLink` / `sanitizeLinkHref`.
 8. **Colors** — menu applies only `isSafeCssColor` values; empty string clears the mark.
 9. **Prefer `let` in examples** — `const` only for arrow functions or true module-level constants (Arrisa monorepo style).
 10. **`codeBlock()`** — registers `CodeBlock` + `CodeBlockLanguage`, menu/key, theme, and a fence input rule: type `` ``` `` or `` ```lang `` then a **space** at the start of a textblock.

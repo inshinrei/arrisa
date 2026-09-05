@@ -109,7 +109,7 @@ Mark bundles (usable alone or inside presets):
 | Mod-b / Mod-i / Mod-u / Mod-/ / Mod-` | Strong / em / underline / strike / code |
 | Mod-Shift-p | Spoiler |
 | Mod-. / Mod-, | Super / subscript |
-| Mod-k | Toggle link (dialog when none selected) |
+| Mod-k | Toggle link (floating prompt when none selected) |
 | Ctrl-Shift-0…6 | Paragraph / heading levels |
 | Ctrl-Shift-\\ | Code block |
 | Mod-Shift-l/r/e | Align left / right / center |
@@ -175,12 +175,21 @@ import {
 ```ts
 import {link, isLinkPasteUrl} from "@arrisa/schema"
 
-link() // mark + Mod-k + tooltip + paste-URL-over-selection
+link() // mark + Mod-k + cursor tooltip + paste-URL-over-selection
+link({prompt: false}) // remove-only (no add-link UI)
+link({
+    prompt: (req) => {
+        // host UI; req.apply sanitizes via applyLink — never raw Link.of
+        req.apply("https://example.com")
+    },
+})
 
 if (isLinkPasteUrl(text)) {
     // absolute http(s) / mailto / xmpp, no spaces
 }
 ```
+
+Default add-link UI is a floating tooltip form (`prompt: "floating"`), not a `Dialog` panel. `req.apply` / form submit run `applyLink` (`sanitizeLinkHref`). The read-only cursor-inside-link tooltip is unchanged.
 
 ### Color
 
@@ -242,6 +251,7 @@ import {
 
 composeSchema({
     exclusivity: "none", // | "code-strike" | {isolating: Mark.Type[]}
+    link: {prompt: "floating"}, // | false | (req) => { req.apply(href) }
 })
 
 messengerSchema({

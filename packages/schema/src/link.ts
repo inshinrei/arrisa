@@ -2,58 +2,158 @@
  * Link mark extension.
  *
  * {@link link} registers the {@link Link} mark plus:
- * - **Mod-k** / menu: toggle — remove links under the selection, or open a
- *   dialog to set `href` when none are present
+ * - **Mod-k** / menu: toggle — remove links under the selection, or prompt
+ *   for `href` when none are present (floating tooltip by default)
  * - **Tooltip**: when the cursor is inside a link, show the URL
  * - **Paste**: if the selection is non-empty and clipboard text is a single
  *   URL, apply it as a link mark instead of replacing text
  *
  * Use {@link isLinkPasteUrl} to test the URL regex independently of paste.
  */
-import {type Command, Menu} from "@arrisa/command"
+import {Command, Menu, applyLink, removeLinks} from "@arrisa/command"
 import {ChangeSet} from "@arrisa/doc"
-import {Arrisa, Dialog, KeyBinding, Tooltip} from "@arrisa/editor"
+import {Arrisa, KeyBinding, Tooltip} from "@arrisa/editor"
 import {phrases} from "@arrisa/phrases"
 import {EditorState, Transaction} from "@arrisa/state"
 import {Link, sanitizeLinkHref, isSafeLinkHref} from "@arrisa/types"
+import {cr} from "./dom"
+
+/** Request passed to a host {@link LinkPrompt}. `apply` runs {@link applyLink}. */
+export interface LinkPromptRequest {
+    editor: Arrisa
+    from: number
+    to: number
+    href?: string
+    apply: (href: string) => void
+    cancel: () => void
+}
+
+/** Host callback that presents add-link UI for {@link LinkPromptRequest}. */
+export type LinkPrompt = (req: LinkPromptRequest) => void
+
+export interface LinkConfig {
+    /** Default `"floating"`. `false` = no prompt (remove-only). Function = host UI. */
+    prompt?: "floating" | false | LinkPrompt
+}
+
+type ResolvedPrompt = NonNullable<LinkConfig["prompt"]>
+
+/** Last provided prompt wins; default `"floating"`. */
+let linkPrompt = EditorState.Facet.define<ResolvedPrompt, ResolvedPrompt>({
+    combine: (values) => (values.length ? values[values.length - 1]! : "floating"),
+})
+
+type LinkPromptState = {from: number; to: number; href?: string} | null
+
+let setLinkPrompt = Transaction.Effect.define<LinkPromptState>()
+
+function closeLinkPrompt(editor: Arrisa) {
+    if (!editor.state.field(linkPromptField, false)) return
+    editor.dispatch({effects: setLinkPrompt.of(null)})
+    editor.focus()
+}
+
+function applyPromptHref(editor: Arrisa, href: string) {
+    Command.dispatch(editor, Command.bind(applyLink, href))
+    closeLinkPrompt(editor)
+}
+
+function createLinkPromptView(editor: Arrisa): Tooltip.View {
+    let open = editor.state.field(linkPromptField)
+    let input = cr("input", {
+        type: "text",
+        name: "url",
+        "aria-label": phrases.get(editor.state, "link_target"),
+        value: open?.href ?? "",
+    }) as HTMLInputElement
+    let form = cr(
+        "form",
+        {
+            class: "arrisa-link-prompt",
+            onsubmit: (event: Event) => {
+                event.preventDefault()
+                applyPromptHref(editor, input.value)
+            },
+            onkeydown: (event: KeyboardEvent) => {
+                if (event.key != "Escape") return
+                event.preventDefault()
+                closeLinkPrompt(editor)
+            },
+        },
+        input,
+        cr("button", {type: "submit"}, phrases.get(editor.state, "create_link")),
+    ) as HTMLFormElement
+    return {
+        dom: form,
+        connect() {
+            input.focus()
+            input.select()
+        },
+    }
+}
+
+let linkPromptTheme = Arrisa.styles({
+    ".arrisa-link-prompt": {
+        display: "flex",
+        gap: "4px",
+        padding: "2px 4px",
+        fontSize: "90%",
+        "& input": {
+            minWidth: "12em",
+        },
+    },
+})
+
+let linkPromptField = EditorState.Field.define<LinkPromptState>({
+    create: () => null,
+    update(value, tr) {
+        for (let e of tr.effects) if (e.is(setLinkPrompt)) return e.value
+        if (!value || !tr.docChanged) return value
+        let from = tr.changes.mapPos(value.from, 1)
+        let to = tr.changes.mapPos(value.to, -1)
+        if (from >= to) return null
+        return {from, to, href: value.href}
+    },
+    provide: (f) => [
+        Tooltip.show.from(f, (open) => {
+            if (!open) return null
+            return {pos: open.from, end: open.to, create: createLinkPromptView}
+        }),
+        EditorState.prec.high(
+            KeyBinding.of({
+                key: "Escape",
+                run: (editor) => {
+                    if (!editor.state.field(linkPromptField, false)) return false
+                    closeLinkPrompt(editor as unknown as Arrisa)
+                    return true
+                },
+            }),
+        ),
+        linkPromptTheme,
+    ],
+})
 
 /** Remove existing links in the selection, or prompt for a new URL. */
 let toggleLink: Command = (target) => {
     let editor = target as unknown as Arrisa
-    let open = Dialog.get(editor, "arrisa-link-dialog")
-    if (open) {
-        if (open.dom.contains(editor.contentDOM.ownerDocument.activeElement)) editor.focus()
-        Dialog.close(editor, "arrisa-link-dialog")
+    if (editor.state.field(linkPromptField, false)) {
+        closeLinkPrompt(editor)
         return true
     }
-    let {selection, doc} = editor.state
+    let {selection} = editor.state
     if (selection.empty) return false
-    let remove: ChangeSet.Spec[] = []
-    for (let {from, to} of selection.ranges)
-        doc.iterate(from, to, (node, pos) => {
-            let has = Link.isInSet(node.marks)
-            if (has) remove.push({from: pos, to: pos + node.length, remove: has})
-        })
-    if (remove.length) {
-        editor.dispatch({changes: remove, userEvent: "mark.remove"})
-    } else {
-        Dialog.show(editor, {
-            label: phrases.get(editor.state, "link_target"),
-            input: {type: "text", name: "url"},
-            submitLabel: phrases.get(editor.state, "create_link"),
-            class: "arrisa-link-dialog",
-            focus: true,
-        }).result.then((form) => {
-            editor.focus()
-            let url = form && (form.elements.namedItem("url") as HTMLInputElement)?.value
-            let safe = url ? sanitizeLinkHref(url) : null
-            if (safe)
-                editor.dispatch({
-                    changes: selection.ranges.map((r) => ({from: r.from, to: r.to, add: Link.of(safe)})),
-                    userEvent: "mark.add",
-                })
-        })
+    if (Command.dispatch(editor, removeLinks)) return true
+    let prompt = editor.state.facet(linkPrompt)
+    if (prompt === false) return false
+    let from = selection.from,
+        to = selection.to
+    const apply = (href: string) => applyPromptHref(editor, href)
+    const cancel = () => closeLinkPrompt(editor)
+    if (typeof prompt == "function") {
+        prompt({editor, from, to, apply, cancel})
+        return true
     }
+    editor.dispatch({effects: setLinkPrompt.of({from, to})})
     return true
 }
 
@@ -66,9 +166,9 @@ function computeLinkTooltip(state: EditorState): Tooltip | null {
     let start = head.pos - before!.length,
         end = head.pos,
         siblings = head.parent.node.content
-    for (let index = head.index - 1; index > 0 && link.isInSet(siblings[index - 1].marks);)
+    for (let index = head.index - 1; index > 0 && link.isInSet(siblings[index - 1].marks); )
         start -= siblings[--index].length
-    for (let index = head.index; index < siblings.length && link.isInSet(siblings[index].marks);)
+    for (let index = head.index; index < siblings.length && link.isInSet(siblings[index].marks); )
         end += siblings[index++].length
     return {
         pos: start,
@@ -125,8 +225,16 @@ let linkTooltipTheme = Arrisa.styles({
 })
 
 /** Link mark with menu, Mod-k, cursor tooltip, and paste-as-link. */
-export function link(): EditorState.Extension {
-    return [EditorState.schemaElement.of(Link), link.button, link.keyBinding, link.tooltip, link.pasteOver]
+export function link(config: LinkConfig = {}): EditorState.Extension {
+    return [
+        EditorState.schemaElement.of(Link),
+        link.button,
+        link.keyBinding,
+        link.tooltip,
+        link.pasteOver,
+        linkPrompt.of(config.prompt ?? "floating"),
+        linkPromptField,
+    ]
 }
 
 export namespace link {
