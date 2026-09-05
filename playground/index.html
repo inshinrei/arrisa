@@ -39,13 +39,14 @@
       <section id="panel-chat" class="pg-panel" role="tabpanel" hidden>
         <h2>Messenger mode</h2>
         <p class="pg-hint">
-          <code>messengerCompose()</code> — formats, markdown type/paste, auto-entities on send,
-          <code>@alice</code>/<code>@bob</code> → mention. Select text for the toolbar.
-          Send dumps HTML + entity JSON (with auto-detect).
+          <code>composeField()</code> — lists, quote, code block, clear formatting, floating toolbar;
+          markdown <code>**</code>/<code>__</code>/<code>~~</code>/<code>`</code>; send dumps
+          FormattedText.
+          <code>messengerCompose()</code> is the inline/spoiler preset (not mounted).
         </p>
         <div id="editor-chat" class="pg-editor pg-editor-chat"></div>
         <div class="pg-actions">
-          <button type="button" id="btn-send">Send (HTML + entities)</button>
+          <button type="button" id="btn-send">Send (FormattedText)</button>
           <button type="button" id="btn-clear-chat">Clear</button>
         </div>
         <pre id="chat-out" class="pg-out" aria-live="polite"></pre>

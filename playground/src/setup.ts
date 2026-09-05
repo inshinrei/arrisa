@@ -61,16 +61,16 @@ export function docExtensions(): EditorState.Extension {
     ]
 }
 
-/**
- * Messenger mode via `@arrisa/message` compose preset.
- * Marks + floating toolbar + markdown shortcuts + history.
- */
 /** Demo username → id map for mention resolve on `@name `. */
 let DEMO_USERS: Record<string, string> = {
     alice: "user-alice",
     bob: "user-bob",
 }
 
+/**
+ * Inline/spoiler messenger preset (`messengerCompose`) — kept for inspect/comparison;
+ * the Messenger tab mounts {@link composeExtensions} instead.
+ */
 export function chatExtensions(): EditorState.Extension {
     return [
         messengerCompose({
@@ -91,7 +91,7 @@ export function chatExtensions(): EditorState.Extension {
     ]
 }
 
-/** Block compose field (`composeField`). Chat tab still uses {@link chatExtensions}. */
+/** Block compose field (`composeField`) — lists, quote, code block, floating toolbar. */
 export function composeExtensions(): EditorState.Extension {
     return [
         composeField({
@@ -118,6 +118,6 @@ export function createChatEditor(parent: HTMLElement): Arrisa {
     return Arrisa.create({
         parent,
         doc: "",
-        config: chatExtensions(),
+        config: composeExtensions(),
     })
 }

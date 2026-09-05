@@ -88,7 +88,7 @@ document.getElementById("btn-send")!.addEventListener("click", () => {
     let time = new Date().toLocaleTimeString()
     let line = [
         `[${time}] HTML: ${html || "(empty)"}`,
-        `entities: ${JSON.stringify(formatted, null, 2)}`,
+        `FormattedText: ${JSON.stringify(formatted, null, 2)}`,
     ].join("\n")
     chatOut.textContent = (chatOut.textContent ? chatOut.textContent + "\n\n" : "") + line
     console.log("chat send", {html, formatted})
