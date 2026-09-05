@@ -70,6 +70,9 @@ From the repo root:
 | `pnpm typecheck` | `tsc -b` project references |
 | `pnpm clean` | Remove package `dist/` dirs |
 | `pnpm playground` | Start the playground Vite app |
+| `pnpm release:prepare` | Test, typecheck, build, then version:sync |
+| `pnpm release:publish` | Publish public `packages/*` to npm (`-- --dry-run` supported) |
+| `pnpm release` | `release:prepare` then `release:publish` |
 
 Per package (from `packages/<name>` or via filter):
 

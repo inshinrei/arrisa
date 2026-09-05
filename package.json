@@ -12,7 +12,9 @@
     "test:scripts": "vitest run --config scripts/vitest.config.ts",
     "version:sync": "tsx scripts/version.ts sync",
     "version:bump": "tsx scripts/version.ts bump",
-    "release:prepare": "pnpm test && pnpm typecheck && pnpm build && pnpm version:sync"
+    "release:prepare": "pnpm test && pnpm typecheck && pnpm build && pnpm version:sync",
+    "release:publish": "tsx scripts/publish.ts",
+    "release": "pnpm release:prepare && pnpm release:publish"
   },
   "author": "inshinrei",
   "license": "MIT",

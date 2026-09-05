@@ -119,10 +119,13 @@ Published `packages/*` share one lockstep version with the repo root `package.js
 pnpm version:sync                    # copy root version onto published packages
 pnpm version:bump patch|minor|major  # standard semver on root, then sync
 pnpm release:prepare                 # test, typecheck, build, then version:sync
-pnpm test:scripts                    # version-script unit tests
+pnpm release:publish                 # publish every public package under packages/*
+pnpm release                         # prepare, then publish
+pnpm release:publish -- --dry-run    # extra flags are passed to pnpm publish
+pnpm test:scripts                    # version/publish-script unit tests
 ```
 
-`release:prepare` does not publish. Bumps use standard semver (`0.1.0` + patch → `0.1.1`, + minor → `0.2.0`, + major → `1.0.0`).
+`release:prepare` does not publish. `release:publish` runs `pnpm -r --filter './packages/*' publish` (skips the private playground; skips versions already on the registry). Extra flags after `--` go to `pnpm publish`. Bumps use standard semver (`0.1.0` + patch → `0.1.1`, + minor → `0.2.0`, + major → `1.0.0`).
 
 ## License
 
