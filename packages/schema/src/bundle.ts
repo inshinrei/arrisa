@@ -8,11 +8,13 @@
  * |--------|-------------|
  * | {@link basicSchema} | Document editor: doc root, paragraph/heading, basic marks |
  * | {@link inlineSchema} | Single-line / rich field: inline doc, marks, image |
- * | {@link messengerSchema} | Chat compose: inline doc + messenger format marks |
+ * | {@link composeSchema} | Block chat field: doc, lists, quote, code, compose marks |
+ * | {@link messengerSchema} | Chat compose: inline doc + messenger format marks (spoiler) |
  * | {@link fullSchema} | Full rich text: blocks, lists, marks, media, resize |
  *
  * Mark bundles:
  * - {@link basicMarks} — strong, emphasis, link
+ * - {@link composeMarks} — strong, em, underline, strike, code, link, clear-formatting
  * - {@link messengerMarks} — spoiler, strong, em, underline, strike, code, link
  * - {@link inlineMarks} — basic + code, underline, strike, super/sub, colors
  */
@@ -30,6 +32,7 @@ import {
     inlineDoc,
     paragraph,
 } from "./block"
+import {clearFormattingButton} from "./clear-formatting"
 import {backgroundColor, color} from "./color"
 import {figure, image, imageResizing} from "./image"
 import {link} from "./link"
@@ -44,6 +47,17 @@ export function lineBreak(): EditorState.Extension {
 /** Minimal inline marks: strong, emphasis, and link. */
 export function basicMarks(): EditorState.Extension {
     return [strong(), emphasis(), link()]
+}
+
+/**
+ * Compose-field marks: bold, italic, underline, strikethrough, monospace
+ * (code), and link, plus {@link clearFormattingButton}. No spoiler.
+ *
+ * `config.link` is reserved for {@link link} options; until that factory
+ * accepts config, the field is ignored.
+ */
+export function composeMarks(config?: {link?: ComposeSchemaConfig["link"]}): EditorState.Extension {
+    return [strong(), emphasis(), underline(), strikethrough(), code(), link(), clearFormattingButton]
 }
 
 /**
@@ -96,15 +110,63 @@ export interface MessengerSchemaConfig {
      * - custom `{isolating: …}` for {@link markExclusivity}
      */
     exclusivity?: "none" | "code-strike" | {isolating: readonly import("@arrisa/doc").Mark.Type[]}
+    /**
+     * When true, use a block {@link Doc} with paragraphs and fenced code blocks
+     * (`CodeBlock` + language mark, menu, `` ```lang `` input rule, theme).
+     * Enables FormattedText `pre` import/export and markdown fence paste.
+     * Default false keeps the single-stream {@link InlineDoc}.
+     */
+    codeBlocks?: boolean
 }
 
 /**
- * Messenger chat compose: {@link InlineDoc}, messenger format marks, line breaks.
- * Does not include headings, lists, colors, or media — use {@link fullSchema}
- * for a document editor.
+ * Messenger chat compose: format marks + line breaks.
+ * - Default: {@link InlineDoc} (single inline stream).
+ * - {@link MessengerSchemaConfig.codeBlocks}: block {@link Doc}, paragraphs,
+ *   and {@link codeBlock} chrome (no headings/lists/media — use {@link fullSchema}).
  */
 export function messengerSchema(config: MessengerSchemaConfig = {}): EditorState.Extension {
-    let ext: EditorState.Extension[] = [inlineDoc(), messengerMarks(), lineBreak()]
+    let root: EditorState.Extension = config.codeBlocks
+        ? [blockDoc(), paragraph(), codeBlock()]
+        : inlineDoc()
+    let ext: EditorState.Extension[] = [root, messengerMarks(), lineBreak()]
+    let excl = config.exclusivity ?? "none"
+    if (excl === "code-strike") {
+        ext.push(markExclusivity({isolating: [Code, Strikethrough]}))
+    } else if (excl !== "none" && typeof excl === "object") {
+        ext.push(markExclusivity(excl))
+    }
+    return ext
+}
+
+export interface ComposeSchemaConfig {
+    /**
+     * Mark exclusivity policy. Same values as {@link MessengerSchemaConfig.exclusivity}.
+     */
+    exclusivity?: MessengerSchemaConfig["exclusivity"]
+    /**
+     * Options forwarded to {@link link} when that factory accepts config.
+     * Until then, this field is ignored.
+     */
+    link?: {}
+}
+
+/**
+ * Block chat compose: {@link Doc} root, paragraphs, {@link composeMarks},
+ * lists, quotes, and fenced code blocks. No spoiler, headings, media, or
+ * alignment. {@link messengerSchema} remains the inline/spoiler path.
+ */
+export function composeSchema(config: ComposeSchemaConfig = {}): EditorState.Extension {
+    let ext: EditorState.Extension[] = [
+        blockDoc(),
+        paragraph(),
+        composeMarks({link: config.link}),
+        lineBreak(),
+        bulletList(),
+        orderedList(),
+        blockquote(),
+        codeBlock(),
+    ]
     let excl = config.exclusivity ?? "none"
     if (excl === "code-strike") {
         ext.push(markExclusivity({isolating: [Code, Strikethrough]}))

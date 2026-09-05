@@ -71,7 +71,7 @@ let config = [
 
 | Concept | Role |
 |---------|------|
-| **Presets** | `basicSchema`, `fullSchema`, `inlineSchema`, `messengerSchema` assemble extensions for common hosts |
+| **Presets** | `basicSchema`, `fullSchema`, `inlineSchema`, `composeSchema`, `messengerSchema` assemble extensions for common hosts |
 | **Factories** | `paragraph()`, `strong()`, `image()`, … each returns an `EditorState.Extension` (or array) |
 | **Namespaces** | Merged namespaces expose pieces for re-ranking/omission: `paragraph.button`, `link.tooltip`, `image.dropHandler`, … |
 | **Types vs chrome** | Schema elements from `@arrisa/types`; this package adds menu, keys, input rules, dialogs, themes |
@@ -82,19 +82,21 @@ let config = [
 |--------|-------------|
 | `basicSchema()` | Block `Doc`, paragraphs, headings, line breaks, strong/em/link |
 | `inlineSchema()` | `InlineDoc`, basic marks, inline images, line breaks |
-| `messengerSchema(config?)` | Chat-style: `InlineDoc` + messenger marks; optional mark exclusivity |
+| `composeSchema(config?)` | Block chat field: `Doc`, paragraphs, lists, quotes, code blocks, compose marks (no spoiler/headings/media) |
+| `messengerSchema(config?)` | Inline/spoiler chat: `InlineDoc` + marks (default); `codeBlocks: true` → block `Doc` + `CodeBlock` |
 | `fullSchema()` | Blocks, lists, quotes, HR, full inline marks, image/figure, image resize |
 
 Mark bundles (usable alone or inside presets):
 
 - `basicMarks()` — strong, emphasis, link
+- `composeMarks()` — strong, em, underline, strike, code, link, clear-formatting button (no spoiler)
 - `messengerMarks()` — spoiler, strong, em, underline, strike, code, link
 - `inlineMarks()` — basic + code, underline, strike, spoiler, super/sub, text/background color
 
 ### Input rules (selection)
 
 - Headings: `# ` … `###### `
-- Code block: `` ``` ``
+- Code block: `` ``` `` or `` ```lang `` then space (language → `CodeBlockLanguage`)
 - Blockquote: `> `
 - Horizontal rule: `---` on an empty textblock
 - Bullet list: optional space + `- `
@@ -133,7 +135,7 @@ import {
 ```
 
 - `blockDoc()` / `inlineDoc()` — register `Doc` or `InlineDoc`
-- `paragraph()`, `heading()`, `codeBlock()` — textblocks + chrome
+- `paragraph()`, `heading()`, `codeBlock()` — textblocks + chrome (`codeBlock` registers `CodeBlock` + `CodeBlockLanguage`, fence input rule, theme)
 - `alignment()`, `direction()` — textblock marks + menu submenus
 - `blockquote()`, `horizontalRule()` — structure + input rules
 - `lineBreak()` — hard break leaf (`br`)
@@ -161,8 +163,10 @@ import {
     superscript,
     subscript,
     basicMarks,
+    composeMarks,
     messengerMarks,
     inlineMarks,
+    clearFormattingButton,
 } from "@arrisa/schema"
 ```
 
@@ -230,14 +234,23 @@ import {
     basicSchema,
     fullSchema,
     inlineSchema,
+    composeSchema,
     messengerSchema,
+    type ComposeSchemaConfig,
     type MessengerSchemaConfig,
 } from "@arrisa/schema"
 
-messengerSchema({
+composeSchema({
     exclusivity: "none", // | "code-strike" | {isolating: Mark.Type[]}
 })
+
+messengerSchema({
+    exclusivity: "none", // | "code-strike" | {isolating: Mark.Type[]}
+    codeBlocks: false, // true → Doc + paragraphs + CodeBlock (fence rule + language)
+})
 ```
+
+`messengerSchema` remains the inline/spoiler path. Use `composeSchema` for a block chat field (lists, quotes, fenced code, no spoiler).
 
 For a full chat field (markdown, floating menu, mentions), prefer `@arrisa/message`’s `messengerCompose`, which builds on `messengerSchema`.
 

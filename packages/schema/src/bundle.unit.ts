@@ -1,10 +1,12 @@
 import {describe, expect, it} from "vitest"
+import {Menu} from "@arrisa/command"
 import {
     Alignment,
     Blockquote,
     BulletList,
     Code,
     CodeBlock,
+    CodeBlockLanguage,
     Color,
     Direction,
     Doc,
@@ -26,9 +28,12 @@ import {
     Superscript,
     Underline,
 } from "@arrisa/types"
+import {blockDoc, paragraph} from "./block"
 import {
     basicMarks,
     basicSchema,
+    composeMarks,
+    composeSchema,
     fullSchema,
     inlineMarks,
     inlineSchema,
@@ -36,6 +41,7 @@ import {
     messengerMarks,
     messengerSchema,
 } from "./bundle"
+import {clearFormattingButton} from "./clear-formatting"
 import {makeState} from "./test-helpers"
 
 describe("basicSchema", () => {
@@ -78,12 +84,65 @@ describe("messengerSchema", () => {
         // document-only surfaces stay out of the messenger preset
         expect(state.schema.has(Heading)).toBe(false)
         expect(state.schema.has(Image)).toBe(false)
+        expect(state.schema.has(CodeBlock)).toBe(false)
+    })
+
+    it("codeBlocks: true uses Doc with paragraphs and CodeBlock", () => {
+        let state = makeState(messengerSchema({codeBlocks: true}))
+        expect(state.schema.has(Doc)).toBe(true)
+        expect(state.schema.has(InlineDoc)).toBe(false)
+        expect(state.schema.has(Paragraph)).toBe(true)
+        expect(state.schema.has(CodeBlock)).toBe(true)
+        expect(state.schema.has(CodeBlockLanguage)).toBe(true)
+        expect(state.schema.has(Code)).toBe(true)
+        expect(state.schema.has(Heading)).toBe(false)
+        expect(state.schema.has(Image)).toBe(false)
     })
 
     it("messengerMarks registers spoiler and code among other chat marks", () => {
         let state = makeState([messengerMarks(), inlineSchema()])
         expect(state.schema.has(Spoiler)).toBe(true)
         expect(state.schema.has(Code)).toBe(true)
+    })
+})
+
+describe("composeSchema", () => {
+    it("registers the compose type set and omits document-only types", () => {
+        let state = makeState(composeSchema())
+        expect(state.schema.has(Doc)).toBe(true)
+        expect(state.schema.has(Paragraph)).toBe(true)
+        expect(state.schema.has(Strong)).toBe(true)
+        expect(state.schema.has(Emphasis)).toBe(true)
+        expect(state.schema.has(Underline)).toBe(true)
+        expect(state.schema.has(Strikethrough)).toBe(true)
+        expect(state.schema.has(Code)).toBe(true)
+        expect(state.schema.has(Link)).toBe(true)
+        expect(state.schema.has(BulletList)).toBe(true)
+        expect(state.schema.has(OrderedList)).toBe(true)
+        expect(state.schema.has(Blockquote)).toBe(true)
+        expect(state.schema.has(CodeBlock)).toBe(true)
+        expect(state.schema.has(LineBreak)).toBe(true)
+        expect(state.schema.has(InlineDoc)).toBe(false)
+        expect(state.schema.has(Spoiler)).toBe(false)
+        expect(state.schema.has(Heading)).toBe(false)
+        expect(state.schema.has(Image)).toBe(false)
+        expect(state.schema.has(HorizontalRule)).toBe(false)
+        expect(state.schema.has(Alignment)).toBe(false)
+    })
+})
+
+describe("composeMarks", () => {
+    it("does not register spoiler", () => {
+        let state = makeState([blockDoc(), paragraph(), composeMarks()])
+        expect(state.schema.has(Spoiler)).toBe(false)
+        expect(state.schema.has(Code)).toBe(true)
+    })
+})
+
+describe("clearFormattingButton", () => {
+    it("lives in the inline group after the link button", () => {
+        expect(clearFormattingButton.parent).toBe(Menu.Group.inline)
+        expect(clearFormattingButton.rank).toBe(90)
     })
 })
 

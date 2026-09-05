@@ -6,7 +6,8 @@
  * small UI surfaces (dialogs, color picker, image resize).
  *
  * **Usage**
- * - Prefer a preset: {@link basicSchema}, {@link fullSchema}, or {@link inlineSchema}.
+ * - Prefer a preset: {@link basicSchema}, {@link fullSchema}, {@link inlineSchema},
+ *   {@link composeSchema}, or {@link messengerSchema}.
  * - Or compose factories: `paragraph()`, `strong()`, `image()`, `bulletList()`, …
  *
  * Each factory returns an extension (or array of extensions). Merged namespaces
@@ -31,14 +32,18 @@ export {bulletList, orderedList} from "./list"
 export {
     lineBreak,
     basicMarks,
+    composeMarks,
     messengerMarks,
     inlineMarks,
     basicSchema,
     inlineSchema,
+    composeSchema,
     messengerSchema,
     fullSchema,
+    type ComposeSchemaConfig,
     type MessengerSchemaConfig,
 } from "./bundle"
+export {clearFormattingButton} from "./clear-formatting"
 export {strong, emphasis, code, underline, strikethrough, spoiler, superscript, subscript} from "./mark"
 export {color, backgroundColor, ColorPicker} from "./color"
 export {link, isLinkPasteUrl} from "./link"

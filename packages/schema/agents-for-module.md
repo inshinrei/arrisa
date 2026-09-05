@@ -7,7 +7,8 @@
 ## When to use
 
 - You need a **document or inline editor** with standard blocks/marks and UI chrome (menus, keys, input rules).
-- Prefer a **preset** (`basicSchema`, `fullSchema`, `inlineSchema`, `messengerSchema`) unless the host needs a custom subset of factories.
+- Prefer a **preset** (`basicSchema`, `fullSchema`, `inlineSchema`, `composeSchema`, `messengerSchema`) unless the host needs a custom subset of factories.
+- For **block chat fields**, use `composeSchema` (lists/quotes/code, no spoiler). `messengerSchema` remains the inline/spoiler path.
 - For **chat compose** (markdown shortcuts, floating toolbar, entity I/O), use `@arrisa/message`’s `messengerCompose` — it builds on this package’s messenger marks.
 
 ## Public API patterns
@@ -32,8 +33,9 @@ let config = [/* blockDoc(), paragraph(), strong(), … */]
 
 | Export group | Examples |
 |--------------|----------|
-| Presets | `basicSchema`, `fullSchema`, `inlineSchema`, `messengerSchema` |
-| Mark bundles | `basicMarks`, `messengerMarks`, `inlineMarks` |
+| Presets | `basicSchema`, `fullSchema`, `inlineSchema`, `composeSchema`, `messengerSchema` |
+| Mark bundles | `basicMarks`, `composeMarks`, `messengerMarks`, `inlineMarks` |
+| Compose chrome | `clearFormattingButton` (inline group, rank 90) |
 | Blocks | `blockDoc`, `inlineDoc`, `paragraph`, `heading`, `codeBlock`, `blockquote`, `horizontalRule`, `alignment`, `direction`, `lineBreak` |
 | Lists | `bulletList`, `orderedList` (`{blockItems?: boolean}`) |
 | Marks | `strong`, `emphasis`, `code`, `underline`, `strikethrough`, `spoiler`, `superscript`, `subscript` |
@@ -46,13 +48,14 @@ Factories return `EditorState.Extension` values. Pass them in `EditorState.creat
 
 1. **Not `@arrisa/doc`’s Schema class** — this package wires *types from `@arrisa/types`* into editor extensions. Do not invent a parallel schema API here.
 2. **Namespaces are partial install hooks** — e.g. `strong()` includes type + button + key; hosts can install `EditorState.schemaElement.of(Strong)` + only `strong.button` if needed.
-3. **`messengerSchema` is lean** — inline doc + messenger marks only. No headings, lists, or colors. Use `fullSchema` for documents; use `@arrisa/message` for chat I/O.
-4. **`messengerSchema({exclusivity})`** — `"none"` (default free stacking), `"code-strike"` (isolates Code + Strikethrough), or custom `{isolating: Mark.Type[]}`.
+3. **`messengerSchema` is lean** — default inline doc + messenger marks only (includes spoiler). No headings, lists, or colors. Use `composeSchema` for block chat fields (lists/quotes/code, no spoiler); `fullSchema` for documents; `@arrisa/message` for chat I/O.
+4. **`messengerSchema({exclusivity, codeBlocks})` / `composeSchema({exclusivity})`** — `"none"` (default free stacking), `"code-strike"` (isolates Code + Strikethrough), or custom `{isolating: Mark.Type[]}`. `codeBlocks: true` (messenger only) switches to block `Doc` + paragraphs + fenced code blocks.
 5. **Lists** — both `bulletList` and `orderedList` register a list-item type; default is block items. Use `{blockItems: false}` for inline-only items.
 6. **Images** — drop/file upload only runs when `imageUploader` facet is provided. Src values go through `sanitizeImageSrc`.
 7. **Links** — paste-as-link requires non-empty selection + `isLinkPasteUrl` (absolute safe href). Tooltip never turns unsafe legacy hrefs into clickable script URLs.
 8. **Colors** — menu applies only `isSafeCssColor` values; empty string clears the mark.
 9. **Prefer `let` in examples** — `const` only for arrow functions or true module-level constants (Arrisa monorepo style).
+10. **`codeBlock()`** — registers `CodeBlock` + `CodeBlockLanguage`, menu/key, theme, and a fence input rule: type `` ``` `` or `` ```lang `` then a **space** at the start of a textblock.
 
 ## What not to do
 
