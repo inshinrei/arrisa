@@ -111,6 +111,19 @@ pnpm playground     # local demo app
 
 Each package ships a human `README.md` and, after build, `dist/AGENTS.md` (consumer-oriented guidance for coding agents). Repo-level contributor guidance lives in root [`AGENTS.md`](AGENTS.md) and is **not** published.
 
+## Release
+
+Published `packages/*` share one lockstep version with the repo root `package.json`. Private packages (the playground) are skipped.
+
+```bash
+pnpm version:sync                    # copy root version onto published packages
+pnpm version:bump patch|minor|major  # standard semver on root, then sync
+pnpm release:prepare                 # test, typecheck, build, then version:sync
+pnpm test:scripts                    # version-script unit tests
+```
+
+`release:prepare` does not publish. Bumps use standard semver (`0.1.0` + patch → `0.1.1`, + minor → `0.2.0`, + major → `1.0.0`).
+
 ## License
 
 MIT © [inshinrei](https://github.com/inshinrei)

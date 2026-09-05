@@ -8,7 +8,11 @@
     "test": "pnpm -r --filter './packages/*' run test",
     "typecheck": "tsc -b",
     "clean": "pnpm -r --filter './packages/*' exec rm -rf dist",
-    "playground": "pnpm --filter @arrisa/playground dev"
+    "playground": "pnpm --filter @arrisa/playground dev",
+    "test:scripts": "vitest run --config scripts/vitest.config.ts",
+    "version:sync": "tsx scripts/version.ts sync",
+    "version:bump": "tsx scripts/version.ts bump",
+    "release:prepare": "pnpm test && pnpm typecheck && pnpm build && pnpm version:sync"
   },
   "author": "inshinrei",
   "license": "MIT",
