@@ -6,6 +6,7 @@
 export {Arrisa} from "./editor"
 
 export {KeyBinding} from "./key-map"
+export {composeKeymap} from "./compose-keymap"
 
 export {Decoration, Widget, PointSet, RangeSet} from "./decoration"
 export {Panel} from "./panel"

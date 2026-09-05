@@ -50,6 +50,8 @@ editor.dispatch({
 
 `KeyBinding` installs bindings. By default, the editor includes a full default keymap (Enter, delete unit/word, arrows, page, Home/End, select-all, Mod-z/y undo/redo stubs, macOS Ctrl-b/f/p/n, …). Disable with `KeyBinding.useDefaultKeymap.of(false)`.
 
+For single-field / compose UIs, use `composeKeymap()` instead: it turns off the default map and installs a compact subset (enter/break, delete, arrows, Home/End, select-all, undo/redo) without page motion or macOS emacs-style Ctrl bindings.
+
 ### Chrome
 
 | Extension | Role |
@@ -151,6 +153,10 @@ KeyBinding.useDefaultKeymap.of(false)
 
 // Include defaults as extensions if rebuilding the map yourself
 KeyBinding.defaultKeymap.map((b) => b.extension)
+
+// Compact map for compose / single-field UIs (disables defaults)
+import {composeKeymap} from "@arrisa/editor"
+composeKeymap()
 ```
 
 `Mod` is Meta on macOS and Ctrl elsewhere. Specs support `key`, `mac`, `win`, `linux`, `char`, `run`, `shift`, `scope`, `allowDefault`.

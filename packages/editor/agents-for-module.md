@@ -64,11 +64,13 @@ floatingMenu({template: Menu.Group.inline.template(), above: true})
 ### Key bindings
 
 ```ts
-import {KeyBinding} from "@arrisa/editor"
+import {KeyBinding, composeKeymap} from "@arrisa/editor"
 import {Command, toggleStrong} from "@arrisa/command"
 
 KeyBinding.of({key: "Mod-b", run: toggleStrong})
 // KeyBinding.useDefaultKeymap.of(false) to drop defaults
+// composeKeymap() — compact subset (no page / emacs Ctrl bindings)
+composeKeymap()
 ```
 
 ### Decorations
@@ -110,7 +112,7 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 
 ## What not to do
 
-- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, decoration types, `Panel`, `menuBar`, `floatingMenu`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
+- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`, decoration types, `Panel`, `menuBar`, `floatingMenu`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
 - Do not treat schema `ignoreTags` as XSS protection.
 - Do not create an identity Trusted Types policy inside Arrisa apps for convenience — sanitize first.
 - Do not read layout in plugin `update` without `scheduleDOMRead`.
