@@ -86,7 +86,7 @@ Default schema marks/nodes use:
 - `sanitizeImageSrc` / `isSafeImageSrc` — schemes `http:`, `https:`, `blob:`;
   `data:image/*` only if you pass `{ allowDataImage: true }`
 
-Dialogs, paste-as-link, and tooltip rendering follow the same helpers.
+Link prompt (floating tooltip or host `linkPrompt`), paste-as-link, and tooltip rendering follow `sanitizeLinkHref`.
 
 ### 4. Colors
 

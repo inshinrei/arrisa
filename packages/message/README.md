@@ -106,6 +106,8 @@ composeField({
 })
 ```
 
+Default toggle **removes** existing links or opens add UI; it does **not** prefill `href` (remove-first). `cancel` dismisses the built-in floating field and focuses the editor; custom prompts still own their DOM.
+
 `messengerCompose(config?)` remains the **inline/spoiler** path:
 
 | Feature | Default |

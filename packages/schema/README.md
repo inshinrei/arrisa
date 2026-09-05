@@ -195,7 +195,7 @@ if (isLinkPasteUrl(text)) {
 }
 ```
 
-Default add-link UI is a floating tooltip form (`prompt: "floating"`), not a `Dialog` panel. `req.apply` / form submit run `applyLink` (`sanitizeLinkHref`). The read-only cursor-inside-link tooltip is unchanged.
+Default add-link UI is a floating tooltip form (`prompt: "floating"`), not a `Dialog` panel. The default toggle **removes** existing links or opens add UI; it does **not** prefill `href` (remove-first). `cancel` dismisses the built-in floating field and focuses the editor; custom prompts still own their DOM. `req.apply` / form submit run `applyLink` (`sanitizeLinkHref`). The read-only cursor-inside-link tooltip is unchanged.
 
 ### Color
 
@@ -268,7 +268,7 @@ messengerSchema({
 
 `messengerSchema` remains the inline/spoiler path. Use `composeSchema` for a block chat field (lists, quotes, fenced code, no spoiler).
 
-For a full chat field (markdown, floating menu, mentions), prefer `@arrisa/message`’s `messengerCompose`, which builds on `messengerSchema`.
+Chat field hosts should prefer `@arrisa/message`’s `composeField` (block lists/quote/code) or `messengerCompose` (inline/spoiler).
 
 ## Layering / related packages
 

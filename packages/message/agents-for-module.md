@@ -47,6 +47,8 @@ composeField({
         })
     },
 })
+// Default toggle removes existing links or opens add UI; does not prefill href.
+// cancel dismisses the built-in floating field and focuses; custom prompts own their DOM.
 
 // Inline/spoiler path:
 // messengerCompose({resolveMention: (u) => userMap[u] ?? null})
