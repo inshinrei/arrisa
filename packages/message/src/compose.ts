@@ -33,7 +33,8 @@ export interface MessengerComposeConfig extends MessengerSchemaConfig {
 
 /**
  * Full messenger compose extension set:
- * - {@link messengerSchema} (inline doc + format marks)
+ * - {@link messengerSchema} (inline doc + format marks, or block doc when
+ *   {@link MessengerComposeConfig.codeBlocks} is set)
  * - optional exclusivity (`"none"` | `"code-strike"` | custom)
  * - markdown input rules + paste parser
  * - mention / custom emoji schema elements
@@ -45,6 +46,7 @@ export interface MessengerComposeConfig extends MessengerSchemaConfig {
 export function messengerCompose(config: MessengerComposeConfig = {}): EditorState.Extension {
     let {
         exclusivity = "none",
+        codeBlocks = false,
         floating = true,
         placeholder: ph = "Message…",
         markdown = true,
@@ -53,7 +55,7 @@ export function messengerCompose(config: MessengerComposeConfig = {}): EditorSta
         resolveMention,
     } = config
 
-    let ext: EditorState.Extension[] = [messengerSchema({exclusivity})]
+    let ext: EditorState.Extension[] = [messengerSchema({exclusivity, codeBlocks})]
 
     if (hostElements) ext.push(messengerHostElements())
     if (markdown) ext.push(markdownInputRules())
