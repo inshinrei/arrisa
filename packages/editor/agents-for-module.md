@@ -53,12 +53,13 @@ Default keymap binds Mod-z/y to command stubs until handlers exist.
 ### Menus
 
 ```ts
-import {menuBar, floatingMenu} from "@arrisa/editor"
+import {menuBar, floatingMenu, embeddedMenu} from "@arrisa/editor"
 import {Menu} from "@arrisa/command"
 
 // Items come from Menu.Item extensions (schema packages register many)
 menuBar()
 floatingMenu({template: Menu.Group.inline.template(), above: true})
+embeddedMenu({parent: toolbarEl})
 ```
 
 ### Key bindings
@@ -112,11 +113,11 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 
 ## What not to do
 
-- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`, decoration types, `Panel`, `menuBar`, `floatingMenu`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
+- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`, decoration types, `Panel`, `menuBar`, `floatingMenu`, `embeddedMenu`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
 - Do not treat schema `ignoreTags` as XSS protection.
 - Do not create an identity Trusted Types policy inside Arrisa apps for convenience — sanitize first.
 - Do not read layout in plugin `update` without `scheduleDOMRead`.
-- Do not forget `menuBar`/`floatingMenu` need registered `Menu.Item` extensions to show buttons.
+- Do not forget `menuBar`/`floatingMenu`/`embeddedMenu` need registered `Menu.Item` extensions to show buttons.
 - Do not ship untrusted collab remote effects without an allowlist (see collab package + SECURITY.md).
 
 ## Related packages
@@ -136,11 +137,11 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 
 1. Creating a view? `Arrisa.create({parent, doc|state, config})`.
 2. Editing? `editor.dispatch(spec)` with pure command results when possible.
-3. Toolbar empty? Ensure schema/menu item extensions are in `config` and `menuBar()`/`floatingMenu()` is installed.
+3. Toolbar empty? Ensure schema/menu item extensions are in `config` and `menuBar()`/`floatingMenu()`/`embeddedMenu()` is installed.
 4. Undo dead? `history()` + `Command.handler` for command undo/redo.
 5. Untrusted HTML? `Arrisa.htmlSanitize` + sanitize string docs before load.
 6. Need geometry? Editor must be connected (`parent` or mount `editor.dom`).
-7. Custom UI chrome? `Panel.show` or `Tooltip.show` rather than ad-hoc absolute DOM outside the plugin lifecycle.
+7. Custom UI chrome? `Panel.show`, `Tooltip.show`, or `embeddedMenu({parent})` rather than ad-hoc absolute DOM outside the plugin lifecycle.
 
 ## Keep in sync with README
 

@@ -12,6 +12,7 @@ export {Decoration, Widget, PointSet, RangeSet} from "./decoration"
 export {Panel} from "./panel"
 export {menuBar, type MenuBarConfig} from "./menu-bar"
 export {floatingMenu, defaultFloatingWhen, type FloatingMenuConfig} from "./floating-menu"
+export {embeddedMenu, type EmbeddedMenuConfig} from "./embedded-menu"
 export {Dialog} from "./dialog"
 
 export {Tooltip} from "./tooltip"

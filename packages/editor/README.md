@@ -58,6 +58,7 @@ For single-field / compose UIs, use `composeKeymap()` instead: it turns off the 
 |-----------|------|
 | `menuBar` | Sticky top toolbar from `Menu.Item` sources |
 | `floatingMenu` | Selection toolbar (tooltip-positioned) |
+| `embeddedMenu` | Toolbar mounted into a host parent (not a Panel) |
 | `Panel` | Top/bottom panel host (used by menu bar, dialogs) |
 | `Dialog` | Modal form panels |
 | `Tooltip` | Positioned tooltips + hover sources |
@@ -201,7 +202,7 @@ Decoration.Tag.attribute(myNodeType, "class", "foo")
 ### Panels & menus
 
 ```ts
-import {Panel, menuBar, floatingMenu, defaultFloatingWhen} from "@arrisa/editor"
+import {Panel, menuBar, floatingMenu, embeddedMenu, defaultFloatingWhen} from "@arrisa/editor"
 import {Menu} from "@arrisa/command"
 
 // Sticky bar (default template: Menu.Group.top)
@@ -216,6 +217,13 @@ floatingMenu({
   above: true,
   when: defaultFloatingWhen, // non-empty selection
   hideOnBlur: true,
+})
+
+// Toolbar in a host parent (not a Panel; no bottom border in the default theme)
+embeddedMenu({
+  parent: toolbarEl,
+  // template: Menu.Group.top.template(),
+  // theme: false, // supply your own CSS
 })
 
 // Custom panel
