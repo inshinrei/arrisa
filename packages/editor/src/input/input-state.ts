@@ -21,6 +21,11 @@ export const outsidePointerChromeSelector =
 type OutsidePointerTarget = {
     closest?: (sel: string) => unknown
     parentElement?: {closest?: (sel: string) => unknown} | null
+    nodeType?: number
+}
+
+function isDomNode(entry: unknown): boolean {
+    return typeof Node != "undefined" ? entry instanceof Node : typeof (entry as OutsidePointerTarget)?.nodeType == "number"
 }
 
 /** True when a document `pointerdown` should collapse a non-empty selection. */
@@ -31,7 +36,8 @@ export function shouldCollapseOnOutsidePointer(
 ): boolean {
     if (selectionEmpty || !path || !path.length) return false
     for (let entry of path) {
-        if (entry == editorDom || editorDom.contains(entry)) return false
+        if (entry == editorDom) return false
+        if (isDomNode(entry) && editorDom.contains(entry)) return false
         let node = entry as OutsidePointerTarget
         let el = typeof node.closest == "function" ? node : node.parentElement
         if (el && typeof el.closest == "function" && el.closest(outsidePointerChromeSelector)) return false

@@ -15,7 +15,7 @@ describe("shouldCollapseOnOutsidePointer", () => {
     })
 
     it("ignores pointerdown inside the editor", () => {
-        let target = chromeTarget("x")
+        let target = {...chromeTarget("x"), nodeType: 1}
         expect(shouldCollapseOnOutsidePointer({contains: (n) => n === target}, [target], false)).toBe(false)
     })
 
@@ -36,6 +36,20 @@ describe("shouldCollapseOnOutsidePointer", () => {
     it("collapses when the path is outside the editor and chrome", () => {
         let target = {closest: () => null}
         expect(shouldCollapseOnOutsidePointer({contains: () => false}, [target], false)).toBe(true)
+    })
+
+    it("collapses when composedPath includes window (non-Node) without calling contains on it", () => {
+        let editorDom = {
+            contains(node: any) {
+                if (node == null || typeof node.nodeType != "number") {
+                    throw new TypeError("Failed to execute 'contains' on 'Node': parameter 1 is not of type 'Node'.")
+                }
+                return false
+            },
+        }
+        let outside = {closest: () => null, nodeType: 1}
+        let win = {}
+        expect(shouldCollapseOnOutsidePointer(editorDom, [outside, win], false)).toBe(true)
     })
 
     it("does not collapse when the path is missing or empty", () => {
