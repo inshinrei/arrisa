@@ -12,7 +12,7 @@ import {
     horizontalRule,
     codeBlock,
 } from "@arrisa/schema"
-import {messengerCompose} from "@arrisa/message"
+import {composeField, messengerCompose} from "@arrisa/message"
 import {phrases} from "@arrisa/phrases"
 import type {EditorState} from "@arrisa/state"
 
@@ -75,6 +75,7 @@ export function chatExtensions(): EditorState.Extension {
     return [
         messengerCompose({
             exclusivity: "none",
+            codeBlocks: true,
             floating: {
                 template: Menu.Group.inline.template(),
                 above: true,
@@ -91,9 +92,21 @@ export function chatExtensions(): EditorState.Extension {
     ]
 }
 
+/** Block compose field (`composeField`). Chat tab still uses {@link chatExtensions}. */
+export function composeExtensions(): EditorState.Extension {
+    return [
+        composeField({
+            floating: {above: true, class: "pg-chat-formatter"},
+        }),
+        historyChrome(),
+        Arrisa.label("Compose field"),
+    ]
+}
+
 export let DOC_SAMPLE = `<h2>Document playground</h2>
-<p>Try <strong>bold</strong>, <em>italic</em>, lists, headings, and undo/redo.</p>
-<p>Second paragraph for multi-block editing.</p>`
+<p>Try <strong>bold</strong>, <em>italic</em>, lists, headings, code blocks, and undo/redo.</p>
+<pre><code class="language-ts">let editor = Arrisa.create({parent, config})</code></pre>
+<p>Second paragraph for multi-block editing. Type <code>\`\`\`ts </code> (backticks + lang + space) for a fenced code block.</p>`
 
 export function createDocEditor(parent: HTMLElement): Arrisa {
     return Arrisa.create({

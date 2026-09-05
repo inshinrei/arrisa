@@ -5,8 +5,9 @@
  *
  * **Compose**
  * ```ts
- * import {messengerCompose, docToFormattedText} from "@arrisa/message"
- * Arrisa.create({ config: [messengerCompose({resolveMention: (u) => ids[u]}), history()], parent })
+ * import {composeField, messengerCompose, docToFormattedText} from "@arrisa/message"
+ * Arrisa.create({ config: [composeField(), history()], parent })
+ * // inline/spoiler path: messengerCompose({resolveMention: (u) => ids[u]})
  * // on send:
  * let payload = docToFormattedText(editor.state.doc, {autoDetect: true})
  * ```
@@ -89,3 +90,5 @@ export {
     messengerSchema,
     markExclusivity,
 } from "./compose"
+
+export {composeField, type ComposeFieldConfig} from "./compose-field"

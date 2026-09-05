@@ -1,8 +1,8 @@
 # @arrisa/message
 
-**Messenger compose for Arrisa** — chat-style editor preset, markdown shortcuts/paste, host mentions & custom emoji, and **FormattedText** (plain text + UTF-16 offset entities) I/O.
+**Messenger compose for Arrisa** — chat-style editor presets (`composeField` block field, `messengerCompose` inline/spoiler), markdown shortcuts/paste, host mentions & custom emoji, and **FormattedText** (plain text + UTF-16 offset entities) I/O.
 
-Built on `@arrisa/schema` messenger marks. Layering: schema chrome → this package (wire format + compose).
+Built on `@arrisa/schema` compose/messenger marks. Layering: schema chrome → this package (wire format + compose).
 
 ## Install
 
@@ -11,9 +11,24 @@ pnpm add @arrisa/message @arrisa/editor @arrisa/schema @arrisa/state @arrisa/doc
 # or npm / yarn
 ```
 
-Add `@arrisa/history` if you need undo/redo (not included in `messengerCompose`).
+Add `@arrisa/history` if you need undo/redo (not included in `composeField` / `messengerCompose`).
 
 ## Quick start
+
+Block chat field (lists, quotes, fenced code):
+
+```ts
+import {Arrisa} from "@arrisa/editor"
+import {history} from "@arrisa/history"
+import {composeField, docToFormattedText, formattedTextToDoc} from "@arrisa/message"
+
+let editor = Arrisa.create({
+    parent: document.getElementById("compose")!,
+    config: [composeField(), history()],
+})
+```
+
+Inline/spoiler messenger field:
 
 ```ts
 import {Arrisa} from "@arrisa/editor"
@@ -29,8 +44,11 @@ let editor = Arrisa.create({
         history(),
     ],
 })
+```
 
-// On send — plain text + entities (UTF-16 offsets)
+On send — plain text + entities (UTF-16 offsets):
+
+```ts
 let payload = docToFormattedText(editor.state.doc, {autoDetect: true})
 // { text: string, entities?: MessageEntity[] }
 
@@ -54,13 +72,46 @@ type FormattedText = {
 - **Offsets and lengths are UTF-16 code units** (JavaScript string indices).
 - Entities include flag marks (`bold`, `italic`, …), `text_url`, `pre`, `blockquote`, `unordered_list`, `ordered_list`, `mention_name`, `custom_emoji`, and auto types (`url`, `email`, `hashtag`, …).
 
-### Compose preset
+### Compose presets
 
-`messengerCompose(config?)` installs:
+`composeField(config?)` installs a **block** chat field (`Doc` + lists/quote/code, no spoiler):
+
+| Feature | Default |
+|---------|---------|
+| `composeSchema` (block `Doc` + compose marks) | always |
+| `composeKeymap` (default keymap off) | always |
+| Mark exclusivity (`none` / `code-strike` / custom) | `"none"` |
+| Mention + custom emoji schema elements | `hostElements: false` |
+| Markdown input rules (`**bold**`, `` `code` ``, …) | `markdown: true` |
+| Markdown plain-text paste | `markdownPaste: true` |
+| Floating selection toolbar (`Menu.Group.top`) | `floating: true` |
+| Embedded toolbar (`embeddedMenu`) | `false` |
+| Placeholder | `"Message…"` |
+| Sync `@username ` → mention | only if `resolveMention` provided |
+| Link add prompt | `linkPrompt` → `link({prompt})` (default `"floating"`) |
+
+Embedded toolbar + custom link UI:
+
+```ts
+composeField({
+    floating: false,
+    embedded: {parent: toolbarEl, theme: false, class: "host-compose-tools"},
+    linkPrompt: (ctx) => {
+        hostOpenLinkField({
+            href: ctx.href,
+            onSubmit: (url) => ctx.apply(url),
+            onCancel: ctx.cancel,
+        })
+    },
+})
+```
+
+`messengerCompose(config?)` remains the **inline/spoiler** path:
 
 | Feature | Default |
 |---------|---------|
 | `messengerSchema` (inline doc + marks) | always |
+| Fenced code blocks (`codeBlocks: true` → block `Doc` + `CodeBlock`) | `false` |
 | Mark exclusivity (`none` / `code-strike` / custom) | `"none"` |
 | Mention + custom emoji schema elements | `hostElements: true` |
 | Markdown input rules (`**bold**`, `` `code` ``, …) | `markdown: true` |
@@ -68,6 +119,8 @@ type FormattedText = {
 | Floating selection toolbar (inline group) | `floating: true` |
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
+
+With `codeBlocks: true`, the compose field uses a multi-block document (paragraphs + code blocks). Typing `` ```ts `` then space opens a fenced block; paste of markdown fences and FormattedText `pre` entities round-trip via the existing block I/O path.
 
 Does **not** include history — add `@arrisa/history` in the host.
 
@@ -89,6 +142,8 @@ Typing (input rules) and paste share messenger-style delimiters:
 
 ```ts
 import {
+    composeField,
+    type ComposeFieldConfig,
     messengerCompose,
     type MessengerComposeConfig,
     messengerMarks,
@@ -96,6 +151,17 @@ import {
     markExclusivity,
 } from "@arrisa/message"
 // Schema / command pieces are also available from @arrisa/schema and @arrisa/command.
+composeField({
+    exclusivity: "none",
+    floating: true,              // or FloatingMenuConfig | false
+    embedded: false,             // or EmbeddedMenuConfig
+    placeholder: "Message…",     // or false
+    markdown: true,
+    markdownPaste: true,
+    hostElements: false,
+    resolveMention: (u) => ids[u] ?? null,
+    linkPrompt: "floating",      // or false | (req) => { req.apply(url) }
+})
 messengerCompose({
     exclusivity: "code-strike",
     floating: true,              // or FloatingMenuConfig | false
@@ -107,7 +173,7 @@ messengerCompose({
 })
 ```
 
-`messengerMarks` / `messengerSchema` / `markExclusivity` are re-exported for hosts that only need pieces (prefer `messengerCompose` for a full field).
+`messengerMarks` / `messengerSchema` / `markExclusivity` are re-exported for hosts that only need pieces. Prefer `composeField` for a block chat field; `messengerCompose` for the inline/spoiler path.
 
 ### Entities and I/O
 
@@ -216,16 +282,16 @@ mentionResolve((name) => name == "alice" ? "user-alice" : null)
 ## Layering / related packages
 
 ```
-@arrisa/schema (messenger marks / messengerSchema)
+@arrisa/schema (composeSchema / messengerSchema)
         ↓
-@arrisa/message (compose + FormattedText + host elements)
+@arrisa/message (composeField / messengerCompose + FormattedText + host elements)
         ↓
 host chat app
 ```
 
 | Package | Relationship |
 |---------|----------------|
-| `@arrisa/schema` | Marks, `messengerSchema`, exclusivity config base |
+| `@arrisa/schema` | Marks, `composeSchema`, `messengerSchema`, exclusivity config base |
 | `@arrisa/types` | Strong, Link, Code, … mapped to entity flags |
 | `@arrisa/editor` | Input rules, clipboard parser, floating menu, placeholder |
 | `@arrisa/command` | `markExclusivity`, menu templates |

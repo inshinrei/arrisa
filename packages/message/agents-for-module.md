@@ -7,10 +7,11 @@
 ## When to use
 
 - Building a **chat / messenger compose** field (inline marks, markdown shortcuts, floating toolbar).
+- **Block chat field** (`composeField`): paragraphs, lists, quotes, fenced code — no spoiler/headings/media.
 - Converting between the editor document and a **plain text + UTF-16 entity** wire format (`FormattedText`).
 - Host features: **mentions** (`MentionName`), **custom emoji** (`CustomEmoji`), optional `@name ` resolve.
 
-For full multi-block document editors, use `@arrisa/schema` presets (`basicSchema` / `fullSchema`), not this package alone.
+For full multi-block document editors, use `@arrisa/schema` presets (`basicSchema` / `fullSchema`), not this package alone. `composeField` is the lean block-chat subset, not a document editor.
 
 ## Public API patterns
 
@@ -18,6 +19,7 @@ For full multi-block document editors, use `@arrisa/schema` presets (`basicSchem
 import {Arrisa} from "@arrisa/editor"
 import {history} from "@arrisa/history"
 import {
+    composeField,
     messengerCompose,
     docToFormattedText,
     formattedTextToDoc,
@@ -28,12 +30,13 @@ import {
 let editor = Arrisa.create({
     parent,
     config: [
-        messengerCompose({
-            resolveMention: (u) => userMap[u] ?? null,
-        }),
+        composeField(),
         history(), // not included by compose
     ],
 })
+
+// Inline/spoiler path:
+// messengerCompose({resolveMention: (u) => userMap[u] ?? null})
 
 // Send
 let payload = docToFormattedText(editor.state.doc, {autoDetect: true})
@@ -44,7 +47,7 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 
 | Area | Exports |
 |------|---------|
-| Compose | `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
+| Compose | `composeField`, `ComposeFieldConfig`, `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
 | Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/list/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
 | I/O | `docToFormattedText`, `formattedTextToDoc`, `materializeRuns`, option types |
 | Auto | `detectAutoEntities`, `mergeAutoEntities`, `AutoDetectOptions` |
@@ -56,8 +59,8 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 ## Invariants / pitfalls
 
 1. **UTF-16 offsets** — entity `offset` / `length` use JS string indices, not Unicode code points. Do not re-count with grapheme libraries without converting carefully.
-2. **`messengerCompose` does not include history** — always add `@arrisa/history` when undo is required.
-3. **Default schema is inline** (`InlineDoc` via `messengerSchema`) — not a multi-paragraph `Doc`. Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1).
+2. **`composeField` / `messengerCompose` do not include history** — always add `@arrisa/history` when undo is required.
+3. **`composeField` is a block `Doc`** (paragraphs, lists, quotes, code; no spoiler). **`messengerCompose` defaults to inline** (`InlineDoc` via `messengerSchema`). Pass `codeBlocks: true` on messenger for block `Doc` + paragraphs + `CodeBlock` (fence input rule, `pre` FormattedText I/O). Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1). `composeField` already includes those list types.
 4. **`autoDetect` on export** — adds url/email/phone/hashtag/… entities; auto types are **not** re-applied as marks on import (`materializeRuns` skips them). Style marks (bold/italic/…) do **not** block auto detection; `pre` / inline `code` / `text_url` / `mention_name` / `custom_emoji` do (`isAutoExclusive`).
 5. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text.
 6. **`MentionName` is non-inclusive** — typing after a mention does not extend the mark.
@@ -71,7 +74,7 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 - Do **not** invent entity types not in `MessageEntity` / export mapping.
 - Do **not** use code-unit offsets from another language’s UTF-8 API without conversion.
 - Do **not** treat schema validation as sanitization for HTML or remote payloads.
-- Do **not** skip registering host elements when calling `insertMention` / `insertCustomEmoji` (needs marks/nodes in schema — default `hostElements: true`).
+- Do **not** skip registering host elements when calling `insertMention` / `insertCustomEmoji` (needs marks/nodes in schema — `messengerCompose` default `hostElements: true`; `composeField` default `false`, pass `hostElements: true`).
 - Do **not** pull monorepo-only paths; depend on the published package surface only.
 
 ## Related packages
@@ -86,7 +89,7 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 
 ## When in doubt
 
-- Prefer `messengerCompose()` over assembling marks manually.
+- Prefer `composeField()` for a block chat field, `messengerCompose()` for the inline/spoiler path — not assembling marks manually.
 - Round-trip a sample with `docToFormattedText` → `formattedTextToDoc` in a unit test.
 - Security: [SECURITY.md](https://github.com/inshinrei/arrisa/blob/main/SECURITY.md).
 
