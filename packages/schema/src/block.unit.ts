@@ -3,6 +3,7 @@ import {
     Alignment,
     Blockquote,
     CodeBlock,
+    CodeBlockLanguage,
     Direction,
     Doc,
     Heading,
@@ -33,6 +34,7 @@ describe("block factories", () => {
         let state = makeState([blockDoc(), paragraph(), heading(), codeBlock(), blockquote(), horizontalRule()])
         expect(state.schema.has(Heading)).toBe(true)
         expect(state.schema.has(CodeBlock)).toBe(true)
+        expect(state.schema.has(CodeBlockLanguage)).toBe(true)
         expect(state.schema.has(Blockquote)).toBe(true)
         expect(state.schema.has(HorizontalRule)).toBe(true)
     })
@@ -62,14 +64,26 @@ describe("block input rules", () => {
         expect(state.doc.textContent()).toBe("")
     })
 
-    it("codeBlock.createOnBackticks turns ``` into a code block", () => {
+    it("codeBlock.createOnBackticks turns '``` ' into a code block", () => {
         let state = makeState([blockDoc(), paragraph(), codeBlock()], {selection: 1})
-        for (let ch of "```") {
+        for (let ch of "``` ") {
             let chain = typeAtEnd(state, ch)
             state = chain[chain.length - 1].state
         }
         let block = state.doc.content[0]
         expect(block.tag.eq(CodeBlock)).toBe(true)
+        expect(block.tag.mark(CodeBlockLanguage)).toBeUndefined()
+    })
+
+    it("codeBlock.createOnBackticks captures '```ts ' as CodeBlockLanguage", () => {
+        let state = makeState([blockDoc(), paragraph(), codeBlock()], {selection: 1})
+        for (let ch of "```ts ") {
+            let chain = typeAtEnd(state, ch)
+            state = chain[chain.length - 1].state
+        }
+        let block = state.doc.content[0]
+        expect(block.type).toBe(CodeBlock.type)
+        expect(block.tag.mark(CodeBlockLanguage)).toBe("ts")
     })
 
     it("blockquote.createOnGT wraps on '> '", () => {

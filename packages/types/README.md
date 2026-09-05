@@ -76,8 +76,8 @@ These are **schema elements**, not full editor chrome. Menus, keymaps, and input
 |--------|------|--------|
 | `Paragraph` | plot | Default block (`defaultBlock`); `p`. |
 | `Heading` | plot type | Param level `1`–`6` → `h1`…`h6`. |
-| `CodeBlock` | plot | `pre`; `Node.Role.Code`. |
-| `CodeBlockLanguage` | mark | `data-language` on code blocks. |
+| `CodeBlock` | plot | `pre > code`; `Node.Role.Code`; defining. |
+| `CodeBlockLanguage` | mark | `class="language-<id>"` on inner `code` (parses `data-language` too). |
 | `Blockquote` | plot | Nestable; `autoJoin`. |
 | `HorizontalRule` | leaf | Selectable `hr`. |
 | `ListItem` / `InlineListItem` | plot | Same type name `"ListItem"`; block vs inline body. |

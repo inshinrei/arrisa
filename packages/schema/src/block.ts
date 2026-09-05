@@ -28,6 +28,7 @@ import {
     Alignment,
     Blockquote,
     CodeBlock,
+    CodeBlockLanguage,
     Direction,
     Doc,
     Heading,
@@ -122,13 +123,18 @@ export namespace heading {
     )
 }
 
-/** Fenced code block: button, Ctrl-Shift-\\, and `` ``` `` input rule. */
+/**
+ * Fenced code block: schema elements, button, Ctrl-Shift-\\, `` ``` `` / `` ```lang ``
+ * input rule, and preformatted theme.
+ */
 export function codeBlock(): EditorState.Extension {
     return [
         EditorState.schemaElement.of(CodeBlock),
+        EditorState.schemaElement.of(CodeBlockLanguage),
         codeBlock.button,
         codeBlock.keyBinding,
         codeBlock.createOnBackticks,
+        codeBlock.theme,
     ]
 }
 
@@ -146,7 +152,44 @@ export namespace codeBlock {
         rank: 30,
     })
 
-    export const createOnBackticks = InputRule.textblockType(/^```$/, CodeBlock)
+    /**
+     * Markdown fence at start of a textblock, terminated by a space:
+     * `` ``` `` or `` ```ts `` then space. Optional language → {@link CodeBlockLanguage}.
+     * Space is required so `` ```ts `` is not cut short while the language is still being typed.
+     */
+    export const createOnBackticks = InputRule.textblockType(
+        /^```([\w+#.-]*) $/,
+        (m) => {
+            let lang = m[1]?.text
+            if (!lang) return CodeBlock
+            return CodeBlock.withMarks(CodeBlockLanguage.of(lang).addToSet(CodeBlock.marks))
+        },
+        true,
+    )
+
+    export const theme: EditorState.Extension = Arrisa.theme({
+        pre: {
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            fontSize: "0.9em",
+            lineHeight: "1.45",
+            marginBlock: "0.5em",
+            marginInline: 0,
+            padding: "10px 12px",
+            borderRadius: "6px",
+            overflowX: "auto",
+            whiteSpace: "pre",
+            backgroundColor: "color-mix(in srgb, currentColor 8%, transparent)",
+            border: "1px solid color-mix(in srgb, currentColor 12%, transparent)",
+        },
+        "pre code": {
+            fontFamily: "inherit",
+            fontSize: "inherit",
+            background: "none",
+            padding: 0,
+            border: "none",
+            borderRadius: 0,
+        },
+    })
 }
 
 /** Text alignment mark on textblocks: start / end / center submenu + shortcuts. */

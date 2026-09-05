@@ -1,7 +1,7 @@
 /**
  * Core block content: paragraphs, headings, code blocks, blockquotes, rules.
  */
-import {Plot, Leaf, Mark, Node, Elt, ValidationError} from "@arrisa/doc"
+import {Plot, Leaf, Mark, Node, Elt, ValidationError, parse} from "@arrisa/doc"
 
 const G = Node.Group
 
@@ -37,22 +37,63 @@ export const Heading = Plot.Type.define("Heading", {
     ],
 })
 
-/** Fenced / preformatted code block (`pre`). Role {@link Node.Role.Code}. */
+/**
+ * Read a language id from a CSS class list (`language-ts`) or reject.
+ * Shared by shape auto-parse and explicit attribute rules.
+ */
+function readLanguageClass(value: string): string | typeof parse.Reject {
+    let m = /(?:^|\s)language-(\S+)/.exec(value)
+    if (!m) return parse.Reject
+    let lang = m[1]!.trim()
+    return lang ? lang : parse.Reject
+}
+
+function readLanguageAttr(value: string): string | typeof parse.Reject {
+    let lang = value.trim()
+    return lang ? lang : parse.Reject
+}
+
+/**
+ * Fenced / preformatted code block (`pre > code`).
+ * Role {@link Node.Role.Code}; whitespace is preserved.
+ * CommonMark-style HTML: content lives in the nested `code` element.
+ */
 export const CodeBlock = Plot.define("CodeBlock", {
     inlineContent: true,
     group: G.Content,
     role: Node.Role.Code,
-    shape: {element: "pre"},
+    defining: true,
+    shape: {structure: Elt.mk("pre", [Elt.mk("code", [0])]), atom: false},
+    parseRules: [
+        // Prefer pre>code so the inner code is content, not the inline Code mark.
+        {selector: "pre", contentElement: "code", marksFrom: "code", precedence: 2},
+        // Bare <pre> paste fallback.
+        {selector: "pre", precedence: 1},
+    ],
 })
 
 /**
- * Optional language tag on a {@link CodeBlock} (`data-language` attribute).
- * String param is the language identifier (e.g. `"ts"`, `"python"`).
+ * Optional language tag on a {@link CodeBlock}.
+ * Serialized as `class="language-<id>"` on the inner `code` element (CommonMark/GFM).
+ * Also parses legacy `data-language` on the matched element.
  */
 export const CodeBlockLanguage = Mark.Type.define<string>("CodeBlockLanguage", {
     target: CodeBlock,
-    validate: "string",
-    shape: {attribute: "data-language", value: 0},
+    validate: (value) => {
+        if (typeof value != "string" || !value.trim())
+            throw new ValidationError(`Invalid code block language: ${value}`)
+    },
+    keepOnSplit: true,
+    shape: {
+        attribute: "class",
+        value: (lang: string) => `language-${lang}`,
+        preferTarget: "code",
+        readAttribute: readLanguageClass,
+    },
+    parseRules: [
+        // Legacy Arrisa HTML / non-class language tags.
+        {attribute: "data-language", readAttribute: readLanguageAttr},
+    ],
 })
 
 /** Nested blockquote (`blockquote`). Adjacent quotes auto-join. */

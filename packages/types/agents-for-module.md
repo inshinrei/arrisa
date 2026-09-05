@@ -138,6 +138,7 @@ Default image schemes: `http:`, `https:`, `blob:` (+ relative).
 4. **Color marks are spanning** — mark mods apply across structure where allowed.
 5. **Safety helpers are pure string checks** — no DOM base URL resolution; protocol-relative `//…` is rejected for “relative” paths.
 6. **Not a full CSS sanitizer** — only color values for the color marks; arbitrary `style` bags are out of scope.
+7. **Code blocks** — `CodeBlock` is CommonMark-style `pre > code` (`Node.Role.Code`). Optional `CodeBlockLanguage` serializes as `class="language-<id>"` on the inner `code` and also parses `data-language`.
 
 ## What not to do
 
