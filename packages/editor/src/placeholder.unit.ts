@@ -1,7 +1,8 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Plot, Schema} from "@arrisa/doc"
 import {EditorState} from "@arrisa/state"
-import {Decoration, PointSet, WidgetDecoration} from "./decoration"
+import {Decoration, PointSet} from "./decoration"
+import {WidgetDecoration} from "./decoration/decoration"
 import {placeholder} from "./placeholder"
 import {WidgetTile} from "./tile"
 import {TileFlag} from "./tile/flag"
@@ -87,7 +88,10 @@ describe("placeholder", () => {
         let state = stateWithDoc((s) => [s.paragraph.create([])], placeholder("Type here"))
         let deco = placeholderPoints(state).values[0] as WidgetDecoration
         withMockDocument(() => {
-            let dom = deco.widget.type.render(deco.widget.value) as {contentEditable: string; tagName: string}
+            let dom = deco.widget.type.render(deco.widget.value) as unknown as {
+                contentEditable: string
+                tagName: string
+            }
             expect(dom.tagName).toBe("ARRISA-PLACEHOLDER")
             expect(dom.contentEditable).toBe("false")
         })

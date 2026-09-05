@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest"
-import {Leaf, Schema} from "@arrisa/doc"
+import {Leaf, Plot, Schema} from "@arrisa/doc"
 import {
     Blockquote,
     BulletList,
@@ -238,7 +238,7 @@ describe("formattedTextToDoc", () => {
         let back = formattedTextToDoc(ft, schema)
         expect(docToFormattedText(back).entities?.some((e) => e.type == "unordered_list")).toBe(true)
         expect(back.firstChild!.type.name).toBe("BulletList")
-        expect(back.firstChild!.content.length).toBe(2)
+        expect((back.firstChild as Plot).content.length).toBe(2)
     })
 
     it("exports ordered list startIndex when not 1", () => {
@@ -261,7 +261,7 @@ describe("formattedTextToDoc", () => {
         let ft = docToFormattedText(doc)
         let back = formattedTextToDoc(ft, schema)
         expect(back.firstChild!.type.name).toBe("Blockquote")
-        expect(back.firstChild!.content[0]!.type.name).toBe("BulletList")
+        expect((back.firstChild as Plot).content[0]!.type.name).toBe("BulletList")
     })
 })
 

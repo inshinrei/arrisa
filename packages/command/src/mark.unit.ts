@@ -114,7 +114,7 @@ describe("clearFormatting", () => {
 
     it("returns false when there is nothing to clear", () => {
         let {state} = stateFromBlocks((s) => [para(s, "hi")], EditorSelection.range(1, 3))
-        expect(clearFormatting({state})).toBe(false)
+        expect(clearFormatting({state}, null)).toBe(false)
     })
 })
 
@@ -173,6 +173,6 @@ describe("applyLink / removeLinks", () => {
         let result = runPure(state, removeLinks)
         expect(result.applied).toBe(true)
         expect(Link.isInSet(result.state.doc.resolve(1).nodeAfter!.tag.marks)).toBeFalsy()
-        expect(removeLinks({state: result.state})).toBe(false)
+        expect(removeLinks({state: result.state}, null)).toBe(false)
     })
 })

@@ -78,8 +78,8 @@ describe("enter", () => {
         expect(result.state.doc.content.length).toBe(2)
         expect(result.state.doc.content[0].type).toBe(CodeBlock.type)
         expect(result.state.doc.content[1].type).toBe(Paragraph.type)
-        expect(result.state.doc.content[0].textContent()).toBe("ab")
-        expect(result.state.doc.content[1].textContent()).toBe("")
+        expect((result.state.doc.content[0] as Plot).textContent()).toBe("ab")
+        expect((result.state.doc.content[1] as Plot).textContent()).toBe("")
     })
 
     it("splits a code block mid-content into two code blocks", () => {
@@ -90,8 +90,8 @@ describe("enter", () => {
         expect(result.state.doc.content.length).toBe(2)
         expect(result.state.doc.content[0].type).toBe(CodeBlock.type)
         expect(result.state.doc.content[1].type).toBe(CodeBlock.type)
-        expect(result.state.doc.content[0].textContent()).toBe("a")
-        expect(result.state.doc.content[1].textContent()).toBe("b")
+        expect((result.state.doc.content[0] as Plot).textContent()).toBe("a")
+        expect((result.state.doc.content[1] as Plot).textContent()).toBe("b")
     })
 
     it("keeps language mark when splitting a code block", () => {

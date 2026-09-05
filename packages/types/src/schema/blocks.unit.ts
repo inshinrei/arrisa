@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest"
-import {Leaf, Schema, parse, serialize, ValidationError} from "@arrisa/doc"
+import {Leaf, Plot, Schema, parse, serialize, ValidationError} from "@arrisa/doc"
 import {CodeBlock, CodeBlockLanguage, Paragraph} from "./blocks"
 import {Doc} from "./doc"
 import {Code} from "./marks"
@@ -131,7 +131,7 @@ describe("CodeBlock HTML", () => {
         let root = el("div", null, el("p", null, el("code", null, "id")))
         let doc = parse(schema, root as unknown as Element)
         expect(doc.content[0].type).toBe(Paragraph.type)
-        let text = doc.content[0].content[0]
+        let text = (doc.content[0] as Plot).content[0]
         expect(text.is(Leaf.Text)).toBe(true)
         expect(Code.isInSet(text.marks)).toBeTruthy()
     })
@@ -144,7 +144,7 @@ describe("CodeBlockLanguage validate", () => {
             schema.nodeFromJSON({
                 type: "CodeBlock",
                 marks: {CodeBlockLanguage: ""},
-                content: [{type: "text", text: "x"}],
+                content: [{type: "Text", param: "x"}],
             }),
         ).toThrow(ValidationError)
     })

@@ -107,7 +107,7 @@ describe("InputRule", () => {
     it("matches on InlineDoc (root textblock with no .before)", () => {
         // Parent-node identity check must use plot nodes, not `.before`, so
         // messenger-style markdown rules work on InlineDoc roots.
-        let inline = Plot.defineDoc({inlineContent: true, shape: {element: "div"}})
+        let inline = Plot.defineDoc({inlineContent: true})
         let schema = Schema.define([inline])
         let rule = InputRule.define({expr: /\*\*([^*\n]+)\*\*$/, apply: "X"})
         let state = EditorState.create({
