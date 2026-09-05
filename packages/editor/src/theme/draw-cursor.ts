@@ -73,7 +73,7 @@ export class CursorLayer {
 const VertWidth = 30,
     VertGap = 5
 
-/** Compute caret box relative to contentDOM; null when selection is not a cursor. */
+/** Compute caret box relative to scrollDOM (plus scroll); null when selection is not a cursor. */
 function cursorPos(editor: Arrisa): CursorPos {
     let {state} = editor
     if (!state.selection.isCursor) return null
@@ -91,8 +91,15 @@ function cursorPos(editor: Arrisa): CursorPos {
             top = bottom = top + move * (other.top < top ? -1 : 1)
         }
     }
-    let doc = editor.contentDOM.getBoundingClientRect()
-    return {left: left - doc.left, top: top - doc.top, size, horiz}
+    // Abspos origin is scrollDOM's padding edge; top/left do not include scroll.
+    let scroller = editor.scrollDOM,
+        origin = scroller.getBoundingClientRect()
+    return {
+        left: left - origin.left + scroller.scrollLeft,
+        top: top - origin.top + scroller.scrollTop,
+        size,
+        horiz,
+    }
 }
 
 function setBlinkRate(state: EditorState, dom: HTMLElement) {

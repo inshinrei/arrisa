@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Plot, Schema} from "@arrisa/doc"
 import {EditorState} from "@arrisa/state"
-import {buildTheme, theme, colorScheme} from "./theme"
+import {baseStyles, buildTheme, theme, colorScheme} from "./theme"
 import {cursorBlinkRate} from "./draw-cursor"
 
 function makeState(extensions: EditorState.Extension = []) {
@@ -45,6 +45,20 @@ describe("buildTheme", () => {
                 "&foo": {color: "red"},
             }, {}),
         ).toThrow(/Unsupported selector/)
+    })
+})
+
+describe("baseStyles cursor layer", () => {
+    it("gives arrisa-cursor-layer a non-zero box so contain:size can paint", () => {
+        let rule = baseStyles.rules.find((r) => /arrisa-cursor-layer \{/.test(r) && /pointer-events:/.test(r))
+        expect(rule).toBeTruthy()
+        let sized =
+            /inset:\s*0/.test(rule!) ||
+            (/width:\s*100%/.test(rule!) && /height:\s*100%/.test(rule!)) ||
+            (/right:\s*0/.test(rule!) && /bottom:\s*0/.test(rule!))
+        expect(sized).toBe(true)
+        expect(rule).toMatch(/pointer-events:\s*none/)
+        expect(rule).toMatch(/position:\s*absolute/)
     })
 })
 
