@@ -47,6 +47,7 @@ const embeddedConfig = EditorState.Facet.define<EmbeddedMenuConfig, EmbeddedMenu
 class EmbeddedMenu {
     host: MenuHost
     parent: HTMLElement | (() => HTMLElement)
+    classes = ""
 
     constructor(readonly editor: Arrisa) {
         let conf = editor.state.facet(embeddedConfig)
@@ -57,6 +58,7 @@ class EmbeddedMenu {
             class: conf.class,
             createDOM: conf.createDOM,
         })
+        this.syncTheme()
     }
 
     private resolveParent() {
@@ -64,12 +66,24 @@ class EmbeddedMenu {
         return typeof p == "function" ? p() : p
     }
 
+    /** Theme classes on the menu root so `Arrisa.styles` match outside the editor. */
+    private syncTheme() {
+        let next = this.editor.themeClasses
+        if (next == this.classes) return
+        let {classList} = this.host.dom
+        for (let cls of this.classes.split(" ")) if (cls) classList.remove(cls)
+        for (let cls of next.split(" ")) if (cls) classList.add(cls)
+        this.classes = next
+    }
+
     update(update: Arrisa.Update) {
         this.host.update(update)
+        this.syncTheme()
     }
 
     connect() {
         this.host.connect()
+        this.syncTheme()
         this.resolveParent().appendChild(this.host.dom)
     }
 
@@ -89,13 +103,16 @@ class EmbeddedMenu {
 
 const embeddedPlugin = Arrisa.Plugin.fromClass(EmbeddedMenu)
 
+// Themed node is host.dom (outside Arrisa.dom). `&` styles the root; cancel editor border.
 const embeddedShellTheme = Arrisa.styles({
-    "arrisa-menubar, .arrisa-menubar": {
+    "&": {
         display: "flex",
+        flexDirection: "row",
         flexWrap: "wrap",
         gap: "var(--arrisa-menu-gap, 5px)",
         padding: "var(--arrisa-menu-padding, 3px)",
         color: "var(--arrisa-menu-color)",
+        border: "none",
     },
 })
 
