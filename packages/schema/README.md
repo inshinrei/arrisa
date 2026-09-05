@@ -173,16 +173,22 @@ import {
 ### Link
 
 ```ts
-import {link, isLinkPasteUrl} from "@arrisa/schema"
+import {
+    link,
+    isLinkPasteUrl,
+    type LinkConfig,
+    type LinkPrompt,
+    type LinkPromptRequest,
+} from "@arrisa/schema"
 
 link() // mark + Mod-k + cursor tooltip + paste-URL-over-selection
 link({prompt: false}) // remove-only (no add-link UI)
-link({
-    prompt: (req) => {
-        // host UI; req.apply sanitizes via applyLink — never raw Link.of
-        req.apply("https://example.com")
-    },
-})
+let prompt: LinkPrompt = (req: LinkPromptRequest) => {
+    // host UI; req.apply sanitizes via applyLink — never raw Link.of
+    req.apply("https://example.com")
+}
+let linkConf: LinkConfig = {prompt}
+link(linkConf)
 
 if (isLinkPasteUrl(text)) {
     // absolute http(s) / mailto / xmpp, no spaces

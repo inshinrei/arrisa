@@ -33,7 +33,7 @@ let config = [/* blockDoc(), paragraph(), strong(), … */]
 
 | Export group | Examples |
 |--------------|----------|
-| Presets | `basicSchema`, `fullSchema`, `inlineSchema`, `composeSchema`, `messengerSchema` |
+| Presets | `basicSchema`, `fullSchema`, `inlineSchema`, `composeSchema` / `ComposeSchemaConfig`, `messengerSchema` / `MessengerSchemaConfig` |
 | Mark bundles | `basicMarks`, `composeMarks`, `messengerMarks`, `inlineMarks` |
 | Compose chrome | `clearFormattingButton` (inline group, rank 90) |
 | Blocks | `blockDoc`, `inlineDoc`, `paragraph`, `heading`, `codeBlock`, `blockquote`, `horizontalRule`, `alignment`, `direction`, `lineBreak` |

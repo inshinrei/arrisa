@@ -189,6 +189,8 @@ import {
     type CustomEmojiEntity,
     type AutoEntity,
     entityInBounds,
+    unorderedListEntity,
+    orderedListEntity,
     docToFormattedText,
     type ToFormattedOptions,
     formattedTextToDoc,

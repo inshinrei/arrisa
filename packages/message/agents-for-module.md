@@ -35,6 +35,19 @@ let editor = Arrisa.create({
     ],
 })
 
+// Embedded toolbar + custom link UI (ComposeFieldConfig)
+composeField({
+    floating: false,
+    embedded: {parent: toolbarEl, theme: false, class: "host-compose-tools"},
+    linkPrompt: (ctx) => {
+        hostOpenLinkField({
+            href: ctx.href,
+            onSubmit: (url) => ctx.apply(url),
+            onCancel: ctx.cancel,
+        })
+    },
+})
+
 // Inline/spoiler path:
 // messengerCompose({resolveMention: (u) => userMap[u] ?? null})
 
@@ -48,7 +61,7 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 | Area | Exports |
 |------|---------|
 | Compose | `composeField`, `ComposeFieldConfig`, `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
-| Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/list/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
+| Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/`UnorderedListEntity`/`OrderedListEntity`/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
 | I/O | `docToFormattedText`, `formattedTextToDoc`, `materializeRuns`, option types |
 | Auto | `detectAutoEntities`, `mergeAutoEntities`, `AutoDetectOptions` |
 | Mark map | `markToEntityPartial`, `entityToMark`, `DEFAULT_FLAG_MARKS`, `markKey`, `isInlineEntityMark` |

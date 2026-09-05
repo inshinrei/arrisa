@@ -53,13 +53,21 @@ Default keymap binds Mod-z/y to command stubs until handlers exist.
 ### Menus
 
 ```ts
-import {menuBar, floatingMenu, embeddedMenu} from "@arrisa/editor"
+import {
+    menuBar,
+    floatingMenu,
+    embeddedMenu,
+    type MenuBarConfig,
+    type FloatingMenuConfig,
+    type EmbeddedMenuConfig,
+} from "@arrisa/editor"
 import {Menu} from "@arrisa/command"
 
 // Items come from Menu.Item extensions (schema packages register many)
-menuBar()
-floatingMenu({template: Menu.Group.inline.template(), above: true})
-embeddedMenu({parent: toolbarEl})
+menuBar() // MenuBarConfig
+floatingMenu({template: Menu.Group.inline.template(), above: true}) // FloatingMenuConfig
+let embed: EmbeddedMenuConfig = {parent: toolbarEl}
+embeddedMenu(embed)
 ```
 
 ### Key bindings
@@ -113,7 +121,7 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 
 ## What not to do
 
-- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`, decoration types, `Panel`, `menuBar`, `floatingMenu`, `embeddedMenu`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
+- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`, decoration types, `Panel`, `menuBar`/`MenuBarConfig`, `floatingMenu`/`FloatingMenuConfig`, `embeddedMenu`/`EmbeddedMenuConfig`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
 - Do not treat schema `ignoreTags` as XSS protection.
 - Do not create an identity Trusted Types policy inside Arrisa apps for convenience — sanitize first.
 - Do not read layout in plugin `update` without `scheduleDOMRead`.
