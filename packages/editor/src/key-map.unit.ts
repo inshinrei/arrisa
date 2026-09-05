@@ -1,5 +1,12 @@
 import {describe, expect, it} from "vitest"
-import {normalizeKeyName, modifiers} from "./key-map"
+import {KeyBinding, normalizeKeyName, modifiers} from "./key-map"
+
+describe("defaultKeymap", () => {
+    it("binds Escape with allowDefault so empty collapse does not preventDefault", () => {
+        let escape = KeyBinding.defaultKeymap.find((b) => b.spec.key == "Escape")
+        expect(escape?.spec.allowDefault).toBe(true)
+    })
+})
 
 describe("normalizeKeyName", () => {
     it("maps Mod to Meta on mac and Ctrl elsewhere", () => {

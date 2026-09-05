@@ -185,7 +185,7 @@ export namespace KeyBinding {
                 shift: Command.bind(moveToDocSide, {side: "end", extend: true}),
             },
             {key: "Mod-a", run: selectAll},
-            {key: "Escape", run: collapseSelection},
+            {key: "Escape", run: collapseSelection, allowDefault: true},
             {key: "Mod-z", run: undo},
             {key: "Mod-y", mac: "Mod-Shift-z", run: redo},
             {linux: "Ctrl-Shift-z", run: redo},

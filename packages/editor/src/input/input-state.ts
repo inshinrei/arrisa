@@ -26,15 +26,17 @@ type OutsidePointerTarget = {
 /** True when a document `pointerdown` should collapse a non-empty selection. */
 export function shouldCollapseOnOutsidePointer(
     editorDom: {contains(node: any): boolean},
-    target: EventTarget | OutsidePointerTarget | null,
+    path: readonly unknown[] | null | undefined,
     selectionEmpty: boolean,
 ): boolean {
-    if (selectionEmpty || !target) return false
-    if (editorDom.contains(target)) return false
-    let node = target as OutsidePointerTarget
-    let el = typeof node.closest == "function" ? node : node.parentElement
-    if (!el || typeof el.closest != "function") return true
-    return !el.closest(outsidePointerChromeSelector)
+    if (selectionEmpty || !path || !path.length) return false
+    for (let entry of path) {
+        if (entry == editorDom || editorDom.contains(entry)) return false
+        let node = entry as OutsidePointerTarget
+        let el = typeof node.closest == "function" ? node : node.parentElement
+        if (el && typeof el.closest == "function" && el.closest(outsidePointerChromeSelector)) return false
+    }
+    return true
 }
 
 const LOG_input = false
@@ -80,7 +82,6 @@ export class InputState {
         this.notifiedFocused = editor.hasFocus
 
         if (browser.safari) editor.contentDOM.addEventListener("input", () => null)
-        editor.dom.ownerDocument.addEventListener("pointerdown", this.onOutsidePointer, true)
     }
 
     handleEvent(event: Event) {
@@ -208,7 +209,14 @@ export class InputState {
     }
 
     onOutsidePointer(event: PointerEvent) {
-        if (!shouldCollapseOnOutsidePointer(this.editor.dom, event.target, this.editor.state.selection.empty))
+        if (!this.editor.connected) return
+        if (
+            !shouldCollapseOnOutsidePointer(
+                this.editor.dom,
+                event.composedPath(),
+                this.editor.state.selection.empty,
+            )
+        )
             return
         Command.dispatch(this.editor, collapseSelection)
     }
