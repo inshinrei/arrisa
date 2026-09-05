@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "pnpm -r --filter './packages/*' run build",
-    "test": "pnpm -r --filter './packages/*' run test",
+    "test": "pnpm -r --filter './packages/*' run test && pnpm test:scripts",
     "typecheck": "tsc -b",
     "clean": "pnpm -r --filter './packages/*' exec rm -rf dist",
     "playground": "pnpm --filter @arrisa/playground dev",
