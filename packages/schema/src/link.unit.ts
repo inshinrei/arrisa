@@ -1,6 +1,7 @@
-import {describe, expect, it} from "vitest"
+import {describe, expect, it, vi} from "vitest"
 import {type Command} from "@arrisa/command"
 import {Leaf} from "@arrisa/doc"
+import {Tooltip} from "@arrisa/editor"
 import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
 import {Link, Paragraph} from "@arrisa/types"
 import {blockDoc, paragraph} from "./block"
@@ -115,6 +116,29 @@ describe("link.button.run", () => {
         expect(linkAt(editor.state)?.value).toBe("https://ok.example")
         expect(editor.state.selection.from).toBe(1)
         expect(editor.state.selection.to).toBe(6)
+    })
+
+    it("opens a floating prompt by default on an unmarked range", () => {
+        let state = rangedState()
+        let editor = mockEditor(state)
+        expect(runToggle(editor)).toBe(true)
+        let tips = editor.state.facet(Tooltip.show).filter(Boolean)
+        expect(tips.length).toBeGreaterThan(0)
+    })
+
+    it("custom cancel focuses the editor", () => {
+        let req: LinkPromptRequest | undefined
+        let state = rangedState({
+            prompt: (r) => {
+                req = r
+            },
+        })
+        let editor = mockEditor(state)
+        let focus = vi.fn()
+        editor.focus = focus
+        expect(runToggle(editor)).toBe(true)
+        req!.cancel()
+        expect(focus).toHaveBeenCalled()
     })
 
     it("returns false for prompt: false on an unmarked range", () => {

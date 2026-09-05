@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest"
 import {Leaf} from "@arrisa/doc"
-import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
+import {Transaction} from "@arrisa/state"
 import {para, runPure, stateFromBlocks} from "./test-helpers"
 import {replaceDoc} from "./replace-doc"
 
@@ -11,6 +11,8 @@ describe("replaceDoc", () => {
         let result = runPure(state, replaceDoc, next)
         expect(result.applied).toBe(true)
         expect(result.state.doc.textContent()).toBe("new")
+        expect(result.state.selection.empty).toBe(true)
+        expect(result.state.selection.from).toBe(1)
         let tr = state.update(result.spec as Transaction.Spec)
         expect(tr.annotation(Transaction.addToHistory)).toBe(false)
         expect(tr.annotation(Transaction.userEvent)).toBe("set.doc")

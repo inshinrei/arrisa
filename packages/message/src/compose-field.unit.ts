@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Slice} from "@arrisa/doc"
 import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
-import {KeyBinding} from "@arrisa/editor"
+import {Arrisa, KeyBinding, Tooltip} from "@arrisa/editor"
 import {
     Blockquote,
     BulletList,
@@ -47,6 +47,21 @@ describe("composeField", () => {
         expect(state.schema.has(InlineDoc)).toBe(false)
         expect(state.schema.has(Spoiler)).toBe(false)
         expect(state.facet(KeyBinding.useDefaultKeymap)).toBe(false)
+    })
+
+    it("shows a floating menu for a non-empty selection", () => {
+        let config = composeField({placeholder: false, markdown: false})
+        let proto = EditorState.create({doc: "", config})
+        let doc = formattedTextToDoc({text: "hello"}, proto.schema)
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.range(1, 6),
+            config,
+        })
+        // Default hideOnBlur hides the toolbar until the editor is focused.
+        state = state.update({annotations: Arrisa.isFocusChange.of(true)}).state
+        let tips = state.facet(Tooltip.show).filter(Boolean)
+        expect(tips.length).toBeGreaterThan(0)
     })
 
     it("does not install host elements by default", () => {

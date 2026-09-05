@@ -128,6 +128,9 @@ describe("composeSchema", () => {
         expect(state.schema.has(Image)).toBe(false)
         expect(state.schema.has(HorizontalRule)).toBe(false)
         expect(state.schema.has(Alignment)).toBe(false)
+        expect(state.schema.has(Color)).toBe(false)
+        expect(state.schema.has(Direction)).toBe(false)
+        expect(state.schema.has(Figure)).toBe(false)
     })
 })
 

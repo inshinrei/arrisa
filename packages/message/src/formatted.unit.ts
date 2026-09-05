@@ -238,6 +238,7 @@ describe("formattedTextToDoc", () => {
         let back = formattedTextToDoc(ft, schema)
         expect(docToFormattedText(back).entities?.some((e) => e.type == "unordered_list")).toBe(true)
         expect(back.firstChild!.type.name).toBe("BulletList")
+        expect(back.firstChild!.content.length).toBe(2)
     })
 
     it("exports ordered list startIndex when not 1", () => {
@@ -249,6 +250,8 @@ describe("formattedTextToDoc", () => {
         expect(ft.entities).toEqual(
             expect.arrayContaining([{type: "ordered_list", offset: 0, length: 1, startIndex: 3}]),
         )
+        let back = formattedTextToDoc(ft, schema)
+        expect(back.firstChild!.tag.param).toBe(3)
     })
 
     it("wraps a list inside a blockquote", () => {

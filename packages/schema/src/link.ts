@@ -48,8 +48,8 @@ type LinkPromptState = {from: number; to: number; href?: string} | null
 let setLinkPrompt = Transaction.Effect.define<LinkPromptState>()
 
 function closeLinkPrompt(editor: Arrisa) {
-    if (!editor.state.field(linkPromptField, false)) return
-    editor.dispatch({effects: setLinkPrompt.of(null)})
+    if (editor.state.field(linkPromptField, false))
+        editor.dispatch({effects: setLinkPrompt.of(null)})
     editor.focus()
 }
 
