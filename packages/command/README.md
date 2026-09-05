@@ -105,6 +105,9 @@ Most high-level commands are pure. View-backed ones: `deleteToLineEnd`, `deleteL
 | `toggleEmphasis` / `toggleStrong` / `toggleUnderline` | Convenience for `@arrisa/types` marks |
 | `setAlignment` | Text-align on textblocks (`null` / `"start"` clears default) |
 | `setDirection` | `dir` on textblocks (`null` clears) |
+| `clearFormatting` | Strip stored marks at an empty cursor, or every mark on nodes in the selection (does not unwrap blocks) |
+| `applyLink` | Add a sanitized `Link` mark on a non-empty range (`sanitizeLinkHref`; `false` if empty or unsafe) |
+| `removeLinks` | Remove `Link` marks in the selection (`false` when none) |
 
 ### Mark exclusivity
 

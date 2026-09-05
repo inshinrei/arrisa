@@ -110,13 +110,25 @@ markExclusivity({isolating: [Code, Strikethrough]})
 
 Installs a `Command.handler` on `toggleMark` so keymaps/menus pick it up automatically.
 
+### Clear formatting / links
+
+```ts
+import {clearFormatting, applyLink, removeLinks} from "@arrisa/command"
+
+Command.dispatch(editor, clearFormatting)
+Command.dispatch(editor, applyLink, "https://example.com")
+Command.dispatch(editor, removeLinks)
+```
+
+`applyLink` sanitizes via `sanitizeLinkHref` and returns `false` for empty selections or unsafe hrefs. Do not apply untrusted hrefs with raw `Link.of`.
+
 ## Invariants / pitfalls
 
 1. **`undo` / `redo` from this package are stubs** — always return `false` until overridden or rebound to `@arrisa/history`.
 2. **Two different `Arrisa` symbols** — `@arrisa/command` exports a *minimal interface*; `@arrisa/editor` exports the *view class*. The class implements the interface; do not import the editor class into command-layer code.
 3. **Commands do not auto-dispatch** when called as functions — only `Command.dispatch` applies specs. Pure usage: `let spec = cmd({state}, p); if (spec) state = state.update(spec).state`.
 4. **View commands need a real editor** (or mock with `moveToLineBoundary` / `moveVertically` / `scrollDOM` / `dom`).
-5. **Mark helpers assume schema content** — `setAlignment` / `setDirection` return `false` if the schema lacks those mark types.
+5. **Mark helpers assume schema content** — `setAlignment` / `setDirection` return `false` if the schema lacks those mark types. `applyLink` / `removeLinks` use `@arrisa/types` `Link`; `applyLink` rejects empty selections and hrefs that fail `sanitizeLinkHref`. `clearFormatting` clears stored marks at an empty cursor and strips marks on ranged nodes without unwrapping blocks.
 6. **Menu ranks** are clamped to `0…100` (default `100`). Lower ranks sort first within a group.
 7. **Layering** — this package must not import `@arrisa/editor` or higher packages.
 
@@ -125,6 +137,7 @@ Installs a `Command.handler` on `toggleMark` so keymaps/menus pick it up automat
 - Do not invent command return types that always mutate the editor — keep pure commands pure.
 - Do not call `editor.dispatch` inside a pure command body; return a `Transaction.Spec`.
 - Do not treat schema validation as XSS safety (that is app + editor sanitize hooks).
+- Do not apply links from untrusted hrefs with raw `Link.of`; use `applyLink` (or `sanitizeLinkHref` first).
 - Do not reimplement undo inside this package; use `@arrisa/history` + handlers.
 - Do not register menu items without their `extension` (items will not appear in resolve).
 

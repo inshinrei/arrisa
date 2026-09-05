@@ -29,6 +29,9 @@ export {
     toggleUnderline,
     setAlignment,
     setDirection,
+    clearFormatting,
+    applyLink,
+    removeLinks,
 } from "./mark"
 
 export {

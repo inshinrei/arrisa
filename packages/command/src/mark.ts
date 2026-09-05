@@ -1,9 +1,10 @@
 /**
- * Inline and block mark commands: toggle styles, alignment, and direction.
+ * Inline and block mark commands: toggle styles, alignment, direction,
+ * clear formatting, and apply/remove links.
  */
-import {type ChangeSet, type Mark} from "@arrisa/doc"
+import {type ChangeSet, Mark} from "@arrisa/doc"
 import {EditorSelection, type EditorState} from "@arrisa/state"
-import {Alignment, Direction, Emphasis, Strong, Underline} from "@arrisa/types"
+import {Alignment, Direction, Emphasis, Link, Strong, Underline, sanitizeLinkHref} from "@arrisa/types"
 import {type Command} from "./command"
 import {canAddMarkInRange, selectedTextblocks} from "./util/selection"
 
@@ -96,4 +97,59 @@ export const setDirection: Command.Pure<null | "ltr" | "rtl" | "auto"> = ({state
 function ltrAtCursor(state: EditorState) {
     let block = state.sel.head.textblockParent
     return block ? state.textblockLTR(block.node) : state.textLTR
+}
+
+/**
+ * Strip stored marks at an empty cursor, or every mark on nodes in the
+ * selection ranges. Does not unwrap blocks.
+ */
+export const clearFormatting: Command.Pure = ({state}) => {
+    let {selection, doc} = state
+    if (selection instanceof EditorSelection.Text && selection.empty) {
+        let selMarks = selection.marks || state.sel.head.marks()
+        if (!selMarks.length) return false
+        return {
+            selection: EditorSelection.Text.create({
+                anchor: selection.anchor,
+                headSide: selection.headSide,
+                goalColumn: selection.goalColumn,
+                marks: Mark.none,
+            }),
+            userEvent: "mark.remove",
+        }
+    }
+    let changes: ChangeSet.Spec[] = []
+    for (let {from, to} of selection.ranges)
+        doc.iterate(from, to, (node, pos) => {
+            for (let mark of node.marks) changes.push({from: pos, to: pos + node.length, remove: mark})
+        })
+    if (!changes.length) return false
+    return {changes, userEvent: "mark.remove"}
+}
+
+/**
+ * Add a sanitized {@link Link} mark on a non-empty selection. Returns `false`
+ * for empty selections or hrefs rejected by {@link sanitizeLinkHref}.
+ */
+export const applyLink: Command.Pure<string> = ({state}, href) => {
+    let {selection} = state
+    let safe = sanitizeLinkHref(href)
+    if (!safe || selection.empty) return false
+    return {
+        changes: selection.ranges.map((r) => ({from: r.from, to: r.to, add: Link.of(safe)})),
+        userEvent: "mark.add",
+    }
+}
+
+/** Remove {@link Link} marks under the selection. Returns `false` when none. */
+export const removeLinks: Command.Pure = ({state}) => {
+    let {selection, doc} = state
+    let remove: ChangeSet.Spec[] = []
+    for (let {from, to} of selection.ranges)
+        doc.iterate(from, to, (node, pos) => {
+            let has = Link.isInSet(node.marks)
+            if (has) remove.push({from: pos, to: pos + node.length, remove: has})
+        })
+    if (!remove.length) return false
+    return {changes: remove, userEvent: "mark.remove"}
 }
