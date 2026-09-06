@@ -121,4 +121,22 @@ describe("markExclusivity", () => {
         expect(markAllowedByExclusivity(state, s.code)).toBe(false)
         expect(markAllowedByExclusivity(state, s.bold)).toBe(true)
     })
+
+    it("applies an isolating mark when given the Type", () => {
+        let s = exclusiveSchema()
+        let doc = s.schema.doc([s.paragraph.create([Leaf.text("hi", [s.bold])])])
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.range(1, 3),
+            config: [
+                EditorState.schemaElement.of(s.schema.elements),
+                markExclusivity({isolating: [s.code.type]}),
+            ],
+        })
+        let result = runPure(state, toggleMarkExclusive, s.code.type)
+        expect(result.applied).toBe(true)
+        let text = result.state.doc.resolve(1).nodeAfter!
+        expect(s.code.isInSet(text.tag.marks)).toBeTruthy()
+        expect(s.bold.isInSet(text.tag.marks)).toBeFalsy()
+    })
 })

@@ -40,6 +40,8 @@ Command.dispatch(editor, enter)
 
 // Parameterized
 Command.dispatch(editor, toggleMark, Strong)
+// Mark.Type is also accepted (resolved to Type.default)
+Command.dispatch(editor, toggleMark, Strong.type)
 
 // Bound (menus / KeyBinding.run)
 Command.dispatch(editor, Command.bind(deleteUnit, "backward"))

@@ -97,26 +97,25 @@ function activeMarkTypes(state: EditorState): Set<Mark.Type> {
  * Toggle `mark`, stripping conflicting marks when exclusivity rules apply.
  * Falls through to plain {@link toggleMark} when no policy is installed.
  */
-export const toggleMarkExclusive: Command.Pure<Mark> = (target, mark) => {
+export const toggleMarkExclusive: Command.Pure<Mark | Mark.Type> = (target, mark) => {
     let {state} = target
     let policy = markExclusivityPolicy(state)
     if (!policy.isolating.length) return toggleMark(target, mark)
 
-    let type = mark.type
+    let instance = asMark(mark)
+    let type = instance.type
     let {selection, doc} = state
     let adding =
         selection instanceof EditorSelection.Text && selection.empty
-            ? !mark.isInSet(selection.marks || state.sel.activeMarks)
-            : selection.ranges.some((r) => canAddMarkInRange(doc, r.from, r.to, mark))
+            ? !instance.isInSet(selection.marks || state.sel.activeMarks)
+            : selection.ranges.some((r) => canAddMarkInRange(doc, r.from, r.to, instance))
 
-    if (!adding) return toggleMark(target, mark)
+    if (!adding) return toggleMark(target, instance)
 
     let stripTypes = new Set<Mark.Type>()
     if (isIsolating(policy, type)) {
-        // Isolating mark: strip every other mark type present
         for (let t of activeMarkTypes(state)) if (t != type) stripTypes.add(t)
     } else {
-        // Non-isolating: strip isolating marks first
         for (let t of policy.isolating) stripTypes.add(t)
     }
 
@@ -124,7 +123,7 @@ export const toggleMarkExclusive: Command.Pure<Mark> = (target, mark) => {
         let selMarks = selection.marks || state.sel.head.marks()
         let next = selMarks
         for (let t of stripTypes) next = t.removeFromSet(next)
-        next = mark.addToSet(next)
+        next = instance.addToSet(next)
         return {
             selection: EditorSelection.Text.create({
                 anchor: selection.anchor,
@@ -148,7 +147,7 @@ export const toggleMarkExclusive: Command.Pure<Mark> = (target, mark) => {
                 changes.push({from, to, remove: m})
             }
         })
-        changes.push({from, to, add: mark})
+        changes.push({from, to, add: instance})
     }
     return {changes, userEvent: "mark.add"}
 }

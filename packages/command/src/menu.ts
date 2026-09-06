@@ -89,7 +89,7 @@ export namespace Menu {
 
         /** Toolbar button that toggles an inline mark and reports active state. */
         export function toggleMark(config: {
-            mark: Mark
+            mark: Mark | Mark.Type
             parent?: Menu.Group | Menu.Submenu
             rank?: number
             description?: PhraseSet.Ref

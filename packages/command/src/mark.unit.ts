@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Mark, Plot, Schema} from "@arrisa/doc"
 import {EditorSelection, EditorState} from "@arrisa/state"
-import {Alignment, Direction, Emphasis, Link, Strong, sanitizeLinkHref} from "@arrisa/types"
+import {Alignment, Direction, Doc, Emphasis, Link, Paragraph, Strong, sanitizeLinkHref} from "@arrisa/types"
 import {applyLink, clearFormatting, removeLinks, setAlignment, setDirection, toggleMark} from "./mark"
 import {para, runPure, stateFromBlocks, testSchema} from "./test-helpers"
 
@@ -37,6 +37,31 @@ describe("toggleMark", () => {
         let text = result.state.doc.resolve(1).nodeAfter
         expect(text).toBeTruthy()
         expect(s.bold.isInSet(text!.tag.marks)).toBeFalsy()
+    })
+
+    it("adds Strong on a range when given the Type, not mark.remove", () => {
+        let schema = Schema.define([Doc, Paragraph, Strong])
+        let doc = schema.doc([Paragraph.create([Leaf.text("hello world")])])
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.range(1, 6),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let result = runPure(state, toggleMark, Strong.type)
+        expect(result.applied).toBe(true)
+        expect((result.spec as {userEvent?: string}).userEvent).toBe("mark.add")
+        let text = result.state.doc.resolve(1).nodeAfter!
+        expect(Strong.isInSet(text.tag.marks)).toBeTruthy()
+    })
+
+    it("adds the mark on a range when given a Type-like value", () => {
+        let {state, bold} = stateFromBlocks((s) => [para(s, "hello world")], EditorSelection.range(1, 6))
+        let typeLike = {default: bold} as Mark.Type
+        let result = runPure(state, toggleMark, typeLike)
+        expect(result.applied).toBe(true)
+        expect((result.spec as {userEvent?: string}).userEvent).toBe("mark.add")
+        let text = result.state.doc.resolve(1).nodeAfter!
+        expect(bold.isInSet(text.tag.marks)).toBeTruthy()
     })
 })
 

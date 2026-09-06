@@ -6,18 +6,19 @@ import {type ChangeSet, Mark} from "@arrisa/doc"
 import {EditorSelection, type EditorState} from "@arrisa/state"
 import {Alignment, Direction, Emphasis, Link, Strong, Underline, sanitizeLinkHref} from "@arrisa/types"
 import {type Command} from "./command"
-import {canAddMarkInRange, selectedTextblocks} from "./util/selection"
+import {asMark, canAddMarkInRange, selectedTextblocks} from "./util/selection"
 
 /**
  * Toggle `mark` on the selection. Empty cursors update stored marks; ranges
  * add the mark when any gap allows it, otherwise remove it.
  */
-export const toggleMark: Command.Pure<Mark> = ({state}, mark) => {
+export const toggleMark: Command.Pure<Mark | Mark.Type> = ({state}, mark) => {
+    let instance = asMark(mark)
     let {selection, doc} = state
     if (selection instanceof EditorSelection.Text && selection.empty) {
         let selMarks = selection.marks || state.sel.head.marks(),
-            add = !mark.isInSet(selMarks)
-        let newMarks = add ? mark.addToSet(selMarks) : mark.removeFromSet(selMarks)
+            add = !instance.isInSet(selMarks)
+        let newMarks = add ? instance.addToSet(selMarks) : instance.removeFromSet(selMarks)
         return {
             selection: EditorSelection.Text.create({
                 anchor: selection.anchor,
@@ -27,14 +28,14 @@ export const toggleMark: Command.Pure<Mark> = ({state}, mark) => {
             }),
             userEvent: add ? "mark.add" : "mark.remove",
         }
-    } else if (selection.ranges.some((r) => canAddMarkInRange(doc, r.from, r.to, mark))) {
+    } else if (selection.ranges.some((r) => canAddMarkInRange(doc, r.from, r.to, instance))) {
         return {
-            changes: selection.ranges.map((r) => ({from: r.from, to: r.to, add: mark})),
+            changes: selection.ranges.map((r) => ({from: r.from, to: r.to, add: instance})),
             userEvent: "mark.add",
         }
     } else {
         return {
-            changes: selection.ranges.map((r) => ({from: r.from, to: r.to, remove: mark})),
+            changes: selection.ranges.map((r) => ({from: r.from, to: r.to, remove: instance})),
             userEvent: "mark.remove",
         }
     }

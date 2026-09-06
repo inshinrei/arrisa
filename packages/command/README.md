@@ -102,7 +102,7 @@ Most high-level commands are pure. View-backed ones: `deleteToLineEnd`, `deleteL
 
 | Export | Description |
 |--------|-------------|
-| `toggleMark` | Toggle a mark on selection or stored marks |
+| `toggleMark` | Toggle a mark on selection or stored marks. Param is `Mark` or `Mark.Type` (Type is resolved to `.default`) |
 | `toggleEmphasis` / `toggleStrong` / `toggleUnderline` | Convenience for `@arrisa/types` marks |
 | `setAlignment` | Text-align on textblocks (`null` / `"start"` clears default) |
 | `setDirection` | `dir` on textblocks (`null` clears) |
@@ -163,6 +163,7 @@ markExclusivity({isolating: [Code, Strikethrough]})
 import {Menu, toggleStrong, Command} from "@arrisa/command"
 import {Strong} from "@arrisa/types"
 
+// Strong is the default Mark instance; callers may pass Strong or Strong.type
 let boldBtn = Menu.Button.toggleMark({
   mark: Strong,
   parent: Menu.Group.inline,
