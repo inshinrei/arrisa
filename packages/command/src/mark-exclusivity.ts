@@ -8,7 +8,7 @@ import {type Mark} from "@arrisa/doc"
 import {EditorSelection, EditorState} from "@arrisa/state"
 import {Command} from "./command"
 import {toggleMark} from "./mark"
-import {canAddMarkInRange} from "./util/selection"
+import {asMark, asType, canAddMarkInRange} from "./util/selection"
 
 /** Resolved exclusivity policy from the editor state. */
 export interface MarkExclusivityPolicy {
@@ -36,14 +36,6 @@ const policyFacet = EditorState.Facet.define<MarkExclusivityPolicy, MarkExclusiv
         return {isolating}
     },
 })
-
-function asType(mark: Mark | Mark.Type): Mark.Type {
-    return "type" in mark && (mark as Mark).type ? (mark as Mark).type : (mark as Mark.Type)
-}
-
-function asMark(mark: Mark | Mark.Type): Mark {
-    return "type" in mark && (mark as Mark).type ? (mark as Mark) : (mark as Mark.Type).default!
-}
 
 function isIsolating(policy: MarkExclusivityPolicy, type: Mark.Type): boolean {
     return policy.isolating.includes(type)

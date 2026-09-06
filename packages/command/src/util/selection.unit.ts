@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest"
-import {Leaf} from "@arrisa/doc"
+import {Leaf, Mark} from "@arrisa/doc"
 import {EditorSelection} from "@arrisa/state"
 import {canAddMarkInRange, selectedTextblocks} from "./selection"
 import {para, stateFromBlocks, testSchema} from "./test-helpers"
@@ -37,5 +37,19 @@ describe("canAddMarkInRange", () => {
         let s = testSchema()
         let doc = s.schema.doc([s.paragraph.create([Leaf.text("hi", [s.bold])])])
         expect(canAddMarkInRange(doc, 1, 3, s.bold)).toBe(false)
+    })
+
+    it("is true for a Type on a range that includes the paragraph plot (from 0)", () => {
+        let s = testSchema()
+        let doc = s.schema.doc([para(s, "hello world")])
+        expect(canAddMarkInRange(doc, 0, 6, s.bold.type)).toBe(true)
+    })
+
+    it("is true for a Type-like value that is not instanceof Mark.Type", () => {
+        let s = testSchema()
+        let doc = s.schema.doc([para(s, "hello world")])
+        let typeLike = {default: s.bold} as Mark.Type
+        expect(canAddMarkInRange(doc, 0, 6, typeLike)).toBe(true)
+        expect(canAddMarkInRange(doc, 1, 6, typeLike)).toBe(true)
     })
 })
