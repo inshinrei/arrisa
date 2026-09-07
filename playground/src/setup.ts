@@ -14,6 +14,7 @@ import {
 } from "@arrisa/schema"
 import {composeField, messengerCompose} from "@arrisa/message"
 import {phrases} from "@arrisa/phrases"
+import type {LinkConfig, LinkPromptRequest} from "@arrisa/schema"
 import type {EditorState} from "@arrisa/state"
 
 /** History field + handlers so default keymap Mod-z/y hit real undo/redo. */
@@ -91,11 +92,50 @@ export function chatExtensions(): EditorState.Extension {
     ]
 }
 
-/** Block compose field (`composeField`) — lists, quote, code block, floating toolbar. */
-export function composeExtensions(): EditorState.Extension {
+/** Host-style link field: show `#chat-link-field`, Apply / Escape. */
+export function playgroundLinkPrompt(field: HTMLElement): NonNullable<LinkConfig["prompt"]> {
+    let input = field.querySelector("input") as HTMLInputElement
+    let applyBtn = field.querySelector("#btn-link-apply") as HTMLButtonElement
+    let open: LinkPromptRequest | null = null
+    let hide = () => {
+        field.hidden = true
+        open = null
+    }
+    applyBtn.addEventListener("click", () => {
+        if (!open) return
+        let req = open
+        hide()
+        req.apply(input.value)
+    })
+    input.addEventListener("keydown", (event) => {
+        if (event.key == "Enter") {
+            event.preventDefault()
+            applyBtn.click()
+        } else if (event.key == "Escape") {
+            event.preventDefault()
+            let req = open
+            hide()
+            req?.cancel()
+        }
+    })
+    return (req) => {
+        open = req
+        input.value = req.href ?? ""
+        field.hidden = false
+        input.focus()
+    }
+}
+
+/** Block compose field — embedded menubar in `toolbar`, no floating toolbar. */
+export function composeExtensions(
+    toolbar: HTMLElement,
+    linkPrompt: NonNullable<LinkConfig["prompt"]>,
+): EditorState.Extension {
     return [
         composeField({
-            floating: {above: true, class: "pg-chat-formatter"},
+            floating: false,
+            embedded: {parent: toolbar, class: "pg-compose-tools"},
+            linkPrompt,
         }),
         historyChrome(),
         Arrisa.label("Compose field"),
@@ -114,10 +154,14 @@ export function createDocEditor(parent: HTMLElement): Arrisa {
     })
 }
 
-export function createChatEditor(parent: HTMLElement): Arrisa {
+export function createChatEditor(
+    parent: HTMLElement,
+    toolbar: HTMLElement,
+    linkPrompt: NonNullable<LinkConfig["prompt"]>,
+): Arrisa {
     return Arrisa.create({
         parent,
         doc: "",
-        config: composeExtensions(),
+        config: composeExtensions(toolbar, linkPrompt),
     })
 }

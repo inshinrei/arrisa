@@ -67,21 +67,50 @@ body {
   background: color-mix(in srgb, Canvas 92%, CanvasText 4%);
 }
 
-.pg-editor-chat {
-  min-height: 120px;
-  max-width: 36rem;
-  /* Compact messenger field — override menu layout vars for chat chrome */
+.pg-compose {
+  max-width: 22.5rem;
+  overflow: visible;
   --arrisa-menu-gap: 2px;
   --arrisa-menu-padding: 4px 6px;
   --arrisa-menu-item-size: 22px;
-  --arrisa-floating-radius: 10px;
-  --arrisa-floating-shadow: 0 2px 12px rgba(0, 0, 0, 0.14);
 }
 
-/* Demo: host-custom floating toolbar look (class from floatingMenu config) */
-.pg-chat-formatter.arrisa-floating-menu,
-arrisa-tooltip .pg-chat-formatter {
-  border-radius: var(--arrisa-floating-radius, 10px);
+.pg-format-bar {
+  overflow: visible;
+  margin-bottom: 0.35rem;
+}
+
+.pg-format-bar arrisa-menubar .arrisa-button-label {
+  display: none;
+}
+
+.pg-format-bar arrisa-menubar arrisa-menu-list .arrisa-button-label {
+  display: inline-block;
+}
+
+.pg-editor-chat {
+  min-height: 120px;
+}
+
+.pg-link-field {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  align-items: center;
+}
+
+.pg-link-field[hidden] {
+  display: none;
+}
+
+.pg-link-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
 }
 
 .pg-actions {

@@ -4,15 +4,18 @@
 import {serialize} from "@arrisa/doc"
 import type {Arrisa} from "@arrisa/editor"
 import {docToFormattedText} from "@arrisa/message"
-import {createChatEditor, createDocEditor} from "./setup"
+import {createChatEditor, createDocEditor, playgroundLinkPrompt} from "./setup"
 
 let docMount = document.getElementById("editor-doc") as HTMLElement
 let chatMount = document.getElementById("editor-chat") as HTMLElement
+let chatToolbar = document.getElementById("chat-format-bar") as HTMLElement
+let chatLinkField = document.getElementById("chat-link-field") as HTMLElement
 let chatOut = document.getElementById("chat-out") as HTMLPreElement
 let inspectOut = document.getElementById("inspect-out") as HTMLPreElement
 
+let linkPrompt = playgroundLinkPrompt(chatLinkField)
 let docEditor = createDocEditor(docMount)
-let chatEditor = createChatEditor(chatMount)
+let chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt)
 let activeEditor: Arrisa = docEditor
 
 function trackFocus(editor: Arrisa) {
@@ -96,7 +99,9 @@ document.getElementById("btn-send")!.addEventListener("click", () => {
 
 document.getElementById("btn-clear-chat")!.addEventListener("click", () => {
     chatMount.replaceChildren()
-    chatEditor = createChatEditor(chatMount)
+    chatToolbar.replaceChildren()
+    chatLinkField.hidden = true
+    chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt)
     trackFocus(chatEditor)
     activeEditor = chatEditor
     ;(window as any).arrisa.chatEditor = chatEditor
