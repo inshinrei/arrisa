@@ -1,5 +1,9 @@
 import {describe, expect, it} from "vitest"
-import {shouldCollapseOnOutsidePointer} from "./input-state"
+import {
+    addOutsidePointerChrome,
+    outsidePointerChromeRoots,
+    shouldCollapseOnOutsidePointer,
+} from "./input-state"
 
 function chromeTarget(token: string) {
     return {
@@ -25,17 +29,25 @@ describe("shouldCollapseOnOutsidePointer", () => {
         expect(shouldCollapseOnOutsidePointer(editorDom, [inner, editorDom], false)).toBe(false)
     })
 
-    it("ignores tooltips, floating menu, and link prompt in the path", () => {
+    it("ignores tooltips, floating menu, link prompt, and menubar in the path", () => {
         let editorDom = {contains: () => false}
         expect(shouldCollapseOnOutsidePointer(editorDom, [chromeTarget("arrisa-tooltip")], false)).toBe(false)
         expect(shouldCollapseOnOutsidePointer(editorDom, [chromeTarget(".arrisa-tooltip")], false)).toBe(false)
         expect(shouldCollapseOnOutsidePointer(editorDom, [chromeTarget(".arrisa-floating-menu")], false)).toBe(false)
         expect(shouldCollapseOnOutsidePointer(editorDom, [chromeTarget("arrisa-link-prompt")], false)).toBe(false)
+        expect(shouldCollapseOnOutsidePointer(editorDom, [chromeTarget("arrisa-menubar")], false)).toBe(false)
+        expect(shouldCollapseOnOutsidePointer(editorDom, [chromeTarget(".arrisa-menubar")], false)).toBe(false)
     })
 
     it("collapses when the path is outside the editor and chrome", () => {
         let target = {closest: () => null}
         expect(shouldCollapseOnOutsidePointer({contains: () => false}, [target], false)).toBe(true)
+    })
+
+    it("collapses when the path is document.body only", () => {
+        let target = {closest: () => null}
+        expect(shouldCollapseOnOutsidePointer({contains: () => false}, [target], false)).toBe(true)
+        expect(shouldCollapseOnOutsidePointer({contains: () => false}, [target], false, [])).toBe(true)
     })
 
     it("collapses when composedPath includes window (non-Node) without calling contains on it", () => {
@@ -62,5 +74,34 @@ describe("shouldCollapseOnOutsidePointer", () => {
         expect(shouldCollapseOnOutsidePointer({contains: () => false}, [{parentElement: parent}], false)).toBe(
             false,
         )
+    })
+
+    it("does not collapse when a registered chrome root is on the path", () => {
+        let inner = {closest: () => null, nodeType: 1}
+        let root = {
+            contains(node: any) {
+                return node === inner
+            },
+        }
+        expect(shouldCollapseOnOutsidePointer({contains: () => false}, [inner, root], false, [root])).toBe(false)
+    })
+
+    it("addOutsidePointerChrome is read by outsidePointerChromeRoots", () => {
+        let editor = {}
+        let inner = {closest: () => null, nodeType: 1}
+        let root = {
+            contains(node: any) {
+                return node === inner
+            },
+        }
+        addOutsidePointerChrome(editor, root)
+        expect(
+            shouldCollapseOnOutsidePointer(
+                {contains: () => false},
+                [inner],
+                false,
+                outsidePointerChromeRoots(editor),
+            ),
+        ).toBe(false)
     })
 })

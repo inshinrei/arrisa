@@ -52,7 +52,7 @@ editor.dispatch({
 
 For single-field / compose UIs, use `composeKeymap()` instead: it turns off the default map and installs a compact subset (enter/break, delete, arrows, Home/End, select-all, Escape, undo/redo) without page motion or macOS emacs-style Ctrl bindings.
 
-A non-empty selection also collapses on `pointerdown` outside `editor.dom`, except on tooltips (`arrisa-tooltip`), the floating menu, and the link prompt.
+A non-empty selection also collapses on `pointerdown` outside `editor.dom`, except on tooltips (`arrisa-tooltip`), the floating menu, the link prompt, and the menubar (`arrisa-menubar` / `.arrisa-menubar`, including registered `MenuHost.dom` roots).
 
 ### Chrome
 

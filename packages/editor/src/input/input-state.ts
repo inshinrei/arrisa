@@ -16,7 +16,7 @@ import {baseHandlers, baseObservers} from "./handlers"
 
 /** Chrome outside `editor.dom` that should not collapse a range. */
 export const outsidePointerChromeSelector =
-    "arrisa-tooltip, .arrisa-tooltip, arrisa-floating-menu, .arrisa-floating-menu, arrisa-link-prompt, .arrisa-link-prompt"
+    "arrisa-tooltip, .arrisa-tooltip, arrisa-floating-menu, .arrisa-floating-menu, arrisa-link-prompt, .arrisa-link-prompt, arrisa-menubar, .arrisa-menubar"
 
 type OutsidePointerTarget = {
     closest?: (sel: string) => unknown
@@ -28,16 +28,37 @@ function isDomNode(entry: unknown): boolean {
     return typeof Node != "undefined" ? entry instanceof Node : typeof (entry as OutsidePointerTarget)?.nodeType == "number"
 }
 
+let chromeByEditor = new WeakMap<object, Set<{contains(node: any): boolean}>>()
+
+export function addOutsidePointerChrome(editor: object, root: {contains(node: any): boolean}) {
+    let set = chromeByEditor.get(editor)
+    if (!set) chromeByEditor.set(editor, (set = new Set()))
+    set.add(root)
+}
+
+export function outsidePointerChromeRoots(editor: object): Iterable<{contains(node: any): boolean}> {
+    return chromeByEditor.get(editor) ?? emptyChrome
+}
+
+const emptyChrome: Iterable<{contains(node: any): boolean}> = []
+
 /** True when a document `pointerdown` should collapse a non-empty selection. */
 export function shouldCollapseOnOutsidePointer(
     editorDom: {contains(node: any): boolean},
     path: readonly unknown[] | null | undefined,
     selectionEmpty: boolean,
+    chromeRoots?: Iterable<{contains(node: any): boolean}>,
 ): boolean {
     if (selectionEmpty || !path || !path.length) return false
     for (let entry of path) {
         if (entry == editorDom) return false
         if (isDomNode(entry) && editorDom.contains(entry)) return false
+        if (chromeRoots) {
+            for (let root of chromeRoots) {
+                if (entry == root) return false
+                if (isDomNode(entry) && typeof root.contains == "function" && root.contains(entry)) return false
+            }
+        }
         let node = entry as OutsidePointerTarget
         let el = typeof node.closest == "function" ? node : node.parentElement
         if (el && typeof el.closest == "function" && el.closest(outsidePointerChromeSelector)) return false
@@ -221,6 +242,7 @@ export class InputState {
                 this.editor.dom,
                 event.composedPath(),
                 this.editor.state.selection.empty,
+                outsidePointerChromeRoots(this.editor),
             )
         )
             return

@@ -9,6 +9,7 @@ import {PhraseSet} from "@arrisa/phrases"
 import {EditorState} from "@arrisa/state"
 import {Menu, Command} from "@arrisa/command"
 import {Arrisa} from "./editor"
+import {addOutsidePointerChrome} from "./input/input-state"
 
 export interface MenuElement {
     dom: Element
@@ -399,6 +400,7 @@ export class MenuHost {
             this.dom.role = "toolbar"
             if (this.dom.tagName.toLowerCase() != "arrisa-menubar") this.dom.classList.add("arrisa-menubar")
         }
+        addOutsidePointerChrome(this.editor, this.dom)
 
         this.items = editor.state.facet(Menu.Item.source)
         this.menu = {dom: this.dom, elts: [], children: []}

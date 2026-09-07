@@ -119,6 +119,7 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 7. **Attribute maps** go through safe-attr filtering for known dangerous names; values still need care.
 8. **Range decorations must not overlap** and must be added in order when building `RangeSet`.
 9. **Layering** — editor may import command; command/history/doc/state must not import editor.
+10. **Outside-pointer chrome** — `pointerdown` outside `editor.dom` does **not** collapse a non-empty selection when the path is `arrisa-menubar` / `.arrisa-menubar` or that editor’s `MenuHost.dom`. Do not add `arrisa-floating-menu` on a host parent to fake chrome.
 
 ## What not to do
 
