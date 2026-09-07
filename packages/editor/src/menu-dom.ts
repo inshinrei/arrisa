@@ -183,6 +183,7 @@ export class MenuSubmenu implements MenuElement {
         if (item.arrow) this.button.classList.add("arrisa-submenu-arrow")
         this.list = this.dom.appendChild(document.createElement("arrisa-menu-list"))
         this.list.style.display = "none"
+        this.list.setAttribute("aria-hidden", "true")
         this.list.role = "menu"
         this.list.id = id("arrisa-popup")
         this.list.setAttribute("aria-label", this.button.title)
@@ -212,6 +213,7 @@ export class MenuSubmenu implements MenuElement {
             }
             if ((flags & F.Open) != (this.flags & F.Open)) {
                 this.list.style.display = flags & F.Open ? "" : "none"
+                this.list.setAttribute("aria-hidden", flags & F.Open ? "false" : "true")
                 this.button.setAttribute("aria-expanded", flags & F.Open ? "true" : "false")
             }
             this.flags = flags
@@ -463,8 +465,13 @@ export class MenuHost {
 
     setSelection(selection: readonly MenuElement[], focus = true) {
         updateMenuDOM(this.menu, this.editor, false, selection)
-        if (selection.length > 1 && this.selection.length <= 1)
-            this.dom.ownerDocument.addEventListener("mousedown", this.globalClick)
+        // Defer so the opening mousedown cannot hit globalClick while still bubbling.
+        if (selection.length > 1 && this.selection.length <= 1) {
+            let doc = this.dom.ownerDocument
+            let add = () => doc.addEventListener("mousedown", this.globalClick)
+            if (typeof queueMicrotask == "function") queueMicrotask(add)
+            else add()
+        }
         this.selection = selection
         if (focus && selection.length) selection[selection.length - 1].focusDOM.focus()
     }

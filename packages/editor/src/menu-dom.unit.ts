@@ -312,4 +312,82 @@ describe("embedded menubar chrome click", () => {
             expect(ran).toBe(1)
         })
     })
+
+    it("mousedown on More opens a visible Toggle underline menuitem", () => {
+        withMockDocument(() => {
+            let ran = 0
+            // at:2 wraps only when length > 2 (same threshold as @arrisa/command menu.unit).
+            let overflowGroup = Menu.Group.define({parent: Menu.Group.top, rank: 50, overflow: {at: 2}})
+            let keep = Menu.Button.define({
+                run: () => true,
+                parent: overflowGroup,
+                rank: 1,
+                description: "Keep",
+                label: {icon: "M1"},
+            })
+            let under = Menu.Button.define({
+                run: () => {
+                    ran++
+                    return true
+                },
+                parent: overflowGroup,
+                rank: 2,
+                description: "Toggle underline",
+                label: {icon: "M2"},
+            })
+            let extra = Menu.Button.define({
+                run: () => true,
+                parent: overflowGroup,
+                rank: 3,
+                description: "Extra wrap",
+                label: {icon: "M3"},
+            })
+            let {editor, getState} = makeEditor([
+                overflowGroup,
+                keep,
+                under,
+                extra,
+                hostTemplate.of([Menu.Group.top.template()]),
+            ])
+            let host = new MenuHost(editor, {variant: "bar", template: hostTemplate})
+            editor.dom = {contains: () => false, ownerDocument: document}
+            editor.host = host
+            let input = new InputState(editor)
+
+            let more = host.elts.find((e) => e.children && e.dom.getAttribute("aria-label") == "More")
+            expect(more).toBeTruthy()
+            let underEl = host.elts.find((e) => e.dom.getAttribute("aria-label") == "Toggle underline")
+            expect(underEl).toBeTruthy()
+            expect(underEl!.focusDOM.role == "menuitem" || underEl!.dom.role == "menuitem").toBe(true)
+            // Closed: list not visible
+            expect((more as any).list.style.display).toBe("none")
+
+            input.onOutsidePointer({
+                composedPath: () => [more!.dom, host.dom, document],
+            } as PointerEvent)
+            host.click({
+                target: more!.focusDOM,
+                defaultPrevented: false,
+                preventDefault() {},
+            } as MouseEvent)
+
+            expect(getState().selection.empty).toBe(false)
+            expect(host.selection.length).toBeGreaterThan(1)
+            expect((more as any).list.style.display).not.toBe("none")
+            expect((more as any).list.getAttribute("aria-hidden")).toBe("false")
+            expect(underEl!.dom.style.display).not.toBe("none")
+            expect(underEl!.focusDOM.getAttribute("aria-hidden")).not.toBe("true")
+
+            input.onOutsidePointer({
+                composedPath: () => [underEl!.dom, (more as any).list, more!.dom, host.dom, document],
+            } as PointerEvent)
+            host.click({
+                target: underEl!.focusDOM,
+                defaultPrevented: false,
+                preventDefault() {},
+            } as MouseEvent)
+            expect(getState().selection.empty).toBe(false)
+            expect(ran).toBe(1)
+        })
+    })
 })
