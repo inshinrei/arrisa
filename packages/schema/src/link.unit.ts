@@ -156,3 +156,14 @@ describe("link.button.run", () => {
         expect(runToggle(editor)).toBe(false)
     })
 })
+
+describe("link.button.enable", () => {
+    it("is false iff selection.empty", () => {
+        let empty = makeState([blockDoc(), paragraph(), link()], {selection: 1})
+        expect(empty.selection.empty).toBe(true)
+        expect(link.button.enable!(empty)).toBe(false)
+        let ranged = rangedState()
+        expect(ranged.selection.empty).toBe(false)
+        expect(link.button.enable!(ranged)).toBe(true)
+    })
+})
