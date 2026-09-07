@@ -220,6 +220,18 @@ let hostTemplate = EditorState.Facet.define<readonly Menu.Template[], readonly M
     combine: (inputs) => (inputs.length ? inputs[0] : [Menu.Group.top.template()]),
 })
 
+function fakePointer(path: unknown[]): PointerEvent {
+    return {composedPath: () => path} as unknown as PointerEvent
+}
+
+function fakeMouse(target: EventTarget | null): MouseEvent {
+    return {
+        target,
+        defaultPrevented: false,
+        preventDefault() {},
+    } as unknown as MouseEvent
+}
+
 describe("embedded menubar chrome click", () => {
     it("embedded menubar pointerdown + mousedown applies the mark and keeps the range", () => {
         withMockDocument(() => {
@@ -242,14 +254,8 @@ describe("embedded menubar chrome click", () => {
             expect(markBtn).toBeTruthy()
             let menubar = host.dom
             let parent = {closest: () => null}
-            input.onOutsidePointer({
-                composedPath: () => [markBtn!.dom, menubar, parent, document],
-            } as PointerEvent)
-            host.click({
-                target: markBtn!.dom,
-                defaultPrevented: false,
-                preventDefault() {},
-            } as MouseEvent)
+            input.onOutsidePointer(fakePointer([markBtn!.dom, menubar, parent, document]))
+            host.click(fakeMouse(markBtn!.dom))
             let state = getState()
             expect(state.selection.empty).toBe(false)
             expect(state.selection.from).toBe(1)
@@ -280,15 +286,9 @@ describe("embedded menubar chrome click", () => {
             let input = new InputState(editor)
             let btn = host.elts.find((e) => e.dom.getAttribute("aria-label") == "Create link")!
             // Without menubar on the path, capture pointerdown collapses; click must not run.
-            input.onOutsidePointer({
-                composedPath: () => [{closest: () => null}],
-            } as PointerEvent)
+            input.onOutsidePointer(fakePointer([{closest: () => null}]))
             expect(getState().selection.empty).toBe(true)
-            host.click({
-                target: btn.dom,
-                defaultPrevented: false,
-                preventDefault() {},
-            } as MouseEvent)
+            host.click(fakeMouse(btn.dom))
             expect(ran).toBe(0)
 
             // Restore a range and go through menubar chrome.
@@ -300,15 +300,9 @@ describe("embedded menubar chrome click", () => {
                 selectionSet: true,
                 transactions: [],
             } as any)
-            input.onOutsidePointer({
-                composedPath: () => [btn.dom, host.dom, document],
-            } as PointerEvent)
+            input.onOutsidePointer(fakePointer([btn.dom, host.dom, document]))
             expect(getState().selection.empty).toBe(false)
-            host.click({
-                target: btn.dom,
-                defaultPrevented: false,
-                preventDefault() {},
-            } as MouseEvent)
+            host.click(fakeMouse(btn.dom))
             expect(ran).toBe(1)
         })
     })
@@ -362,30 +356,18 @@ describe("embedded menubar chrome click", () => {
             // Closed: list not visible
             expect((more as any).list.style.display).toBe("none")
 
-            input.onOutsidePointer({
-                composedPath: () => [more!.dom, host.dom, document],
-            } as PointerEvent)
-            host.click({
-                target: more!.focusDOM,
-                defaultPrevented: false,
-                preventDefault() {},
-            } as MouseEvent)
+            input.onOutsidePointer(fakePointer([more!.dom, host.dom, document]))
+            host.click(fakeMouse(more!.focusDOM))
 
             expect(getState().selection.empty).toBe(false)
             expect(host.selection.length).toBeGreaterThan(1)
             expect((more as any).list.style.display).not.toBe("none")
             expect((more as any).list.getAttribute("aria-hidden")).toBe("false")
-            expect(underEl!.dom.style.display).not.toBe("none")
+            expect((underEl!.dom as HTMLElement).style.display).not.toBe("none")
             expect(underEl!.focusDOM.getAttribute("aria-hidden")).not.toBe("true")
 
-            input.onOutsidePointer({
-                composedPath: () => [underEl!.dom, (more as any).list, more!.dom, host.dom, document],
-            } as PointerEvent)
-            host.click({
-                target: underEl!.focusDOM,
-                defaultPrevented: false,
-                preventDefault() {},
-            } as MouseEvent)
+            input.onOutsidePointer(fakePointer([underEl!.dom, (more as any).list, more!.dom, host.dom, document]))
+            host.click(fakeMouse(underEl!.focusDOM))
             expect(getState().selection.empty).toBe(false)
             expect(ran).toBe(1)
         })
