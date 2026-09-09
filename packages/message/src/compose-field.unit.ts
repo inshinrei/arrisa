@@ -8,7 +8,9 @@ import {
     CodeBlock,
     Doc,
     InlineDoc,
+    Link,
     OrderedList,
+    Paragraph,
     Spoiler,
     Strong,
 } from "@arrisa/types"
@@ -16,6 +18,7 @@ import {composeField} from "./compose-field"
 import {flagEntity} from "./entities"
 import {formattedTextToDoc} from "./from-formatted"
 import {entityToMark} from "./mark-map"
+import {docToFormattedText} from "./to-formatted"
 
 function typeChars(state: EditorState, chars: string) {
     let cur = state
@@ -100,5 +103,115 @@ describe("composeField", () => {
             if (node.isText && Spoiler.isInSet(node.marks)) spoiler = true
         })
         expect(spoiler).toBe(false)
+    })
+})
+
+function mockEditor(state: EditorState) {
+    let current = state
+    let dispatched: Transaction.Spec[] = []
+    let editor = {
+        get state() {
+            return current
+        },
+        dispatched,
+        dispatch(...specs: Transaction.Spec[]) {
+            for (let s of specs) {
+                dispatched.push(s)
+                current = current.update(s).state
+            }
+        },
+        focus() {},
+        contentDOM: {ownerDocument: {activeElement: null}},
+        win: globalThis,
+    }
+    return editor as any
+}
+
+function pasteEvent(plain: string, html = ""): ClipboardEvent {
+    return {
+        clipboardData: {
+            getData(type: string) {
+                if (type == "text/plain" || type == "Text") return plain
+                if (type == "text/html") return html
+                if (type == "text/uri-list") return ""
+                return ""
+            },
+        },
+    } as ClipboardEvent
+}
+
+function runPasteOver(editor: {state: EditorState}, event: ClipboardEvent) {
+    return editor.state.facet(Arrisa.pasteHandler).some((h) => h(editor as any, event, Slice.empty, []))
+}
+
+describe("composeField paste-link dump", () => {
+    it("caret-pasted https URL dumps as text_url, not only auto url", () => {
+        let url = "https://example.com"
+        let state = EditorState.create({
+            doc: "",
+            selection: EditorSelection.cursor(1),
+            config: composeField({floating: false, placeholder: false, markdown: false, markdownPaste: false}),
+        })
+        let editor = mockEditor(state)
+        expect(runPasteOver(editor, pasteEvent(url))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe(url)
+        let leaf = editor.state.doc.resolve(1).nodeAfter
+        expect(leaf && Link.isInSet(leaf.tag.marks)).toBeTruthy()
+        let ft = docToFormattedText(editor.state.doc)
+        expect(ft.text).toBe(url)
+        expect(ft.entities?.some((e) => e.type == "text_url" && e.url == url)).toBe(true)
+        expect(ft.entities?.some((e) => e.type == "url")).toBeFalsy()
+        let auto = docToFormattedText(editor.state.doc, {autoDetect: true})
+        expect(auto.entities?.some((e) => e.type == "text_url" && e.url == url)).toBe(true)
+    })
+
+    it("does not claim HTML clipboard that already has an anchor", () => {
+        let url = "https://example.com"
+        let state = EditorState.create({
+            doc: "",
+            selection: EditorSelection.cursor(1),
+            config: composeField({floating: false, placeholder: false, markdown: false, markdownPaste: false}),
+        })
+        let editor = mockEditor(state)
+        expect(
+            runPasteOver(editor, pasteEvent(url, `<a href="${url}">${url}</a>`)),
+        ).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+    })
+
+    it("marks only the pasted URL when the field already has surrounding text", () => {
+        let url = "https://example.com"
+        let prefix = "hello "
+        let config = composeField({floating: false, placeholder: false, markdown: false, markdownPaste: false})
+        let proto = EditorState.create({doc: "", config})
+        let doc = proto.schema.doc([Paragraph.create([Leaf.text(prefix)])])
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(1 + prefix.length),
+            config,
+        })
+        let editor = mockEditor(state)
+        expect(runPasteOver(editor, pasteEvent(url))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe(prefix + url)
+        let before = editor.state.doc.resolve(1).nodeAfter
+        expect(before && Link.isInSet(before.tag.marks)).toBeFalsy()
+        let linked = editor.state.doc.resolve(1 + prefix.length).nodeAfter
+        expect(linked && Link.isInSet(linked.tag.marks)?.value).toBe(url)
+        let ft = docToFormattedText(editor.state.doc)
+        expect(ft.text).toBe(prefix + url)
+        expect(ft.entities).toEqual([
+            {type: "text_url", offset: prefix.length, length: url.length, url},
+        ])
+    })
+
+    it("does not mark a mixed clipboard that contains a URL plus other text", () => {
+        let state = EditorState.create({
+            doc: "",
+            selection: EditorSelection.cursor(1),
+            config: composeField({floating: false, placeholder: false, markdown: false, markdownPaste: false}),
+        })
+        let editor = mockEditor(state)
+        expect(runPasteOver(editor, pasteEvent("see https://example.com"))).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
     })
 })

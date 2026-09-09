@@ -231,6 +231,24 @@ describe("link.pasteOver", () => {
         expect(editor.dispatched).toHaveLength(0)
     })
 
+    it("marks only the pasted URL when the paragraph already has surrounding text", () => {
+        let url = "https://example.com"
+        let prefix = "hello "
+        let extensions = [blockDoc(), paragraph(), link()]
+        let proto = makeState(extensions)
+        let doc = proto.schema.doc([Paragraph.create([Leaf.text(prefix)])])
+        let state = makeState(extensions, {
+            doc,
+            selection: EditorSelection.cursor(1 + prefix.length),
+        })
+        let editor = mockEditor(state)
+        expect(runPasteOver(editor, pasteEvent({plain: url}))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe(prefix + url)
+        expect(linkAt(editor.state, 1)).toBeFalsy()
+        expect(linkAt(editor.state, 1 + prefix.length)?.value).toBe(url)
+        expect(editor.dispatched.at(-1)!.userEvent).toBe("paste.link")
+    })
+
     it("returns false when text/html is present even if plain is a URL", () => {
         let editor = mockEditor(emptyCaretState())
         expect(
