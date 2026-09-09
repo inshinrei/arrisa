@@ -181,7 +181,7 @@ import {
     type LinkPromptRequest,
 } from "@arrisa/schema"
 
-link() // mark + Mod-k + cursor tooltip + paste-URL-over-selection
+link() // mark + Mod-k + cursor tooltip + paste URL over selection or at caret
 link({prompt: false}) // remove-only (no add-link UI)
 let prompt: LinkPrompt = (req: LinkPromptRequest) => {
     // host UI; req.apply sanitizes via applyLink — never raw Link.of
@@ -194,6 +194,8 @@ if (isLinkPasteUrl(text)) {
     // absolute http(s) / mailto / xmpp, no spaces
 }
 ```
+
+Pasting a lone absolute URL (`isLinkPasteUrl`) at an empty caret inserts the URL as a `Link`; a non-empty selection is wrapped and the URL string is not inserted. HTML `<a href>` paste is unchanged.
 
 Default add-link UI is a floating tooltip form (`prompt: "floating"`), not a `Dialog` panel. The default toggle **removes** existing links or opens add UI; it does **not** prefill `href` (remove-first). `cancel` dismisses the built-in floating field and focuses the editor; custom prompts still own their DOM. `req.apply` / form submit run `applyLink` (`sanitizeLinkHref`). The read-only cursor-inside-link tooltip is unchanged.
 

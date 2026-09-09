@@ -5,13 +5,14 @@
  * - **Mod-k** / menu: toggle — remove links under the selection, or prompt
  *   for `href` when none are present (floating tooltip by default)
  * - **Tooltip**: when the cursor is inside a link, show the URL
- * - **Paste**: if the selection is non-empty and clipboard text is a single
- *   URL, apply it as a link mark instead of replacing text
+ * - **Paste**: if clipboard text is a single absolute URL, either wrap a
+ *   non-empty selection as a Link (do not insert the URL string) or insert
+ *   the URL already marked at an empty caret
  *
  * Use {@link isLinkPasteUrl} to test the URL regex independently of paste.
  */
 import {Command, Menu, applyLink, removeLinks} from "@arrisa/command"
-import {ChangeSet} from "@arrisa/doc"
+import {ChangeSet, Leaf, Node} from "@arrisa/doc"
 import {Arrisa, KeyBinding, Tooltip} from "@arrisa/editor"
 import {phrases} from "@arrisa/phrases"
 import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
@@ -288,18 +289,59 @@ export namespace link {
         linkTooltipTheme,
     ]
 
-    /** Apply clipboard URL as a link mark when selection is non-empty. */
+    /** Apply clipboard URL as a link: wrap a range, or insert a marked URL at the caret. */
     export const pasteOver: EditorState.Extension = Arrisa.pasteHandler.of((editor, event) => {
-        let {selection} = editor.state,
-            data = event.clipboardData
-        if (!data || selection.empty) return false
-        let text = data.getData("text/plain") || data.getData("Text") || data.getData("text/uri-list")
+        let {selection} = editor.state
+        let data = event.clipboardData
+        if (!data) return false
+
+        let raw = data.getData("text/plain") || data.getData("Text") || data.getData("text/uri-list")
+        let text = raw.trim()
         if (!text || !isLinkPasteUrl(text)) return false
-        let linkMark = Link.of(text)
-        let changes = ChangeSet.create(editor.state.doc, {from: selection.from, to: selection.to, add: linkMark})
+
+        if (!selection.empty) {
+            let mark = Link.of(text)
+            let changes = ChangeSet.create(editor.state.doc, {
+                from: selection.from,
+                to: selection.to,
+                add: mark,
+            })
+            if (changes.empty) return false
+            editor.dispatch({changes, userEvent: "paste.link", scrollIntoView: true})
+            return true
+        }
+
+        let html = data.getData("text/html")
+        if (html) return false
+
+        if (editor.state.sel.head.parent.node.type.hasRole(Node.Role.Code)) return false
+
+        let href = sanitizeLinkHref(text)
+        if (!href) return false
+
+        let from = selection.from
+        let to = selection.to
+        let marks = Link.of(href).addToSet(editor.state.sel.activeMarks)
+        let changes = ChangeSet.create(editor.state.doc, {
+            from,
+            to,
+            insert: [Leaf.text(text, marks)],
+            fit: true,
+        })
         if (changes.empty) return false
+
+        let next = editor.state.update({
+            changes,
+            selection: EditorSelection.cursor(from + text.length),
+            userEvent: "paste.link",
+            scrollIntoView: true,
+        })
+        let inserted = next.state.doc.resolve(from).nodeAfter
+        if (!inserted || !Link.isInSet(inserted.tag.marks)) return false
+
         editor.dispatch({
             changes,
+            selection: EditorSelection.cursor(from + text.length),
             userEvent: "paste.link",
             scrollIntoView: true,
         })

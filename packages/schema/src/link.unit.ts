@@ -1,10 +1,10 @@
 import {describe, expect, it, vi} from "vitest"
-import {type Command} from "@arrisa/command"
-import {Leaf} from "@arrisa/doc"
-import {Tooltip} from "@arrisa/editor"
+import {Command, insertText} from "@arrisa/command"
+import {Leaf, Node, Slice} from "@arrisa/doc"
+import {Arrisa, Tooltip} from "@arrisa/editor"
 import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
-import {Link, Paragraph} from "@arrisa/types"
-import {blockDoc, paragraph} from "./block"
+import {CodeBlock, Link, Paragraph} from "@arrisa/types"
+import {blockDoc, codeBlock, paragraph} from "./block"
 import {isLinkPasteUrl, link, type LinkConfig, type LinkPromptRequest} from "./link"
 import {makeState} from "./test-helpers"
 
@@ -45,6 +45,28 @@ function rangedState(config?: LinkConfig, marks?: readonly import("@arrisa/doc")
     return makeState(extensions, {doc, selection: EditorSelection.range(1, 6)})
 }
 
+function pasteEvent(data: {plain?: string; html?: string; uriList?: string}): ClipboardEvent {
+    return {
+        clipboardData: {
+            getData(type: string) {
+                if (type == "text/plain") return data.plain ?? ""
+                if (type == "Text") return data.plain ?? ""
+                if (type == "text/html") return data.html ?? ""
+                if (type == "text/uri-list") return data.uriList ?? ""
+                return ""
+            },
+        },
+    } as ClipboardEvent
+}
+
+function runPasteOver(editor: {state: EditorState}, event: ClipboardEvent) {
+    return editor.state.facet(Arrisa.pasteHandler).some((h) => h(editor as any, event, Slice.empty, []))
+}
+
+function emptyCaretState() {
+    return makeState([blockDoc(), paragraph(), link()], {selection: 1})
+}
+
 describe("isLinkPasteUrl", () => {
     it("accepts common absolute URL schemes", () => {
         expect(isLinkPasteUrl("https://example.com")).toBe(true)
@@ -63,6 +85,7 @@ describe("isLinkPasteUrl", () => {
         expect(isLinkPasteUrl("https://example.com more")).toBe(false)
         expect(isLinkPasteUrl(" see https://example.com")).toBe(false)
         expect(isLinkPasteUrl("https://example.com ")).toBe(false)
+        expect(isLinkPasteUrl("https://example.com\n")).toBe(false)
     })
 })
 
@@ -165,5 +188,94 @@ describe("link.button.enable", () => {
         let ranged = rangedState()
         expect(ranged.selection.empty).toBe(false)
         expect(link.button.enable!(ranged)).toBe(true)
+    })
+})
+
+describe("link.pasteOver", () => {
+    it("inserts a lone https URL at an empty caret as a Link", () => {
+        let url = "https://example.com"
+        let editor = mockEditor(emptyCaretState())
+        expect(runPasteOver(editor, pasteEvent({plain: url}))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe(url)
+        expect(linkAt(editor.state)?.value).toBe(url)
+        expect(editor.state.selection.empty).toBe(true)
+        expect(editor.state.selection.from).toBe(1 + url.length)
+        expect(editor.dispatched.at(-1)!.userEvent).toBe("paste.link")
+    })
+
+    it("trims trailing newline/spaces then marks", () => {
+        let url = "https://example.com"
+        let editor = mockEditor(emptyCaretState())
+        expect(runPasteOver(editor, pasteEvent({plain: url + "\n  "}))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe(url)
+        expect(linkAt(editor.state)?.value).toBe(url)
+        expect(editor.dispatched.at(-1)!.userEvent).toBe("paste.link")
+    })
+
+    it("returns false for javascript: at an empty caret", () => {
+        let editor = mockEditor(emptyCaretState())
+        expect(runPasteOver(editor, pasteEvent({plain: "javascript:alert(1)"}))).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+        expect(linkAt(editor.state)).toBeFalsy()
+    })
+
+    it("returns false for www.example.com at an empty caret", () => {
+        let editor = mockEditor(emptyCaretState())
+        expect(runPasteOver(editor, pasteEvent({plain: "www.example.com"}))).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+    })
+
+    it("returns false when clipboard is a URL plus more text", () => {
+        let editor = mockEditor(emptyCaretState())
+        expect(runPasteOver(editor, pasteEvent({plain: "https://example.com more"}))).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+    })
+
+    it("returns false when text/html is present even if plain is a URL", () => {
+        let editor = mockEditor(emptyCaretState())
+        expect(
+            runPasteOver(
+                editor,
+                pasteEvent({
+                    plain: "https://example.com",
+                    html: "<a href=\"https://example.com\">https://example.com</a>",
+                }),
+            ),
+        ).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+    })
+
+    it("wraps a non-empty selection with the URL and does not insert the URL string", () => {
+        let url = "https://example.com"
+        let editor = mockEditor(rangedState())
+        expect(runPasteOver(editor, pasteEvent({plain: url}))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe("hello")
+        expect(linkAt(editor.state)?.value).toBe(url)
+        expect(editor.dispatched.at(-1)!.userEvent).toBe("paste.link")
+    })
+
+    it("returns false inside a code block", () => {
+        let extensions = [blockDoc(), paragraph(), codeBlock(), link()]
+        let proto = makeState(extensions)
+        let doc = proto.schema.doc([CodeBlock.create([Leaf.text("x")])])
+        let state = makeState(extensions, {doc, selection: 1})
+        expect(state.sel.head.parent.node.type.hasRole(Node.Role.Code)).toBe(true)
+        let editor = mockEditor(state)
+        expect(runPasteOver(editor, pasteEvent({plain: "https://example.com"}))).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+        expect(linkAt(editor.state)).toBeFalsy()
+        expect(editor.state.doc.textContent()).toBe("x")
+    })
+
+    it("does not extend the Link mark when typing after a caret-pasted URL", () => {
+        let url = "https://example.com"
+        let editor = mockEditor(emptyCaretState())
+        expect(runPasteOver(editor, pasteEvent({plain: url}))).toBe(true)
+        let from = editor.state.selection.from
+        expect(Command.dispatch(editor, insertText, {from, to: from, insert: " x", userEvent: "input.type"})).toBe(true)
+        expect(editor.state.doc.textContent()).toBe(url + " x")
+        let extra = editor.state.doc.resolve(1 + url.length).nodeAfter
+        expect(extra).toBeTruthy()
+        expect(Link.isInSet(extra!.tag.marks)).toBeFalsy()
     })
 })
