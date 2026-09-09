@@ -298,6 +298,7 @@ export namespace link {
         let raw = data.getData("text/plain") || data.getData("Text") || data.getData("text/uri-list")
         let text = raw.trim()
         if (!text || !isLinkPasteUrl(text)) return false
+        if (!editor.state.schema.has(Link)) return false
 
         if (!selection.empty) {
             let mark = Link.of(text)
@@ -316,7 +317,7 @@ export namespace link {
 
         if (editor.state.sel.head.parent.node.type.hasRole(Node.Role.Code)) return false
 
-        let href = sanitizeLinkHref(text)
+        let href = sanitizeLinkHref(text, {allowRelative: false})
         if (!href) return false
 
         let from = selection.from

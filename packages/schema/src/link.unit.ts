@@ -272,6 +272,23 @@ describe("link.pasteOver", () => {
         expect(editor.dispatched.at(-1)!.userEvent).toBe("paste.link")
     })
 
+    it("trims a trailing newline when wrapping a selection", () => {
+        let url = "https://example.com"
+        let editor = mockEditor(rangedState())
+        expect(runPasteOver(editor, pasteEvent({plain: url + "\n"}))).toBe(true)
+        expect(editor.state.doc.textContent()).toBe("hello")
+        expect(linkAt(editor.state)?.value).toBe(url)
+        expect(editor.dispatched.at(-1)!.userEvent).toBe("paste.link")
+    })
+
+    it("returns false when a fitted caret insert cannot keep Link", () => {
+        let extensions = [blockDoc(), paragraph(), link.pasteOver]
+        let editor = mockEditor(makeState(extensions, {selection: 1}))
+        expect(runPasteOver(editor, pasteEvent({plain: "https://example.com"}))).toBe(false)
+        expect(editor.dispatched).toHaveLength(0)
+        expect(linkAt(editor.state)).toBeFalsy()
+    })
+
     it("returns false inside a code block", () => {
         let extensions = [blockDoc(), paragraph(), codeBlock(), link()]
         let proto = makeState(extensions)
