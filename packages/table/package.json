@@ -1,6 +1,6 @@
 {
     "name": "@arrisa/table",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "description": "Arrisa — table editing: cell selection, structure commands, paste, menu",
     "license": "MIT",
     "type": "module",
