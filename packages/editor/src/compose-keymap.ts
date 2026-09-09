@@ -57,11 +57,13 @@ const composeBindings: readonly KeyBinding.Spec[] = [
     },
     {
         key: "Mod-ArrowLeft",
+        mac: "Alt-ArrowLeft",
         run: Command.bind(moveByWord, {dir: "left"}),
         shift: Command.bind(moveByWord, {dir: "left", extend: true}),
     },
     {
         key: "Mod-ArrowRight",
+        mac: "Alt-ArrowRight",
         run: Command.bind(moveByWord, {dir: "right"}),
         shift: Command.bind(moveByWord, {dir: "right", extend: true}),
     },

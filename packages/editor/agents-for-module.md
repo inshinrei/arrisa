@@ -79,6 +79,7 @@ import {Command, toggleStrong} from "@arrisa/command"
 KeyBinding.of({key: "Mod-b", run: toggleStrong})
 // KeyBinding.useDefaultKeymap.of(false) to drop defaults
 // composeKeymap() — compact subset (no page / emacs Ctrl bindings)
+// macOS Cmd-ArrowLeft/Right = line side (Shift selects); Option-Arrow = word. Do not bind `Mod-ArrowLeft` without `mac: "Alt-ArrowLeft"` or it collides with Cmd line motion.
 // Escape (default + compose) collapses a range to a cursor at head
 composeKeymap()
 ```

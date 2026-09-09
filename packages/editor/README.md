@@ -52,6 +52,8 @@ editor.dispatch({
 
 For single-field / compose UIs, use `composeKeymap()` instead: it turns off the default map and installs a compact subset (enter/break, delete, arrows, Home/End, select-all, Escape, undo/redo) without page motion or macOS emacs-style Ctrl bindings.
 
+On macOS, Option-Arrow moves by word and Cmd-Arrow moves to the visual line start/end (Shift extends the selection). `Mod-Arrow` is Ctrl-Arrow by-word on Windows/Linux. Those Cmd-Arrow line chords are in both the default keymap and `composeKeymap`.
+
 A non-empty selection also collapses on `pointerdown` outside `editor.dom`, except on tooltips (`arrisa-tooltip`), the floating menu, the link prompt, and the menubar (`arrisa-menubar` / `.arrisa-menubar`, including registered `MenuHost.dom` roots).
 
 ### Chrome

@@ -40,4 +40,14 @@ describe("composeKeymap", () => {
         expect(escape).toBeTruthy()
         expect(escape!.spec.allowDefault).toBe(true)
     })
+
+    it("uses Alt-Arrow on mac for word motion so Cmd-Arrow can select the line", () => {
+        let state = makeState(composeKeymap())
+        let left = state.facet(KeyBinding.source).find((b) => b.spec.key == "Mod-ArrowLeft")
+        let right = state.facet(KeyBinding.source).find((b) => b.spec.key == "Mod-ArrowRight")
+        expect(left?.spec.mac).toBe("Alt-ArrowLeft")
+        expect(right?.spec.mac).toBe("Alt-ArrowRight")
+        let cmdLeft = state.facet(KeyBinding.source).find((b) => b.spec.mac == "Cmd-ArrowLeft")
+        expect(cmdLeft?.spec.shift).toBeTruthy()
+    })
 })
