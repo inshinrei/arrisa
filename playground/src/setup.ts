@@ -12,10 +12,17 @@ import {
     horizontalRule,
     codeBlock,
 } from "@arrisa/schema"
-import {composeField, messengerCompose} from "@arrisa/message"
+import {composeField, messengerCompose, type MentionQuery} from "@arrisa/message"
 import {phrases} from "@arrisa/phrases"
 import type {LinkConfig, LinkPromptRequest} from "@arrisa/schema"
 import type {EditorState} from "@arrisa/state"
+
+/** Extra composeField / keymap options used by the playground and e2e remount. */
+export type ChatEditorOptions = {
+    submit?: "Enter" | "Shift-Enter"
+    onMentionQuery?: (q: MentionQuery | null) => void
+    extra?: EditorState.Extension
+}
 
 /** History field + handlers so default keymap Mod-z/y hit real undo/redo. */
 function historyChrome(): EditorState.Extension {
@@ -130,15 +137,20 @@ export function playgroundLinkPrompt(field: HTMLElement): NonNullable<LinkConfig
 export function composeExtensions(
     toolbar: HTMLElement,
     linkPrompt: NonNullable<LinkConfig["prompt"]>,
+    options: ChatEditorOptions = {},
 ): EditorState.Extension {
     return [
         composeField({
             floating: false,
             embedded: {parent: toolbar, class: "pg-compose-tools"},
             linkPrompt,
+            hostElements: true,
+            submit: options.submit,
+            onMentionQuery: options.onMentionQuery,
         }),
         historyChrome(),
         Arrisa.label("Compose field"),
+        options.extra ?? [],
     ]
 }
 
@@ -158,10 +170,11 @@ export function createChatEditor(
     parent: HTMLElement,
     toolbar: HTMLElement,
     linkPrompt: NonNullable<LinkConfig["prompt"]>,
+    options: ChatEditorOptions = {},
 ): Arrisa {
     return Arrisa.create({
         parent,
         doc: "",
-        config: composeExtensions(toolbar, linkPrompt),
+        config: composeExtensions(toolbar, linkPrompt, options),
     })
 }

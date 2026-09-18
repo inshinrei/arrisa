@@ -89,6 +89,8 @@ From the repo root:
 | `pnpm typecheck` | `tsc -b` project references |
 | `pnpm clean` | Remove package `dist/` dirs |
 | `pnpm playground` | Start the playground Vite app |
+| `pnpm test:e2e` | Playground Playwright e2e (`e2e/*.e2e.ts`) |
+| `pnpm test:e2e:install` | Install Playwright Chromium |
 | `pnpm release:prepare` | Test, typecheck, build, then version:sync |
 | `pnpm release:publish` | Publish public `packages/*` to npm (`-- --dry-run` supported) |
 | `pnpm release` | `release:prepare` then `release:publish` |
@@ -106,6 +108,7 @@ Always run relevant tests before committing behavior changes. Run `pnpm build` w
 ## Testing
 
 - Unit tests live next to source as `*.unit.ts` (Vitest).
+- Playground e2e lives in `e2e/*.e2e.ts` (Playwright). Run `pnpm test:e2e`.
 - Add or update tests for behavior changes in the same package.
 - Prefer pure state/doc tests over full DOM when possible; use editor tests when the view layer is involved.
 

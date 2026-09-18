@@ -2,12 +2,14 @@ import { defineConfig } from "vite"
 import { resolve } from "node:path"
 
 let root = resolve(import.meta.dirname, "..")
+let e2e = process.env.ARRISA_E2E == "1"
 
 export default defineConfig({
   root: resolve(import.meta.dirname),
   server: {
     port: 5173,
-    open: true,
+    strictPort: true,
+    open: !e2e,
   },
   resolve: {
     alias: {

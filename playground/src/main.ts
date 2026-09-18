@@ -1,10 +1,31 @@
 /**
  * Arrisa playground — manual QA for document + messenger editor modes.
  */
+import {Command, insertText as insertTextCommand} from "@arrisa/command"
 import {serialize} from "@arrisa/doc"
-import type {Arrisa} from "@arrisa/editor"
-import {docToFormattedText} from "@arrisa/message"
-import {createChatEditor, createDocEditor, playgroundLinkPrompt} from "./setup"
+import {KeyBinding, type Arrisa} from "@arrisa/editor"
+import {
+    docToFormattedText,
+    insertMention as insertMentionCommand,
+    type FormattedText,
+    type MentionQuery,
+    type ToFormattedOptions,
+} from "@arrisa/message"
+import {EditorState} from "@arrisa/state"
+import {createChatEditor, createDocEditor, playgroundLinkPrompt, type ChatEditorOptions} from "./setup"
+
+type ArrisaE2e = {
+    chatEditor: Arrisa
+    lastMentionQuery: MentionQuery | null
+    dump: (opts?: ToFormattedOptions) => FormattedText
+    insertMention: (p: {userId: string; label: string; from?: number; to?: number}) => boolean
+    insertText: (text: string) => boolean
+    remountCompose: (opts: {submit?: "Enter" | "Shift-Enter"}) => void
+    sendLog: string[]
+}
+
+let e2eMode = new URLSearchParams(location.search).get("e2e") == "1"
+let e2eApi: ArrisaE2e | undefined
 
 let docMount = document.getElementById("editor-doc") as HTMLElement
 let chatMount = document.getElementById("editor-chat") as HTMLElement
@@ -14,8 +35,18 @@ let chatOut = document.getElementById("chat-out") as HTMLPreElement
 let inspectOut = document.getElementById("inspect-out") as HTMLPreElement
 
 let linkPrompt = playgroundLinkPrompt(chatLinkField)
+
+function e2eMentionQuery(q: MentionQuery | null) {
+    if (e2eApi) e2eApi.lastMentionQuery = q
+}
+
+function chatOptions(extra?: EditorState.Extension, submit?: "Enter" | "Shift-Enter"): ChatEditorOptions {
+    if (!e2eMode) return extra ? {extra} : {}
+    return {submit, onMentionQuery: e2eMentionQuery, extra}
+}
+
 let docEditor = createDocEditor(docMount)
-let chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt)
+let chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt, chatOptions())
 let activeEditor: Arrisa = docEditor
 
 function trackFocus(editor: Arrisa) {
@@ -97,21 +128,86 @@ document.getElementById("btn-send")!.addEventListener("click", () => {
     console.log("chat send", {html, formatted})
 })
 
-document.getElementById("btn-clear-chat")!.addEventListener("click", () => {
+function remountChat(options: ChatEditorOptions = {}) {
     chatMount.replaceChildren()
     chatToolbar.replaceChildren()
     chatLinkField.hidden = true
-    chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt)
+    chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt, options)
     trackFocus(chatEditor)
     activeEditor = chatEditor
     ;(window as any).arrisa.chatEditor = chatEditor
+    if (e2eApi) e2eApi.chatEditor = chatEditor
     chatEditor.focus()
+}
+
+document.getElementById("btn-clear-chat")!.addEventListener("click", () => {
+    remountChat(chatOptions())
 })
 
 // —— Inspect ——
 document.getElementById("btn-refresh-inspect")!.addEventListener("click", refreshInspect)
 
+function e2eDump(opts?: ToFormattedOptions) {
+    return docToFormattedText(chatEditor.state.doc, opts)
+}
+
+function e2eInsertText(text: string) {
+    chatEditor.focus()
+    let {from, to} = chatEditor.state.selection
+    let ok = Command.dispatch(chatEditor, insertTextCommand, {
+        from,
+        to,
+        insert: text,
+        userEvent: "input.type",
+    })
+    chatEditor.selectionRect()
+    return ok
+}
+
+function e2eInsertMention(p: {userId: string; label: string; from?: number; to?: number}) {
+    chatEditor.focus()
+    let ok = Command.dispatch(chatEditor, insertMentionCommand, p)
+    chatEditor.selectionRect()
+    return ok
+}
+
+function remountCompose(opts: {submit?: "Enter" | "Shift-Enter"}) {
+    if (e2eApi) {
+        e2eApi.sendLog.length = 0
+        e2eApi.lastMentionQuery = null
+    }
+    let submit = opts.submit
+    let extra: EditorState.Extension | undefined
+    if (submit) {
+        extra = EditorState.prec.high(
+            KeyBinding.of({
+                key: submit,
+                run: () => {
+                    e2eApi?.sendLog.push("send")
+                    return true
+                },
+            }),
+        )
+    }
+    remountChat(chatOptions(extra, submit))
+}
+
 // —— Debug surface ——
 ;(window as any).arrisa = {docEditor, chatEditor}
+
+if (e2eMode) {
+    document.body.dataset.e2e = "1"
+    e2eApi = {
+        chatEditor,
+        lastMentionQuery: null,
+        dump: e2eDump,
+        insertMention: e2eInsertMention,
+        insertText: e2eInsertText,
+        remountCompose,
+        sendLog: [],
+    }
+    ;(window as any).__arrisaE2e = e2eApi
+    setTab("chat")
+}
 
 console.log("playground ready — window.arrisa = { docEditor, chatEditor }")
