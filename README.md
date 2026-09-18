@@ -115,6 +115,8 @@ Each package ships a human `README.md` and, after build, `dist/AGENTS.md` (consu
 
 Published `packages/*` share one lockstep version with the repo root `package.json`. Private packages (the playground) are skipped.
 
+On `feat` / `fix` / `perf` / `revert` commits, bump that lockstep **patch** in the same commit (`pnpm version:bump patch`). Do not bump on `docs` / `test` / `chore` / `ci` / `style` / `refactor`. `feat` stays a patch; minor/major only when explicitly requested. See root [`AGENTS.md`](AGENTS.md).
+
 ```bash
 pnpm version:sync                    # copy root version onto published packages
 pnpm version:bump patch|minor|major  # standard semver on root, then sync

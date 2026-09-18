@@ -4,6 +4,25 @@
 
 This file is **not** published to npm. Consumer-facing agent guidance lives in each package’s `agents-for-module.md` and is copied to `dist/AGENTS.md` on build (same pattern as [halua](https://github.com/inshinrei/halua)).
 
+## Version bump on user-facing commits
+
+Published `packages/*` share one lockstep version with the repo root `package.json`. Private packages (the playground) are skipped.
+
+Every commit whose conventional type is `feat`, `fix`, `perf`, or `revert` must increment the **patch** of:
+
+- the repo root `package.json`
+- every public package under `packages/*/package.json`
+
+by **+1**, in **the same commit** as the code change. Run `pnpm version:bump patch` (or edit the files equivalently). Do not leave a follow-up `feat: ver bump` / `chore: ver bump` for those types.
+
+Do **not** bump on `docs`, `test`, `chore`, `ci`, `style`, or `refactor`.
+
+Do **not** bump the private playground. Do not publish from a bump-only thought; publishing stays `pnpm release`.
+
+`feat` is still a patch here (not minor). Use `pnpm version:bump minor` or `pnpm version:bump major` only when the human explicitly wants a minor/major cut.
+
+Example: root and published packages at `0.1.5` + `fix(editor): …` → all of those `package.json` files become `0.1.6` in that fix commit.
+
 ## Code style
 
 - Prefer `let` over `const` in almost all cases inside functions and blocks.
@@ -73,6 +92,8 @@ From the repo root:
 | `pnpm release:prepare` | Test, typecheck, build, then version:sync |
 | `pnpm release:publish` | Publish public `packages/*` to npm (`-- --dry-run` supported) |
 | `pnpm release` | `release:prepare` then `release:publish` |
+| `pnpm version:sync` | Copy root version onto published packages |
+| `pnpm version:bump patch|minor|major` | Standard semver on root, then sync |
 
 Per package (from `packages/<name>` or via filter):
 
@@ -133,6 +154,7 @@ When editing a package:
 2. Keep the dependency graph acyclic.
 3. Update docs if the public surface or usage patterns change.
 4. Run package tests; run build if you need to verify `dist/AGENTS.md` copy.
+5. If the commit type is `feat`, `fix`, `perf`, or `revert`, bump the lockstep patch in the same commit (`pnpm version:bump patch`).
 
 ## Decision guidance
 
@@ -140,6 +162,7 @@ When editing a package:
 - Prefer pure command functions over view-only side effects when both are possible.
 - Do not add reverse-layer dependencies “for convenience.”
 - Do not treat default collab or paste behavior as fully secure without reading `SECURITY.md`.
+- On `feat` / `fix` / `perf` / `revert`, bump the lockstep patch in that same commit. Do not save it for a later `ver bump` commit.
 
 ---
 
