@@ -101,6 +101,7 @@ Point decorations (widgets, attrs, shapes at a position) and range decorations (
 | `moveToLineBoundary` / `moveVertically` | Used by motion/delete commands |
 | `domAtPos` / `posAtDOM` / `nodeDOM` / `nodeFromDOM` | DOM ↔ document mapping |
 | `posAtCoords` / `coordsAtPos` / `coordsForElement` | Screen coordinates |
+| `selectionRect` | Viewport box for the selection (plain `{top,left,width,height}`), flushed, same turn as dispatch |
 | `scheduleDOMRead` / `scheduleDOMWrite` | Split layout read/write phases |
 | `plugin(plugin)` | Plugin value lookup |
 

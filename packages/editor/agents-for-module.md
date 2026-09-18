@@ -118,7 +118,7 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 
 1. **Do not mutate `contentDOM` as the source of truth** — dispatch transactions.
 2. **No dispatch during flush** — throws; use `updateListener` carefully (nested updates are separate).
-3. **Geometry APIs need a connected editor** — `moveToLineBoundary`, `coordsAtPos`, etc. call `ensureFlushed`.
+3. **Geometry APIs need a connected editor** — `moveToLineBoundary`, `coordsAtPos`, `selectionRect`, etc. call `ensureFlushed`. After `insertText` (or any dispatch), hosts must use `selectionRect` / `coordsAtPos` for viewport boxes — not native `Selection` / `Range` rects — so layout is flushed in the same turn.
 4. **`@arrisa/command`’s `Arrisa` is an interface** — the editor class implements it; import the class only from `@arrisa/editor`.
 5. **Default undo is a stub** — install `@arrisa/history` + handlers or rebind keys.
 6. **Paste/HTML is unsafe by default** — without `htmlSanitize`, untrusted HTML is not safe.
@@ -130,7 +130,7 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 
 ## What not to do
 
-- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`/`ComposeKeymapConfig`, decoration types, `Panel`, `menuBar`/`MenuBarConfig`, `floatingMenu`/`FloatingMenuConfig`, `embeddedMenu`/`EmbeddedMenuConfig`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
+- Do not invent exports beyond the package entry (`Arrisa`, `ClientBox`, `KeyBinding`, `composeKeymap`/`ComposeKeymapConfig`, decoration types, `Panel`, `menuBar`/`MenuBarConfig`, `floatingMenu`/`FloatingMenuConfig`, `embeddedMenu`/`EmbeddedMenuConfig`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
 - Do not treat schema `ignoreTags` as XSS protection.
 - Do not create an identity Trusted Types policy inside Arrisa apps for convenience — sanitize first.
 - Do not read layout in plugin `update` without `scheduleDOMRead`.

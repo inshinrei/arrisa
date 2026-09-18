@@ -22,5 +22,6 @@ export {
     textNodeAfter,
 } from "./dom"
 export {coordsAtPos, caretRectFromCharBox} from "./coords"
+export {clientBoxFromRects, type ClientBox} from "./selection-rect"
 export {setDOMSelection, readDOMSelection, moveToLineBoundary, moveVertically} from "./selection"
 export {DOMObserver} from "./observer"

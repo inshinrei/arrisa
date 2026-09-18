@@ -4,6 +4,7 @@
  * Layering: util/browser/style-mod → dom → decoration → tile → input → editor → extensions.
  */
 export {Arrisa} from "./editor"
+export type {ClientBox} from "./dom"
 
 export {KeyBinding} from "./key-map"
 export {composeKeymap, type ComposeKeymapConfig} from "./compose-keymap"

@@ -38,7 +38,7 @@ import {
     clearScratchRange,
     scrollRectIntoView,
 } from "../dom"
-import {coordsAtPos} from "../dom"
+import {coordsAtPos, clientBoxFromRects, type ClientBox} from "../dom"
 import {setDOMSelection, moveToLineBoundary, moveVertically} from "../dom"
 import browser from "../browser"
 import {editorPlugin, PluginInstance} from "./plugin"
@@ -528,6 +528,16 @@ export class Arrisa {
     coordsAtPos(pos: number, assoc: -1 | 1 = -1): DOMRect {
         this.ensureFlushed()
         return coordsAtPos(this, pos, assoc)
+    }
+
+    /// Viewport box for the current selection (plain copy, not a live DOMRect).
+    /// Calls `ensureFlushed` so it is safe in the same turn as a dispatch.
+    selectionRect(): ClientBox | null {
+        this.ensureFlushed()
+        let {from, to} = this.state.selection
+        let a = this.coordsAtPos(from, from == to ? -1 : 1)
+        if (from == to) return clientBoxFromRects(a)
+        return clientBoxFromRects(a, this.coordsAtPos(to, -1))
     }
 
     /// Return the rectangle around a given node or character. If there is no
