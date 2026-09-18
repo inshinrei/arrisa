@@ -46,7 +46,10 @@ composeField({
             onCancel: ctx.cancel,
         })
     },
+    submit: "Enter", // omit that chord; host binds send. or "Shift-Enter"
 })
+// Host send: EditorState.prec.high(KeyBinding.of({key: "Enter", run}))
+// Missing host binding may fall through to beforeinput (insertParagraph → enter).
 // Default toggle removes existing links or opens add UI; does not prefill href.
 // cancel dismisses the built-in floating field and focuses; custom prompts own their DOM.
 
@@ -75,14 +78,15 @@ let doc = formattedTextToDoc(payload, editor.state.schema)
 
 1. **UTF-16 offsets** — entity `offset` / `length` use JS string indices, not Unicode code points. Do not re-count with grapheme libraries without converting carefully.
 2. **`composeField` / `messengerCompose` do not include history** — always add `@arrisa/history` when undo is required.
-3. **`composeField` is a block `Doc`** (paragraphs, lists, quotes, code; no spoiler). Markdown typing omits `||spoiler||`. **`messengerCompose` defaults to inline** (`InlineDoc` via `messengerSchema`). Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1). `composeField` already includes those list types.
-4. **`autoDetect` on export** — adds url/email/phone/hashtag/… entities; auto types are **not** re-applied as marks on import (`materializeRuns` skips them). Style marks (bold/italic/…) do **not** block auto detection; `pre` / inline `code` / `text_url` / `mention_name` / `custom_emoji` do (`isAutoExclusive`).
-5. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text.
-6. **`MentionName` is non-inclusive** — typing after a mention does not extend the mark.
-7. **Custom emoji** — param is `{documentId, alt}`; export uses `alt` as the text span covered by `custom_emoji`. Alt is atomic (no surrounding mark runs). Marks that only partially overlap a `custom_emoji` range are dropped around the atom.
-8. **Exclusivity** — `"code-strike"` isolates Code + Strikethrough from other marks (via `@arrisa/command` mark exclusivity).
-9. **Markdown paste** only runs when `looksLikeMarkdown` is true and parse yields entities; otherwise default paste wins.
-10. Prefer **`let`** in examples; `const` only for arrow functions / true globals.
+3. **`submit` is not send** — Arrisa omits the chord; the host binds it. When `submit` is set, the other chord is `insertLineBreak`. A missing host binding may fall through to `beforeinput` split.
+4. **`composeField` is a block `Doc`** (paragraphs, lists, quotes, code; no spoiler). Markdown typing omits `||spoiler||`. **`messengerCompose` defaults to inline** (`InlineDoc` via `messengerSchema`). Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1). `composeField` already includes those list types.
+5. **`autoDetect` on export** — adds url/email/phone/hashtag/… entities; auto types are **not** re-applied as marks on import (`materializeRuns` skips them). Style marks (bold/italic/…) do **not** block auto detection; `pre` / inline `code` / `text_url` / `mention_name` / `custom_emoji` do (`isAutoExclusive`).
+6. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text.
+7. **`MentionName` is non-inclusive** — typing after a mention does not extend the mark.
+8. **Custom emoji** — param is `{documentId, alt}`; export uses `alt` as the text span covered by `custom_emoji`. Alt is atomic (no surrounding mark runs). Marks that only partially overlap a `custom_emoji` range are dropped around the atom.
+9. **Exclusivity** — `"code-strike"` isolates Code + Strikethrough from other marks (via `@arrisa/command` mark exclusivity).
+10. **Markdown paste** only runs when `looksLikeMarkdown` is true and parse yields entities; otherwise default paste wins.
+11. Prefer **`let`** in examples; `const` only for arrow functions / true globals.
 
 ## What not to do
 

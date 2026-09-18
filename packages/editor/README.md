@@ -52,6 +52,8 @@ editor.dispatch({
 
 For single-field / compose UIs, use `composeKeymap()` instead: it turns off the default map and installs a compact subset (enter/break, delete, arrows, Home/End, select-all, Escape, undo/redo) without page motion or macOS emacs-style Ctrl bindings.
 
+`composeKeymap({submit: "Enter" | "Shift-Enter"})` omits that chord so the host can bind send. The other chord is always `insertLineBreak`. When `submit` is omitted, Enter still runs `enter` (split textblock) and Shift-Enter runs `insertLineBreak`. Arrisa does not send messages. Bind the omitted chord with `EditorState.prec.high(KeyBinding.of({key, run}))`. A missing host binding may fall through to `beforeinput` (`insertParagraph` → `enter`).
+
 On macOS, Option-Arrow moves by word and Cmd-Arrow moves to the visual line start/end (Shift extends the selection). `Mod-Arrow` is Ctrl-Arrow by-word on Windows/Linux. Those Cmd-Arrow line chords are in both the default keymap and `composeKeymap`.
 
 A non-empty selection also collapses on `pointerdown` outside `editor.dom`, except on tooltips (`arrisa-tooltip`), the floating menu, the link prompt, and the menubar (`arrisa-menubar` / `.arrisa-menubar`, including registered `MenuHost.dom` roots).
@@ -160,8 +162,11 @@ KeyBinding.useDefaultKeymap.of(false)
 KeyBinding.defaultKeymap.map((b) => b.extension)
 
 // Compact map for compose / single-field UIs (disables defaults)
-import {composeKeymap} from "@arrisa/editor"
-composeKeymap()
+import {composeKeymap, type ComposeKeymapConfig} from "@arrisa/editor"
+import {EditorState} from "@arrisa/state"
+composeKeymap() // Enter = enter, Shift-Enter = insertLineBreak
+composeKeymap({submit: "Enter"}) // Enter unbound; Shift-Enter = insertLineBreak
+EditorState.prec.high(KeyBinding.of({key: "Enter", run: hostSend}))
 ```
 
 `Mod` is Meta on macOS and Ctrl elsewhere. Specs support `key`, `mac`, `win`, `linux`, `char`, `run`, `shift`, `scope`, `allowDefault`.

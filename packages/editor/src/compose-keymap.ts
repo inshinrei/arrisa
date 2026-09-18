@@ -5,6 +5,8 @@
  * {@link KeyBinding.defaultKeymap}: enter/break, delete unit/word/line-end,
  * arrows (unit/line/word/doc), Home/End, select-all, Escape (collapse), undo/redo.
  * Omits page motion, transpose, and macOS emacs-style Ctrl bindings.
+ *
+ * `submit` omits that chord so the host can bind send. Arrisa does not send.
  */
 import {EditorState} from "@arrisa/state"
 import {
@@ -26,9 +28,12 @@ import {
 } from "@arrisa/command"
 import {KeyBinding} from "./key-map"
 
-const composeBindings: readonly KeyBinding.Spec[] = [
-    {key: "Enter", run: enter},
-    {key: "Shift-Enter", run: insertLineBreak},
+export type ComposeKeymapConfig = {
+    /** Chord the host binds to submit. Arrisa does not bind it. */
+    submit?: "Enter" | "Shift-Enter"
+}
+
+const composeTailBindings: readonly KeyBinding.Spec[] = [
     {key: "Backspace", run: Command.bind(deleteUnit, "backward")},
     {key: "Delete", run: Command.bind(deleteUnit, "forward")},
     {key: "Ctrl-Backspace", mac: "Alt-Backspace", run: Command.bind(deleteWord, "backward")},
@@ -114,7 +119,19 @@ const composeBindings: readonly KeyBinding.Spec[] = [
     {linux: "Ctrl-Shift-z", run: redo},
 ]
 
+function composeBindingList(config: ComposeKeymapConfig = {}): KeyBinding.Spec[] {
+    let bindings: KeyBinding.Spec[] = []
+    if (config.submit != "Enter") {
+        bindings.push({key: "Enter", run: config.submit == "Shift-Enter" ? insertLineBreak : enter})
+    }
+    if (config.submit != "Shift-Enter") {
+        bindings.push({key: "Shift-Enter", run: insertLineBreak})
+    }
+    bindings.push(...composeTailBindings)
+    return bindings
+}
+
 /** Extension: disable the full default keymap and install compose-field bindings. */
-export function composeKeymap(): EditorState.Extension {
-    return [KeyBinding.useDefaultKeymap.of(false), composeBindings.map(KeyBinding.of)]
+export function composeKeymap(config: ComposeKeymapConfig = {}): EditorState.Extension {
+    return [KeyBinding.useDefaultKeymap.of(false), composeBindingList(config).map(KeyBinding.of)]
 }

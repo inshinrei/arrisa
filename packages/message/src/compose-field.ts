@@ -43,12 +43,17 @@ export interface ComposeFieldConfig {
     resolveMention?: (username: string) => string | null | undefined
     /** Forwarded to {@link composeSchema} as `link.prompt`. */
     linkPrompt?: LinkConfig["prompt"]
+    /**
+     * Chord the host binds to submit. Arrisa does not bind it.
+     * Forwarded to {@link composeKeymap}. Omitted: Enter splits, Shift-Enter breaks.
+     */
+    submit?: "Enter" | "Shift-Enter"
 }
 
 /**
  * Block chat compose extension set:
  * - {@link composeSchema} (Doc + lists/quote/code + compose marks, no spoiler)
- * - {@link composeKeymap} (default keymap off)
+ * - {@link composeKeymap} (default keymap off; optional `submit` omits that chord)
  * - optional exclusivity (`"none"` | `"code-strike"` | custom)
  * - optional host elements (`hostElements` default false)
  * - markdown input rules (no spoiler) + paste parser
@@ -68,11 +73,12 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
         hostElements = false,
         resolveMention,
         linkPrompt,
+        submit,
     } = config
 
     let ext: EditorState.Extension[] = [
         composeSchema({exclusivity, link: {prompt: linkPrompt}}),
-        composeKeymap(),
+        submit ? composeKeymap({submit}) : composeKeymap(),
     ]
 
     if (hostElements) ext.push(messengerHostElements())

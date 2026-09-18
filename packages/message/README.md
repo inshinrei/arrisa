@@ -79,7 +79,7 @@ type FormattedText = {
 | Feature | Default |
 |---------|---------|
 | `composeSchema` (block `Doc` + compose marks) | always |
-| `composeKeymap` (default keymap off) | always |
+| `composeKeymap` (default keymap off) | always; `submit?: "Enter" \| "Shift-Enter"` omits that chord |
 | Mark exclusivity (`none` / `code-strike` / custom) | `"none"` |
 | Mention + custom emoji schema elements | `hostElements: false` |
 | Markdown input rules (`**bold**`, `` `code` ``, …; no spoiler) | `markdown: true` |
@@ -89,6 +89,7 @@ type FormattedText = {
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
 | Link add prompt | `linkPrompt` → `link({prompt})` (default `"floating"`) |
+| Submit chord (`submit`) | omitted (Enter splits, Shift-Enter breaks). `"Enter"` / `"Shift-Enter"` omits that chord; the other is `insertLineBreak`. Host binds send with `EditorState.prec.high(KeyBinding.of({key, run}))`. Arrisa does not send. A missing host binding may fall through to `beforeinput` split. |
 
 Embedded toolbar + custom link UI:
 
@@ -161,6 +162,7 @@ composeField({
     hostElements: false,
     resolveMention: (u) => ids[u] ?? null,
     linkPrompt: "floating",      // or false | (req) => { req.apply(url) }
+    submit: "Enter",             // omit Enter; host binds send. or "Shift-Enter"
 })
 messengerCompose({
     exclusivity: "code-strike",

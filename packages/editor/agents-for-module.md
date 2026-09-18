@@ -73,8 +73,9 @@ embeddedMenu(embed)
 ### Key bindings
 
 ```ts
-import {KeyBinding, composeKeymap} from "@arrisa/editor"
+import {KeyBinding, composeKeymap, type ComposeKeymapConfig} from "@arrisa/editor"
 import {Command, toggleStrong} from "@arrisa/command"
+import {EditorState} from "@arrisa/state"
 
 KeyBinding.of({key: "Mod-b", run: toggleStrong})
 // KeyBinding.useDefaultKeymap.of(false) to drop defaults
@@ -82,6 +83,10 @@ KeyBinding.of({key: "Mod-b", run: toggleStrong})
 // macOS Cmd-ArrowLeft/Right = line side (Shift selects); Option-Arrow = word. Do not bind `Mod-ArrowLeft` without `mac: "Alt-ArrowLeft"` or it collides with Cmd line motion.
 // Escape (default + compose) collapses a range to a cursor at head
 composeKeymap()
+// submit omits that chord for host send; the other chord is insertLineBreak
+composeKeymap({submit: "Enter"})
+EditorState.prec.high(KeyBinding.of({key: "Enter", run: hostSend}))
+// Missing host binding may fall through to beforeinput (insertParagraph → enter)
 ```
 
 ### Decorations
@@ -121,10 +126,11 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 8. **Range decorations must not overlap** and must be added in order when building `RangeSet`.
 9. **Layering** — editor may import command; command/history/doc/state must not import editor.
 10. **Outside-pointer chrome** — `pointerdown` outside `editor.dom` does **not** collapse a non-empty selection when the path is `arrisa-menubar` / `.arrisa-menubar` or that editor’s `MenuHost.dom`. Do not add `arrisa-floating-menu` on a host parent to fake chrome.
+11. **`composeKeymap({submit})` is not send** — Arrisa omits that chord; the host binds it with `EditorState.prec.high(KeyBinding.of({key, run}))`. A missing host binding may fall through to `beforeinput` split.
 
 ## What not to do
 
-- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`, decoration types, `Panel`, `menuBar`/`MenuBarConfig`, `floatingMenu`/`FloatingMenuConfig`, `embeddedMenu`/`EmbeddedMenuConfig`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
+- Do not invent exports beyond the package entry (`Arrisa`, `KeyBinding`, `composeKeymap`/`ComposeKeymapConfig`, decoration types, `Panel`, `menuBar`/`MenuBarConfig`, `floatingMenu`/`FloatingMenuConfig`, `embeddedMenu`/`EmbeddedMenuConfig`, `Dialog`, `Tooltip`, `InputRule`, `placeholder`, `dropCursor`).
 - Do not treat schema `ignoreTags` as XSS protection.
 - Do not create an identity Trusted Types policy inside Arrisa apps for convenience — sanitize first.
 - Do not read layout in plugin `update` without `scheduleDOMRead`.

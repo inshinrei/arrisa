@@ -75,6 +75,20 @@ describe("composeField", () => {
         expect(state.schema.getNode("CustomEmoji")).toBeFalsy()
     })
 
+    it("forwards submit to composeKeymap", () => {
+        let state = EditorState.create({
+            doc: "",
+            config: composeField({
+                floating: false,
+                placeholder: false,
+                markdown: false,
+                submit: "Enter",
+            }),
+        })
+        expect(state.facet(KeyBinding.source).some((b) => b.spec.key == "Enter")).toBe(false)
+        expect(state.facet(KeyBinding.source).some((b) => b.spec.key == "Shift-Enter")).toBe(true)
+    })
+
     it("does not apply spoiler markdown on typing", () => {
         let state = EditorState.create({
             doc: "",

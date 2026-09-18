@@ -1,4 +1,5 @@
 import {describe, expect, it} from "vitest"
+import {enter, insertLineBreak} from "@arrisa/command"
 import {Leaf, Plot, Schema} from "@arrisa/doc"
 import {EditorState} from "@arrisa/state"
 import {composeKeymap} from "./compose-keymap"
@@ -49,5 +50,32 @@ describe("composeKeymap", () => {
         expect(right?.spec.mac).toBe("Alt-ArrowRight")
         let cmdLeft = state.facet(KeyBinding.source).find((b) => b.spec.mac == "Cmd-ArrowLeft")
         expect(cmdLeft?.spec.shift).toBeTruthy()
+    })
+})
+
+describe("composeKeymap submit", () => {
+    it("omits Enter and binds Shift-Enter to insertLineBreak when submit is Enter", () => {
+        let state = makeState(composeKeymap({submit: "Enter"}))
+        let bindings = state.facet(KeyBinding.source)
+        expect(bindings.some((b) => b.spec.key == "Enter")).toBe(false)
+        let shift = bindings.find((b) => b.spec.key == "Shift-Enter")
+        expect(shift).toBeTruthy()
+        expect(shift!.spec.run).toBe(insertLineBreak)
+    })
+
+    it("omits Shift-Enter and binds Enter to insertLineBreak when submit is Shift-Enter", () => {
+        let state = makeState(composeKeymap({submit: "Shift-Enter"}))
+        let bindings = state.facet(KeyBinding.source)
+        expect(bindings.some((b) => b.spec.key == "Shift-Enter")).toBe(false)
+        let enterBind = bindings.find((b) => b.spec.key == "Enter")
+        expect(enterBind).toBeTruthy()
+        expect(enterBind!.spec.run).toBe(insertLineBreak)
+    })
+
+    it("keeps Enter as enter and Shift-Enter as insertLineBreak by default", () => {
+        let state = makeState(composeKeymap())
+        let bindings = state.facet(KeyBinding.source)
+        expect(bindings.find((b) => b.spec.key == "Enter")!.spec.run).toBe(enter)
+        expect(bindings.find((b) => b.spec.key == "Shift-Enter")!.spec.run).toBe(insertLineBreak)
     })
 })
