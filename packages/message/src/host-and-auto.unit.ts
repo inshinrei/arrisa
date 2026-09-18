@@ -19,6 +19,7 @@ import {looksLikeMarkdown} from "./paste-markdown"
 import {CustomEmoji, MentionName} from "./schema-elements"
 import {insertCustomEmojiSpec, insertMentionSpec} from "./insert"
 import {messengerCompose} from "./compose"
+import {composeField} from "./compose-field"
 import type {FormattedText} from "./entities"
 
 function fullInlineSchema() {
@@ -122,6 +123,64 @@ describe("insert helpers", () => {
         state = applySpec(state, emoji)
         let ft = docToFormattedText(state.doc)
         expect(ft.entities?.some((e) => e.type == "custom_emoji")).toBe(true)
+    })
+})
+
+describe("insertMention dump range", () => {
+    it("replaces the dump range and leaves no leftover query", () => {
+        let schema = fullInlineSchema()
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("hi @al")]),
+            selection: EditorSelection.cursor(1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let spec = insertMentionSpec(state, {
+            userId: "u@ex",
+            label: "@[u@ex]",
+            from: 3,
+            to: 6,
+        })
+        state = applySpec(state, spec)
+        let ft = docToFormattedText(state.doc)
+        expect(ft.text).toBe("hi @[u@ex]")
+        expect(ft.entities).toEqual(
+            expect.arrayContaining([{type: "mention_name", offset: 3, length: 7, userId: "u@ex"}]),
+        )
+        expect(ft.text.includes("@al")).toBe(false)
+    })
+
+    it("returns false for out-of-range from/to and does not change the doc", () => {
+        let schema = fullInlineSchema()
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("hi @al")]),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        expect(insertMentionSpec(state, {userId: "u@ex", label: "@[u@ex]", from: 999, to: 1000})).toBe(false)
+        expect(state.doc.textContent()).toContain("@al")
+    })
+
+    it("returns false when only one of from/to is set", () => {
+        let schema = fullInlineSchema()
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("x")]),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        expect(insertMentionSpec(state, {userId: "u", label: "@u", from: 0} as any)).toBe(false)
+    })
+
+    it("maps dump offsets in a block compose doc", () => {
+        let proto = EditorState.create({
+            doc: "",
+            config: composeField({floating: false, placeholder: false, markdown: false, hostElements: true}),
+        })
+        let doc = formattedTextToDoc({text: "hi @al"}, proto.schema)
+        let state = EditorState.create({
+            doc,
+            config: composeField({floating: false, placeholder: false, markdown: false, hostElements: true}),
+        })
+        let spec = insertMentionSpec(state, {userId: "u@ex", label: "@[u@ex]", from: 3, to: 6})
+        state = applySpec(state, spec)
+        expect(docToFormattedText(state.doc).text).toBe("hi @[u@ex]")
     })
 })
 

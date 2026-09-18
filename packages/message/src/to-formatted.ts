@@ -75,7 +75,7 @@ export function docToFormattedText(doc: Plot.Doc, options: ToFormattedOptions = 
         options.blockquoteCanCollapse,
         options.mentionText,
     )
-    walk(doc, flat)
+    walk(doc, flat, 0)
     flat.finish()
     let entities = flat.entities.filter((e) => e.length > 0)
     entities.sort((a, b) => a.offset - b.offset || b.length - a.length || a.type.localeCompare(b.type))
@@ -90,6 +90,28 @@ export function docToFormattedText(doc: Plot.Doc, options: ToFormattedOptions = 
     }
 
     return entities.length ? {text, entities} : {text}
+}
+
+/** Dump-text span tied to a document range. Internal to dump-offset mapping. */
+export type DumpSpan = {
+    dumpFrom: number
+    dumpTo: number
+    docFrom: number
+    docTo: number
+}
+
+/** Flatten with the same rules as {@link docToFormattedText}, recording dump↔doc spans. */
+export function collectDumpSpans(doc: Plot.Doc, options: ToFormattedOptions = {}) {
+    let flat = new Flattener(
+        options.blockSeparator ?? "\n",
+        options.leafText,
+        options.blockquoteCanCollapse,
+        options.mentionText,
+        true,
+    )
+    walk(doc, flat, 0)
+    flat.finish()
+    return {spans: flat.spans, dumpLength: flat.text.length}
 }
 
 type StructureKind = "pre" | "blockquote" | "unordered_list" | "ordered_list"
@@ -107,6 +129,8 @@ class Flattener {
     entities: MessageEntity[] = []
     startedBlocks = false
     readonly blockSep: string
+    readonly spans: DumpSpan[] = []
+    private lastDocTo = 0
     private runs = new Map<string, {start: number; mark: Mark}>()
     /** Explicit structural open stack (enter/leave plot roles). */
     private structure: StructureFrame[] = []
@@ -116,6 +140,7 @@ class Flattener {
         readonly leafText?: (node: Leaf) => string,
         readonly blockquoteCanCollapse?: boolean,
         readonly mentionText?: ToFormattedOptions["mentionText"],
+        readonly collectSpans = false,
     ) {
         this.blockSep = blockSep
     }
@@ -124,13 +149,23 @@ class Flattener {
         return this.text.length
     }
 
-    openBlock() {
+    openBlock(contentStart: number) {
         if (this.startedBlocks) {
             this.closeAllRuns()
+            let dumpFrom = this.offset
             this.text += this.blockSep
+            if (this.collectSpans && this.offset > dumpFrom) {
+                this.spans.push({
+                    dumpFrom,
+                    dumpTo: this.offset,
+                    docFrom: this.lastDocTo,
+                    docTo: contentStart,
+                })
+            }
         } else {
             this.startedBlocks = true
         }
+        if (this.collectSpans) this.lastDocTo = contentStart
         this.pinPendingStructure()
     }
 
@@ -163,7 +198,7 @@ class Flattener {
         }
     }
 
-    append(s: string, marks: Mark.Set) {
+    append(s: string, marks: Mark.Set, docFrom: number, docTo: number) {
         let userId = mentionUserId(marks)
         if (userId != null) s = serializedMention(userId, s, this.mentionText)
         if (!s) return
@@ -181,19 +216,28 @@ class Flattener {
             let key = markKey(m)
             if (!this.runs.has(key)) this.runs.set(key, {start: this.offset, mark: m})
         }
+        let dumpFrom = this.offset
         this.text += s
+        this.recordSpan(dumpFrom, docFrom, docTo)
     }
 
     /**
      * Custom emoji is atomic: alt does not participate in surrounding mark runs.
      * Close runs, emit plain alt, push entity, leave runs empty.
      */
-    appendCustomEmoji(param: CustomEmojiParam) {
+    appendCustomEmoji(param: CustomEmojiParam, docFrom: number, docTo: number) {
         this.closeAllRuns()
         this.pinPendingStructure()
         let start = this.offset
         this.text += param.alt
         this.entities.push(customEmojiEntity(start, param.alt.length, param.documentId))
+        this.recordSpan(start, docFrom, docTo)
+    }
+
+    private recordSpan(dumpFrom: number, docFrom: number, docTo: number) {
+        if (!this.collectSpans) return
+        this.spans.push({dumpFrom, dumpTo: this.offset, docFrom, docTo})
+        this.lastDocTo = docTo
     }
     finish() {
         this.closeAllRuns()
@@ -213,14 +257,14 @@ class Flattener {
     }
 }
 
-function walk(node: Node, flat: Flattener) {
+function walk(node: Node, flat: Flattener, pos: number) {
     if (node.isText) {
-        flat.append(node.param as string, node.marks)
+        flat.append(node.param as string, node.marks, pos, pos + node.length)
         return
     }
     if (node.isLeaf) {
         if (node.type.name == "CustomEmoji") {
-            flat.appendCustomEmoji(node.param as CustomEmojiParam)
+            flat.appendCustomEmoji(node.param as CustomEmojiParam, pos, pos + node.length)
             return
         }
         let t = node.type.spec.toText
@@ -228,7 +272,7 @@ function walk(node: Node, flat: Flattener) {
             : flat.leafText
               ? flat.leafText(node)
               : ""
-        if (t) flat.append(t, node.marks)
+        if (t) flat.append(t, node.marks, pos, pos + node.length)
         return
     }
     let plot = node as Plot
@@ -236,7 +280,7 @@ function walk(node: Node, flat: Flattener) {
     let isQuote = plot.type.name == "Blockquote"
     let isBullet = plot.type.name == "BulletList"
     let isOrdered = plot.type.name == "OrderedList"
-    if (plot.isTextblock) flat.openBlock()
+    if (plot.isTextblock) flat.openBlock(plot.isDoc ? pos : pos + 1)
     if (isCode) {
         let language = plot.tag.mark(CodeBlockLanguage)
         flat.enterStructure("pre", typeof language == "string" && language ? language : undefined)
@@ -247,7 +291,11 @@ function walk(node: Node, flat: Flattener) {
         let startIndex = typeof plot.tag.param == "number" ? plot.tag.param : 1
         flat.enterStructure("ordered_list", undefined, startIndex)
     }
-    for (let child of plot.content) walk(child, flat)
+    let childPos = plot.isDoc ? pos : pos + 1
+    for (let child of plot.content) {
+        walk(child, flat, childPos)
+        childPos += child.length
+    }
     if (isOrdered) flat.leaveStructure("ordered_list")
     if (isBullet) flat.leaveStructure("unordered_list")
     if (isQuote) flat.leaveStructure("blockquote")

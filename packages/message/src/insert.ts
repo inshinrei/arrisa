@@ -4,7 +4,17 @@
 import {type Command} from "@arrisa/command"
 import {Leaf, Mark} from "@arrisa/doc"
 import {EditorSelection, type EditorState, type Transaction} from "@arrisa/state"
+import {docPosAtDumpOffset} from "./dump-pos"
 import {CustomEmoji, type CustomEmojiParam, MentionName} from "./schema-elements"
+
+type InsertMentionConfig = {
+    userId: string
+    label: string
+    /** Dump-space start (UTF-16). Requires `to`. */
+    from?: number
+    /** Dump-space end (UTF-16, exclusive). Requires `from`. */
+    to?: number
+}
 
 function selectionInsert(state: EditorState, nodes: Leaf[], cursorOffset: number): Transaction.Spec {
     let {selection} = state
@@ -29,8 +39,9 @@ export const insertCustomEmoji: Command.Pure<CustomEmojiParam> = ({state}, param
 /**
  * Insert a mention: labeled text marked with {@link MentionName}.
  * Requires {@link MentionName} in the schema.
+ * Optional `from`/`to` replace a dump-text range (both required; out of range → `false`).
  */
-export const insertMention: Command.Pure<{userId: string; label: string}> = ({state}, config) => {
+export const insertMention: Command.Pure<InsertMentionConfig> = ({state}, config) => {
     return insertMentionSpec(state, config)
 }
 
@@ -42,11 +53,23 @@ export function insertCustomEmojiSpec(state: EditorState, param: CustomEmojiPara
 }
 
 /** Pure helper for {@link insertMention}. */
-export function insertMentionSpec(
-    state: EditorState,
-    config: {userId: string; label: string},
-): false | Transaction.Spec {
+export function insertMentionSpec(state: EditorState, config: InsertMentionConfig): false | Transaction.Spec {
     if (!state.schema.getMark("MentionName") || !config.label) return false
+    let from = state.selection.from
+    let to = state.selection.to
+    if (config.from != null || config.to != null) {
+        if (config.from == null || config.to == null) return false
+        let mappedFrom = docPosAtDumpOffset(state.doc, config.from, "from")
+        let mappedTo = docPosAtDumpOffset(state.doc, config.to, "to")
+        if (mappedFrom === false || mappedTo === false) return false
+        from = mappedFrom
+        to = mappedTo
+    }
     let leaf = Leaf.text(config.label, MentionName.of(config.userId).addToSet(Mark.none))
-    return selectionInsert(state, [leaf], leaf.length)
+    return {
+        changes: {from, to, insert: [leaf]},
+        selection: EditorSelection.cursor(from + leaf.length),
+        userEvent: "input.insert",
+        scrollIntoView: true,
+    }
 }

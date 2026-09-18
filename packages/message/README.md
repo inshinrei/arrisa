@@ -134,7 +134,7 @@ Typing (input rules) and paste share messenger-style delimiters:
 
 ### Host atoms
 
-- **`MentionName`** — mark with host user id; non-inclusive so typing after does not extend it. Export `mentionText` (`"label"` default, `"userId"`, or a function) serializes the dump slice independently of the visible label; overlapping marks cover that serialized length. Import `mentionLabel(userId, raw)` replaces the dump slice with a display label.
+- **`MentionName`** — mark with host user id; non-inclusive so typing after does not extend it. Export `mentionText` (`"label"` default, `"userId"`, or a function) serializes the dump slice independently of the visible label; overlapping marks cover that serialized length. Import `mentionLabel(userId, raw)` replaces the dump slice with a display label. `insertMention` / `insertMentionSpec` take optional `from`/`to` dump offsets (UTF-16, same space as `docToFormattedText`). Both are required together; one without the other or an out-of-range pair returns `false` and leaves the document unchanged. Omit both to insert at the selection. The caret is left after the mention (no trailing space required).
 - **`CustomEmoji`** — leaf `{documentId, alt}`; text contribution is `alt` for entity offsets
 
 ## Main public API
@@ -284,6 +284,8 @@ import {
 
 // Programmatic insert (pure specs available for tests)
 insertMentionSpec(state, {userId: "u1", label: "@alice"})
+// Replace a dump-text range (UTF-16 offsets, same space as docToFormattedText)
+insertMentionSpec(state, {userId: "u1", label: "@alice", from: 3, to: 6})
 insertCustomEmojiSpec(state, {documentId: "sticker-1", alt: "👍"})
 
 // Typing: @alice␣ → mention when resolve returns an id
