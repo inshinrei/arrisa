@@ -6,6 +6,7 @@ import {Leaf, Mark} from "@arrisa/doc"
 import {EditorSelection, type EditorState, type Transaction} from "@arrisa/state"
 import {docPosAtDumpOffset} from "./dump-pos"
 import {CustomEmoji, type CustomEmojiParam, MentionName} from "./schema-elements"
+import {type ToFormattedOptions} from "./to-formatted"
 
 type InsertMentionConfig = {
     userId: string
@@ -14,6 +15,11 @@ type InsertMentionConfig = {
     from?: number
     /** Dump-space end (UTF-16, exclusive). Requires `from`. */
     to?: number
+    /**
+     * Same flattening as {@link docToFormattedText} when mapping `from`/`to`.
+     * Default `"label"`. Pass the host dump serializer so offsets match serialized space.
+     */
+    mentionText?: ToFormattedOptions["mentionText"]
 }
 
 function selectionInsert(state: EditorState, nodes: Leaf[], cursorOffset: number): Transaction.Spec {
@@ -40,6 +46,7 @@ export const insertCustomEmoji: Command.Pure<CustomEmojiParam> = ({state}, param
  * Insert a mention: labeled text marked with {@link MentionName}.
  * Requires {@link MentionName} in the schema.
  * Optional `from`/`to` replace a dump-text range (both required; out of range → `false`).
+ * Pass `mentionText` with `from`/`to` when dump offsets were taken under that serializer.
  */
 export const insertMention: Command.Pure<InsertMentionConfig> = ({state}, config) => {
     return insertMentionSpec(state, config)
@@ -59,8 +66,8 @@ export function insertMentionSpec(state: EditorState, config: InsertMentionConfi
     let to = state.selection.to
     if (config.from != null || config.to != null) {
         if (config.from == null || config.to == null) return false
-        let mappedFrom = docPosAtDumpOffset(state.doc, config.from, "from")
-        let mappedTo = docPosAtDumpOffset(state.doc, config.to, "to")
+        let mappedFrom = docPosAtDumpOffset(state.doc, config.from, "from", {mentionText: config.mentionText})
+        let mappedTo = docPosAtDumpOffset(state.doc, config.to, "to", {mentionText: config.mentionText})
         if (mappedFrom === false || mappedTo === false) return false
         from = mappedFrom
         to = mappedTo

@@ -182,6 +182,32 @@ describe("insertMention dump range", () => {
         state = applySpec(state, spec)
         expect(docToFormattedText(state.doc).text).toBe("hi @[u@ex]")
     })
+
+    it("maps dump offsets with mentionText when a prior mention is serialized", () => {
+        let schema = fullInlineSchema()
+        let mention = MentionName.of("u@ex").addToSet(Mark.none)
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("Alice", mention), Leaf.text(" @al")]),
+            selection: EditorSelection.cursor(0),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let mentionText = (id: string) => `@[${id}]`
+        let dump = docToFormattedText(state.doc, {mentionText})
+        expect(dump.text).toBe("@[u@ex] @al")
+        let from = dump.text.indexOf("@al")
+        let to = from + 3
+        let spec = insertMentionSpec(state, {
+            userId: "v",
+            label: "Bob",
+            from,
+            to,
+            mentionText,
+        })
+        state = applySpec(state, spec)
+        expect(state.doc.textContent()).toBe("Alice Bob")
+        expect(docToFormattedText(state.doc, {mentionText}).text).toBe("@[u@ex] @[v]")
+        expect(docToFormattedText(state.doc, {mentionText}).text.includes("@al")).toBe(false)
+    })
 })
 
 describe("docToFormattedText autoDetect", () => {

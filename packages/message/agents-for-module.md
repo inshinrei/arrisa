@@ -69,7 +69,13 @@ let doc = formattedTextToDoc(payload, editor.state.schema, {
 })
 
 // Replace a dump-text query (`from`/`to` both required; UTF-16 dump offsets)
-insertMentionSpec(editor.state, {userId: "u@ex", label: "@[u@ex]", from: 3, to: 6})
+insertMentionSpec(editor.state, {
+    userId: "u@ex",
+    label: "@[u@ex]",
+    from: 3,
+    to: 6,
+    mentionText: (userId) => `@[${userId}]`, // same serializer as the dump
+})
 ```
 
 | Area | Exports |
@@ -81,7 +87,7 @@ insertMentionSpec(editor.state, {userId: "u@ex", label: "@[u@ex]", from: 3, to: 
 | Mark map | `markToEntityPartial`, `entityToMark`, `DEFAULT_FLAG_MARKS`, `markKey`, `isInlineEntityMark` |
 | Markdown | `markdownInputRules`, per-delimiter rules, `parseMarkdownText`, `markdownPaste`, `markdownClipboardParser`, `looksLikeMarkdown` |
 | Host elements | `CustomEmoji`, `MentionName`, `customEmoji`, `mentionName`, `messengerHostElements`, `CustomEmojiParam` |
-| Insert / resolve | `insertCustomEmoji`, `insertMention`, `*Spec` pure helpers (`from`/`to` dump offsets on mention), `mentionResolve`, `mentionResolveRule` |
+| Insert / resolve | `insertCustomEmoji`, `insertMention`, `*Spec` pure helpers (`from`/`to` dump offsets + matching `mentionText` on mention), `mentionResolve`, `mentionResolveRule` |
 
 ## Invariants / pitfalls
 
@@ -90,7 +96,7 @@ insertMentionSpec(editor.state, {userId: "u@ex", label: "@[u@ex]", from: 3, to: 
 3. **`submit` is not send** — Arrisa omits the chord; the host binds it. When `submit` is set, the other chord is `insertLineBreak`. A missing host binding may fall through to `beforeinput` split.
 4. **`composeField` is a block `Doc`** (paragraphs, lists, quotes, code; no spoiler). Markdown typing omits `||spoiler||`. **`messengerCompose` defaults to inline** (`InlineDoc` via `messengerSchema`). Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1). `composeField` already includes those list types.
 5. **`autoDetect` on export** — adds url/email/phone/hashtag/… entities; auto types are **not** re-applied as marks on import (`materializeRuns` skips them). Style marks (bold/italic/…) do **not** block auto detection; `pre` / inline `code` / `text_url` / `mention_name` / `custom_emoji` do (`isAutoExclusive`). When `autoDetect: true` and `MentionName` is in the schema, type `"mention"` is omitted; explicit `autoDetect.types` is never rewritten.
-6. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text. `mentionText` serializes `MentionName` independently of the visible label (`"label"` default). `mentionLabel` hydrates dump slices to display labels. Round-trip dump text with matching `mentionText` / `mentionLabel`. Overlapping style marks cover the **serialized** slice on export. `insertMention` / `insertMentionSpec` optional `from`/`to` are UTF-16 dump offsets (same space as `docToFormattedText`). Both required; one or out of range → `false` (doc unchanged). Omit both to use the selection. Caret after the mark; no trailing space required.
+6. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text. `mentionText` serializes `MentionName` independently of the visible label (`"label"` default). `mentionLabel` hydrates dump slices to display labels. Round-trip dump text with matching `mentionText` / `mentionLabel`. Overlapping style marks cover the **serialized** slice on export. `insertMention` / `insertMentionSpec` optional `from`/`to` are UTF-16 dump offsets (same space as `docToFormattedText`). Both required; one or out of range → `false` (doc unchanged). Omit both to use the selection. Pass the same `mentionText` used to produce those offsets (default mapping is `"label"`). Caret after the mark; no trailing space required.
 7. **`MentionName` is non-inclusive** — typing after a mention does not extend the mark.
 8. **Custom emoji** — param is `{documentId, alt}`; export uses `alt` as the text span covered by `custom_emoji`. Alt is atomic (no surrounding mark runs). Marks that only partially overlap a `custom_emoji` range are dropped around the atom.
 9. **Exclusivity** — `"code-strike"` isolates Code + Strikethrough from other marks (via `@arrisa/command` mark exclusivity).
