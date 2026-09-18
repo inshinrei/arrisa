@@ -26,6 +26,8 @@ import {
     insertMention,
     insertMentionSpec,
     insertCustomEmoji,
+    detectMentionQuery,
+    type MentionQuery,
 } from "@arrisa/message"
 
 let editor = Arrisa.create({
@@ -48,7 +50,11 @@ composeField({
         })
     },
     submit: "Enter", // omit that chord; host binds send. or "Shift-Enter"
+    hostElements: true,
+    // Picker hosts: omit resolveMention. Query offsets are dump UTF-16.
+    onMentionQuery: (q: MentionQuery | null) => hostShowMentionPicker(q),
 })
+// detectMentionQuery(editor.state) — dump {from,to,query} without rect / DOM
 // Host send: EditorState.prec.high(KeyBinding.of({key: "Enter", run}))
 // Missing host binding may fall through to beforeinput (insertParagraph → enter).
 // Default toggle removes existing links or opens add UI; does not prefill href.
@@ -81,6 +87,7 @@ insertMentionSpec(editor.state, {
 | Area | Exports |
 |------|---------|
 | Compose | `composeField`, `ComposeFieldConfig`, `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
+| Mention query | `MentionQuery` (`from`/`to` dump offsets, `query`, `rect: ClientBox`), `detectMentionQuery(state)` (no rect; null if not a word-start `@query`) |
 | Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/`UnorderedListEntity`/`OrderedListEntity`/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
 | I/O | `docToFormattedText`, `formattedTextToDoc`, `materializeRuns`, option types |
 | Auto | `detectAutoEntities`, `mergeAutoEntities`, `AutoDetectOptions` |
@@ -96,7 +103,7 @@ insertMentionSpec(editor.state, {
 3. **`submit` is not send** — Arrisa omits the chord; the host binds it. When `submit` is set, the other chord is `insertLineBreak`. A missing host binding may fall through to `beforeinput` split.
 4. **`composeField` is a block `Doc`** (paragraphs, lists, quotes, code; no spoiler). Markdown typing omits `||spoiler||`. **`messengerCompose` defaults to inline** (`InlineDoc` via `messengerSchema`). Block import paths in `formattedTextToDoc` apply when the schema is block-based (`pre`, `blockquote`, `unordered_list`, `ordered_list`). List entities need `BulletList` / `OrderedList` / `ListItem` in the schema; lists wrap before quotes. One-level lists are required (`startIndex` omitted when 1). `composeField` already includes those list types.
 5. **`autoDetect` on export** — adds url/email/phone/hashtag/… entities; auto types are **not** re-applied as marks on import (`materializeRuns` skips them). Style marks (bold/italic/…) do **not** block auto detection; `pre` / inline `code` / `text_url` / `mention_name` / `custom_emoji` do (`isAutoExclusive`). When `autoDetect: true` and `MentionName` is in the schema, type `"mention"` is omitted; explicit `autoDetect.types` is never rewritten.
-6. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text. `mentionText` serializes `MentionName` independently of the visible label (`"label"` default). `mentionLabel` hydrates dump slices to display labels. Round-trip dump text with matching `mentionText` / `mentionLabel`. Overlapping style marks cover the **serialized** slice on export. `insertMention` / `insertMentionSpec` optional `from`/`to` are UTF-16 dump offsets (same space as `docToFormattedText`). Both required; one or out of range → `false` (doc unchanged). Omit both to use the selection. Pass the same `mentionText` used to produce those offsets (default mapping is `"label"`). Caret after the mark; no trailing space required.
+6. **Mentions** — `resolveMention` is **sync**. Typing `@user ` (space) triggers conversion; unknown users stay plain text. `onMentionQuery` is the picker path: word-start `@` / `@al`, `null` for email-like `a@b`, inside or on a `MentionName` (including caret after a completed `@name` label — the `@` is in the mark), `pre` / inline `code`, non-collapsed selection, blur, or missing caret box. It does **not** consume Space or wrap text — keep `resolveMention` unset when the host owns the picker. Query `from`/`to` are UTF-16 dump offsets (same space as `docToFormattedText`); `rect` is `selectionRect()` (`{top,left,width,height}`). `detectMentionQuery` is the pure detector (no `rect`). `mentionText` serializes `MentionName` independently of the visible label (`"label"` default). `mentionLabel` hydrates dump slices to display labels. Round-trip dump text with matching `mentionText` / `mentionLabel`. Overlapping style marks cover the **serialized** slice on export. `insertMention` / `insertMentionSpec` optional `from`/`to` are UTF-16 dump offsets (same space as `docToFormattedText`). Both required; one or out of range → `false` (doc unchanged). Omit both to use the selection. Pass the same `mentionText` used to produce those offsets (default mapping is `"label"`). Caret after the mark; no trailing space required.
 7. **`MentionName` is non-inclusive** — typing after a mention does not extend the mark.
 8. **Custom emoji** — param is `{documentId, alt}`; export uses `alt` as the text span covered by `custom_emoji`. Alt is atomic (no surrounding mark runs). Marks that only partially overlap a `custom_emoji` range are dropped around the atom.
 9. **Exclusivity** — `"code-strike"` isolates Code + Strikethrough from other marks (via `@arrisa/command` mark exclusivity).

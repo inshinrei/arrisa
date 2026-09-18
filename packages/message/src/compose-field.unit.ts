@@ -118,6 +118,27 @@ describe("composeField", () => {
         })
         expect(spoiler).toBe(false)
     })
+
+    it("installs an updateListener when onMentionQuery is set", () => {
+        let state = EditorState.create({
+            doc: "",
+            config: composeField({
+                floating: false,
+                placeholder: false,
+                markdown: false,
+                onMentionQuery: () => {},
+            }),
+        })
+        expect(state.facet(Arrisa.updateListener).length).toBeGreaterThan(0)
+    })
+
+    it("does not install that listener when onMentionQuery is omitted", () => {
+        let state = EditorState.create({
+            doc: "",
+            config: composeField({floating: false, placeholder: false, markdown: false}),
+        })
+        expect(state.facet(Arrisa.updateListener).length).toBe(0)
+    })
 })
 
 function mockEditor(state: EditorState) {

@@ -1,5 +1,6 @@
 /**
- * Map UTF-16 dump offsets (same space as {@link docToFormattedText}) to document positions.
+ * Map UTF-16 dump offsets (same space as {@link docToFormattedText}) to document
+ * positions and back.
  */
 import {type Plot} from "@arrisa/doc"
 import {collectDumpSpans, type ToFormattedOptions} from "./to-formatted"
@@ -35,5 +36,34 @@ export function docPosAtDumpOffset(
         if (dumpLen == docLen) return span.docFrom + (offset - span.dumpFrom)
         return edge == "from" ? span.docFrom : span.docTo
     }
+    return false
+}
+
+/**
+ * Dump offset for a document position, or `false` when out of range.
+ * Inverse of {@link docPosAtDumpOffset} with `edge: "to"` (caret / exclusive end).
+ */
+export function dumpOffsetAtDocPos(doc: Plot.Doc, pos: number, options?: ToFormattedOptions): number | false {
+    if (pos < 0 || pos > doc.length) return false
+    let {spans, dumpLength} = collectDumpSpans(doc, options)
+    if (!spans.length) return 0
+
+    let found: number | false = false
+    for (let span of spans) {
+        let dumpLen = span.dumpTo - span.dumpFrom
+        let docLen = span.docTo - span.docFrom
+        if (dumpLen == docLen) {
+            if (pos >= span.docFrom && pos <= span.docTo) found = span.dumpFrom + (pos - span.docFrom)
+        } else if (pos == span.docFrom) {
+            found = span.dumpFrom
+        } else if (pos == span.docTo) {
+            found = span.dumpTo
+        } else if (pos > span.docFrom && pos < span.docTo) {
+            found = span.dumpTo
+        }
+    }
+    if (found !== false) return found
+    if (pos <= spans[0]!.docFrom) return 0
+    if (pos >= spans[spans.length - 1]!.docTo) return dumpLength
     return false
 }

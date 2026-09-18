@@ -15,6 +15,7 @@ import {
 import {composeSchema, type LinkConfig} from "@arrisa/schema"
 import {EditorState} from "@arrisa/state"
 import {markdownBold, markdownCode, markdownItalic, markdownStrike} from "./markdown"
+import {mentionQueryListener, type MentionQuery} from "./mention-query"
 import {mentionResolve} from "./mention-rule"
 import {markdownPaste} from "./paste-markdown"
 import {messengerHostElements} from "./schema-elements"
@@ -41,6 +42,12 @@ export interface ComposeFieldConfig {
      * Return a user id to convert; null/undefined leaves plain text.
      */
     resolveMention?: (username: string) => string | null | undefined
+    /**
+     * Word-start `@query` at the collapsed caret (dump offsets + caret box).
+     * `null` when unfocused, no query, or no rect. Does not consume Space.
+     * Leave {@link ComposeFieldConfig.resolveMention} unset for picker hosts.
+     */
+    onMentionQuery?: (q: MentionQuery | null) => void
     /** Forwarded to {@link composeSchema} as `link.prompt`. */
     linkPrompt?: LinkConfig["prompt"]
     /**
@@ -59,6 +66,7 @@ export interface ComposeFieldConfig {
  * - markdown input rules (no spoiler) + paste parser
  * - floating and/or embedded toolbar (`Menu.Group.top`)
  * - placeholder
+ * - optional `onMentionQuery` picker listener (does not consume Space)
  *
  * Does not include history — add `@arrisa/history` in the host.
  */
@@ -72,6 +80,7 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
         markdownPaste: mdPaste = true,
         hostElements = false,
         resolveMention,
+        onMentionQuery,
         linkPrompt,
         submit,
     } = config
@@ -86,6 +95,7 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
         ext.push([markdownBold.extension, markdownItalic.extension, markdownStrike.extension, markdownCode.extension])
     if (mdPaste) ext.push(markdownPaste())
     if (resolveMention) ext.push(mentionResolve(resolveMention))
+    if (onMentionQuery) ext.push(mentionQueryListener(onMentionQuery))
 
     if (floating !== false) {
         let fconf: FloatingMenuConfig =

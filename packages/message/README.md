@@ -88,6 +88,7 @@ type FormattedText = {
 | Embedded toolbar (`embeddedMenu`) | `false` |
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
+| Mention picker query (`onMentionQuery`) | omitted. Word-start `@query` + caret box; `null` when unfocused / no query / no rect. Does **not** consume Space. Leave `resolveMention` unset for picker hosts. |
 | Link add prompt | `linkPrompt` → `link({prompt})` (default `"floating"`) |
 | Submit chord (`submit`) | omitted (Enter splits, Shift-Enter breaks). `"Enter"` / `"Shift-Enter"` omits that chord; the other is `insertLineBreak`. Host binds send with `EditorState.prec.high(KeyBinding.of({key, run}))`. Arrisa does not send. A missing host binding may fall through to `beforeinput` split. |
 
@@ -108,6 +109,20 @@ composeField({
 ```
 
 Default toggle **removes** existing links or opens add UI; it does **not** prefill `href` (remove-first). `cancel` dismisses the built-in floating field and focuses the editor; custom prompts still own their DOM.
+
+`onMentionQuery` fires from an `Arrisa.updateListener` when the collapsed caret sits in a **plain-text** mention query. Offsets are UTF-16 dump indices (`docToFormattedText` space). `rect` is `editor.selectionRect()` (`{top,left,width,height}`) on that turn. Use `detectMentionQuery(state)` to inspect the dump range without a live editor.
+
+| Caret | Callback |
+|-------|----------|
+| Word-start `@` (start of textblock or whitespace before `@`) | `query` = chars until caret (`""` if `@` alone) |
+| Same, more typing (`@al`) | same `from`, growing `query` / `to` / `rect` |
+| Mid-word / email (`a@b`) | `null` |
+| Inside or on a `MentionName` mark (including caret after a completed `@name` label) | `null` |
+| Left of `@`, or whitespace / `]` in the query | `null` |
+| Inside `pre` / inline `code` | `null` |
+| Unfocused, non-collapsed selection, or no caret box | `null` |
+
+Does **not** consume Space or wrap text. Keep `resolveMention` unset when the host owns a picker (`insertMention` / `insertMentionSpec` with the query `from`/`to`).
 
 `messengerCompose(config?)` remains the **inline/spoiler** path:
 
@@ -134,7 +149,7 @@ Typing (input rules) and paste share messenger-style delimiters:
 
 ### Host atoms
 
-- **`MentionName`** — mark with host user id; non-inclusive so typing after does not extend it. Export `mentionText` (`"label"` default, `"userId"`, or a function) serializes the dump slice independently of the visible label; overlapping marks cover that serialized length. Import `mentionLabel(userId, raw)` replaces the dump slice with a display label. `insertMention` / `insertMentionSpec` take optional `from`/`to` dump offsets (UTF-16, same space as `docToFormattedText`). Both are required together; one without the other or an out-of-range pair returns `false` and leaves the document unchanged. Omit both to insert at the selection. When dump offsets come from a custom `mentionText` serializer, pass the same `mentionText` on insert (default mapping is `"label"`). The caret is left after the mention (no trailing space required).
+- **`MentionName`** — mark with host user id; non-inclusive so typing after does not extend it. Export `mentionText` (`"label"` default, `"userId"`, or a function) serializes the dump slice independently of the visible label; overlapping marks cover that serialized length. Import `mentionLabel(userId, raw)` replaces the dump slice with a display label. `composeField({onMentionQuery})` emits a dump-range query + caret box for a host picker and does not consume Space — leave `resolveMention` unset on that path. `insertMention` / `insertMentionSpec` take optional `from`/`to` dump offsets (UTF-16, same space as `docToFormattedText`). Both are required together; one without the other or an out-of-range pair returns `false` and leaves the document unchanged. Omit both to insert at the selection. When dump offsets come from a custom `mentionText` serializer, pass the same `mentionText` on insert (default mapping is `"label"`). The caret is left after the mention (no trailing space required).
 - **`CustomEmoji`** — leaf `{documentId, alt}`; text contribution is `alt` for entity offsets
 
 ## Main public API
@@ -160,7 +175,8 @@ composeField({
     markdown: true,
     markdownPaste: true,
     hostElements: false,
-    resolveMention: (u) => ids[u] ?? null,
+    resolveMention: (u) => ids[u] ?? null, // omit when using onMentionQuery
+    onMentionQuery: (q) => hostShowMentionPicker(q),
     linkPrompt: "floating",      // or false | (req) => { req.apply(url) }
     submit: "Enter",             // omit Enter; host binds send. or "Shift-Enter"
 })
@@ -280,6 +296,8 @@ import {
     insertMentionSpec,
     mentionResolve,
     mentionResolveRule,
+    detectMentionQuery,
+    type MentionQuery,
 } from "@arrisa/message"
 
 // Programmatic insert (pure specs available for tests)
@@ -297,6 +315,9 @@ insertCustomEmojiSpec(state, {documentId: "sticker-1", alt: "👍"})
 
 // Typing: @alice␣ → mention when resolve returns an id
 mentionResolve((name) => name == "alice" ? "user-alice" : null)
+
+// Picker path (no Space): dump range without a live editor
+detectMentionQuery(state) // {from, to, query} | null
 ```
 
 ## Layering / related packages

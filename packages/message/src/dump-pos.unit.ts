@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest"
 import {Leaf, Mark, Schema} from "@arrisa/doc"
 import {InlineDoc} from "@arrisa/types"
 import {MentionName} from "./schema-elements"
-import {docPosAtDumpOffset} from "./dump-pos"
+import {docPosAtDumpOffset, dumpOffsetAtDocPos} from "./dump-pos"
 import {docToFormattedText} from "./to-formatted"
 
 function schema() {
@@ -58,3 +58,23 @@ describe("docPosAtDumpOffset", () => {
         expect(doc.textContent({from: from as number, to: to as number})).toBe("Alice")
     })
 })
+
+describe("dumpOffsetAtDocPos", () => {
+    it("is the inverse of docPosAtDumpOffset to-edge on 1:1 text", () => {
+        let s = schema()
+        let doc = s.doc([Leaf.text("hi @al")])
+        for (let offset = 0; offset <= 6; offset++) {
+            let pos = docPosAtDumpOffset(doc, offset, "to")
+            expect(pos).not.toBe(false)
+            expect(dumpOffsetAtDocPos(doc, pos as number)).toBe(offset)
+        }
+    })
+
+    it("returns false out of range", () => {
+        let s = schema()
+        let doc = s.doc([Leaf.text("hi")])
+        expect(dumpOffsetAtDocPos(doc, -1)).toBe(false)
+        expect(dumpOffsetAtDocPos(doc, 999)).toBe(false)
+    })
+})
+

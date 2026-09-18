@@ -92,3 +92,4 @@ export {
 } from "./compose"
 
 export {composeField, type ComposeFieldConfig} from "./compose-field"
+export {detectMentionQuery, type MentionQuery} from "./mention-query"
