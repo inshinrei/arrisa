@@ -24,6 +24,12 @@ export interface FromFormattedOptions {
      * paragraphs. Default `"\\n"`.
      */
     blockSeparator?: string
+    /**
+     * Replace dump text of a `mention_name` run with a display label.
+     * The document shows the returned string; export with matching `mentionText`
+     * to restore the dump slice.
+     */
+    mentionLabel?: (userId: string, raw: string) => string
 }
 
 /**
@@ -44,20 +50,27 @@ export function formattedTextToDoc(
     let text = ft.text ?? ""
     let entities = (ft.entities ?? []).filter((e) => entityInBounds(e, text))
     let sep = options.blockSeparator ?? "\n"
+    let mentionLabel = options.mentionLabel
 
     if (schema.docTag.type.spec.inlineContent) {
-        return schema.doc(inlineLeaves(text, entities, schema, sep))
+        return schema.doc(inlineLeaves(text, entities, schema, sep, mentionLabel))
     }
-    return schema.doc(blockChildren(text, entities, schema, sep))
+    return schema.doc(blockChildren(text, entities, schema, sep, mentionLabel))
 }
 
-function inlineLeaves(text: string, entities: MessageEntity[], schema: Schema, sep: string): Node[] {
+function inlineLeaves(
+    text: string,
+    entities: MessageEntity[],
+    schema: Schema,
+    sep: string,
+    mentionLabel?: FromFormattedOptions["mentionLabel"],
+): Node[] {
     let atoms = entities
         .filter((e): e is CustomEmojiEntity => e.type == "custom_emoji")
         .sort((a, b) => a.offset - b.offset)
 
     if (!atoms.length) {
-        return runsToNodes(materializeRuns(text, entities, schema), schema, sep)
+        return runsToNodes(materializeRuns(text, entities, schema, mentionLabel), schema, sep)
     }
 
     // Single interval scan over cut points at each atom boundary.
@@ -95,7 +108,7 @@ function inlineLeaves(text: string, entities: MessageEntity[], schema: Schema, s
             ),
             from,
         )
-        nodes.push(...runsToNodes(materializeRuns(slice, sliceEnt, schema), schema, sep))
+        nodes.push(...runsToNodes(materializeRuns(slice, sliceEnt, schema, mentionLabel), schema, sep))
     }
     return nodes
 }
@@ -133,7 +146,13 @@ type Seg = {
  * Pre wins over quote on the same interval. Lists wrap before quotes so a
  * quote covering a whole list becomes Blockquote > List.
  */
-function blockChildren(text: string, entities: MessageEntity[], schema: Schema, sep: string): Node[] {
+function blockChildren(
+    text: string,
+    entities: MessageEntity[],
+    schema: Schema,
+    sep: string,
+    mentionLabel?: FromFormattedOptions["mentionLabel"],
+): Node[] {
     let preRanges = entities.filter((e): e is PreEntity => e.type == "pre")
     let quoteRanges = entities.filter((e): e is BlockquoteEntity => e.type == "blockquote")
     let listRanges = entities.filter(
@@ -194,14 +213,14 @@ function blockChildren(text: string, entities: MessageEntity[], schema: Schema, 
         )
         let nodes: Node[]
         if (pre && codeTag) {
-            let leaves = inlineLeaves(slice, sliceEntities, schema, sep)
+            let leaves = inlineLeaves(slice, sliceEntities, schema, sep, mentionLabel)
             let tag = codeTag
             if (pre.language && schema.getMark("CodeBlockLanguage")) {
                 tag = tag.withMarks(CodeBlockLanguage.of(pre.language).addToSet(tag.marks))
             }
             nodes = [tag.create(leaves)]
         } else {
-            nodes = paragraphsFromSlice(slice, sliceEntities, schema, sep, paraTag)
+            nodes = paragraphsFromSlice(slice, sliceEntities, schema, sep, paraTag, mentionLabel)
         }
         segs.push({from, to, pre, quote, list, nodes})
     }
@@ -303,6 +322,7 @@ function paragraphsFromSlice(
     schema: Schema,
     sep: string,
     paraTag: Plot.Tag,
+    mentionLabel?: FromFormattedOptions["mentionLabel"],
 ): Node[] {
     let lines = slice.length ? slice.split(sep) : [""]
     if (lines.length > 1 && lines[lines.length - 1] === "" && slice.endsWith(sep)) lines.pop()
@@ -316,7 +336,7 @@ function paragraphsFromSlice(
             ),
             lineStart,
         )
-        let leaves = inlineLeaves(line, lineEntities, schema, sep) as Leaf[]
+        let leaves = inlineLeaves(line, lineEntities, schema, sep, mentionLabel) as Leaf[]
         paras.push(paraTag.create(leaves))
         lineStart += line.length + (li < lines.length - 1 ? sep.length : 0)
     }
@@ -334,7 +354,12 @@ interface Run {
 }
 
 /** Split `text` into maximal runs with a constant mark set from entities. */
-export function materializeRuns(text: string, entities: MessageEntity[], schema: Schema): Run[] {
+export function materializeRuns(
+    text: string,
+    entities: MessageEntity[],
+    schema: Schema,
+    mentionLabel?: FromFormattedOptions["mentionLabel"],
+): Run[] {
     if (!text) return []
 
     type Ev = {at: number; open: boolean; mark: Mark}
@@ -357,6 +382,15 @@ export function materializeRuns(text: string, entities: MessageEntity[], schema:
         let slice = text.slice(cursor, at)
         let marks: Mark.Set = Mark.none
         for (let m of active) marks = m.addToSet(marks)
+        if (mentionLabel) {
+            for (let e of entities) {
+                if (e.type != "mention_name") continue
+                if (e.offset <= cursor && e.offset + e.length >= at) {
+                    slice = mentionLabel(e.userId, slice)
+                    break
+                }
+            }
+        }
         runs.push({text: slice, marks})
         cursor = at
     }

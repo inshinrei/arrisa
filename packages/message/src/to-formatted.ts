@@ -15,7 +15,7 @@ import {
     type MessageEntity,
 } from "./entities"
 import {isInlineEntityMark, markKey, markToEntityPartial} from "./mark-map"
-import type {CustomEmojiParam} from "./schema-elements"
+import {MentionName, type CustomEmojiParam} from "./schema-elements"
 
 export interface ToFormattedOptions {
     /** Separator between block textblocks. Default `"\\n"`. */
@@ -26,6 +26,8 @@ export interface ToFormattedOptions {
      * Detect auto entities (url, email, hashtag, …) on the flattened text.
      * Pass `true` for defaults, or an options object.
      * Style marks do not block auto detection (bold URL keeps both entities).
+     * When `true` and the document schema has {@link MentionName}, type `"mention"`
+     * is omitted. An explicit `{types: [...]}` object is never rewritten.
      */
     autoDetect?: boolean | AutoDetectOptions
     /**
@@ -33,6 +35,33 @@ export interface ToFormattedOptions {
      * Default: omit the field.
      */
     blockquoteCanCollapse?: boolean
+    /**
+     * How to serialize text covered by a {@link MentionName} mark.
+     * `"label"` (default) keeps the document text; `"userId"` uses the mark param;
+     * a function returns the dump slice. Overlapping marks cover the serialized length.
+     */
+    mentionText?: "label" | "userId" | ((userId: string, label: string) => string)
+}
+
+const AUTO_TYPES_WITHOUT_MENTION = ["url", "email", "phone", "hashtag", "cashtag", "bot_command"] as const
+
+const serializedMention = (
+    userId: string,
+    label: string,
+    mentionText?: ToFormattedOptions["mentionText"],
+) => {
+    if (!mentionText || mentionText == "label") return label
+    if (mentionText == "userId") return userId
+    return mentionText(userId, label)
+}
+
+const mentionUserId = (marks: Mark.Set): string | null => {
+    for (let m of marks) {
+        if ((m.type == MentionName || m.name == "MentionName") && typeof m.value == "string") {
+            return m.value
+        }
+    }
+    return null
 }
 
 /**
@@ -40,7 +69,12 @@ export interface ToFormattedOptions {
  * Offsets/lengths are UTF-16 code units (JS string indices).
  */
 export function docToFormattedText(doc: Plot.Doc, options: ToFormattedOptions = {}): FormattedText {
-    let flat = new Flattener(options.blockSeparator ?? "\n", options.leafText, options.blockquoteCanCollapse)
+    let flat = new Flattener(
+        options.blockSeparator ?? "\n",
+        options.leafText,
+        options.blockquoteCanCollapse,
+        options.mentionText,
+    )
     walk(doc, flat)
     flat.finish()
     let entities = flat.entities.filter((e) => e.length > 0)
@@ -48,7 +82,10 @@ export function docToFormattedText(doc: Plot.Doc, options: ToFormattedOptions = 
 
     let text = flat.text
     if (options.autoDetect) {
-        let autoOpts = options.autoDetect === true ? {} : options.autoDetect
+        let autoOpts: AutoDetectOptions = options.autoDetect === true ? {} : {...options.autoDetect}
+        if (options.autoDetect === true && doc.schema.getMark("MentionName")) {
+            autoOpts.types = AUTO_TYPES_WITHOUT_MENTION
+        }
         entities = mergeAutoEntities(text, entities, autoOpts)
     }
 
@@ -78,6 +115,7 @@ class Flattener {
         blockSep: string,
         readonly leafText?: (node: Leaf) => string,
         readonly blockquoteCanCollapse?: boolean,
+        readonly mentionText?: ToFormattedOptions["mentionText"],
     ) {
         this.blockSep = blockSep
     }
@@ -126,6 +164,8 @@ class Flattener {
     }
 
     append(s: string, marks: Mark.Set) {
+        let userId = mentionUserId(marks)
+        if (userId != null) s = serializedMention(userId, s, this.mentionText)
         if (!s) return
         this.pinPendingStructure()
         let wanted = new Set<string>()

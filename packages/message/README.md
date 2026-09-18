@@ -134,7 +134,7 @@ Typing (input rules) and paste share messenger-style delimiters:
 
 ### Host atoms
 
-- **`MentionName`** — mark with host user id; non-inclusive so typing after does not extend it
+- **`MentionName`** — mark with host user id; non-inclusive so typing after does not extend it. Export `mentionText` (`"label"` default, `"userId"`, or a function) serializes the dump slice independently of the visible label; overlapping marks cover that serialized length. Import `mentionLabel(userId, raw)` replaces the dump slice with a display label.
 - **`CustomEmoji`** — leaf `{documentId, alt}`; text contribution is `alt` for entity offsets
 
 ## Main public API
@@ -204,11 +204,15 @@ import {
 
 let ft = docToFormattedText(doc, {
     blockSeparator: "\n",
-    autoDetect: true, // or AutoDetectOptions
+    autoDetect: true, // skips type "mention" when MentionName is in the schema
+    mentionText: (userId) => `@[${userId}]`,
     blockquoteCanCollapse: true,
 })
 
-let doc2 = formattedTextToDoc(ft, schema, {blockSeparator: "\n"})
+let doc2 = formattedTextToDoc(ft, schema, {
+    blockSeparator: "\n",
+    mentionLabel: (userId, raw) => labels[userId] ?? raw,
+})
 ```
 
 - **Inline schemas** — single stream; `\n` becomes line breaks when present.
@@ -227,7 +231,10 @@ let auto = detectAutoEntities(text, {types: ["url", "email", "hashtag"]})
 
 Detects `url`, `email`, `phone`, `hashtag`, `cashtag`, `bot_command`, `mention` without overlapping skip ranges or each other.
 
+`docToFormattedText({autoDetect: true})` omits type `"mention"` when the document schema registers `MentionName`. Explicit `autoDetect: {types: [...]}` is never rewritten.
+
 `mergeAutoEntities` / `autoDetect` skip only **exclusive** ranges (`pre`, inline `code`, `custom_emoji`, `text_url`, `mention_name`, existing autos) — **not** style marks. A bold URL gets both `bold` and `url`.
+
 ### Mark ↔ entity map
 
 ```ts

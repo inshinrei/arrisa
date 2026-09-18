@@ -169,3 +169,75 @@ describe("formattedTextToDoc mention", () => {
         expect(docToFormattedText(doc)).toEqual(ft)
     })
 })
+
+describe("mentionText serialize", () => {
+    it("exports a serialized slice and shifts later entities", () => {
+        let schema = fullInlineSchema()
+        let mention = MentionName.of("u@ex").addToSet(Mark.none)
+        let doc = schema.doc([
+            Leaf.text("hi "),
+            Leaf.text("Alice", mention),
+            Leaf.text("!"),
+        ])
+        let ft = docToFormattedText(doc, {mentionText: (userId) => `@[${userId}]`})
+        expect(ft.text).toBe("hi @[u@ex]!")
+        expect(ft.entities).toEqual(
+            expect.arrayContaining([{type: "mention_name", offset: 3, length: 7, userId: "u@ex"}]),
+        )
+    })
+
+    it("keeps bold on the serialized mention slice", () => {
+        let schema = fullInlineSchema()
+        let marks = Strong.addToSet(MentionName.of("u@ex").addToSet(Mark.none))
+        let doc = schema.doc([Leaf.text("Alice", marks)])
+        let ft = docToFormattedText(doc, {mentionText: (userId) => `@[${userId}]`})
+        expect(ft.text).toBe("@[u@ex]")
+        expect(ft.entities).toEqual(
+            expect.arrayContaining([
+                {type: "mention_name", offset: 0, length: 7, userId: "u@ex"},
+                {type: "bold", offset: 0, length: 7},
+            ]),
+        )
+    })
+})
+
+describe("mentionLabel hydrate", () => {
+    it("shows the display label while dump stays serialized", () => {
+        let schema = fullInlineSchema()
+        let ft = {
+            text: "hi @[u@ex]",
+            entities: [{type: "mention_name" as const, offset: 3, length: 7, userId: "u@ex"}],
+        }
+        let doc = formattedTextToDoc(ft, schema, {mentionLabel: () => "Alice"})
+        expect(doc.textContent()).toBe("hi Alice")
+        let round = docToFormattedText(doc, {mentionText: (id) => `@[${id}]`})
+        expect(round.text).toBe("hi @[u@ex]")
+        expect(round.entities).toEqual(
+            expect.arrayContaining([{type: "mention_name", offset: 3, length: 7, userId: "u@ex"}]),
+        )
+    })
+})
+
+describe("autoDetect mention skip", () => {
+    it("does not add type mention when MentionName is in the schema", () => {
+        let schema = fullInlineSchema()
+        let doc = schema.doc([Leaf.text("@[u@ex]", MentionName.of("u@ex").addToSet(Mark.none))])
+        let ft = docToFormattedText(doc, {autoDetect: true})
+        expect(ft.entities?.some((e) => e.type == "mention")).toBeFalsy()
+        expect(ft.entities?.some((e) => e.type == "mention_name")).toBe(true)
+    })
+
+    it("does not auto-detect unmarked @alice when MentionName is in the schema", () => {
+        let schema = fullInlineSchema()
+        let doc = schema.doc([Leaf.text("hello @alice now")])
+        let ft = docToFormattedText(doc, {autoDetect: true})
+        expect(ft.entities?.some((e) => e.type == "mention")).toBeFalsy()
+    })
+
+    it("still adds mention when types explicitly include it", () => {
+        let schema = fullInlineSchema()
+        let doc = schema.doc([Leaf.text("hello @alice now")])
+        let ft = docToFormattedText(doc, {autoDetect: {types: ["mention"]}})
+        expect(ft.entities?.some((e) => e.type == "mention")).toBe(true)
+    })
+})
