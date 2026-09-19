@@ -3,7 +3,7 @@
  */
 import {type Leaf, type Mark, Node, type Plot} from "@arrisa/doc"
 import {CodeBlockLanguage} from "@arrisa/types"
-import {mergeAutoEntities, type AutoDetectOptions} from "./auto-entities"
+import {AUTO_TYPES_WITHOUT_MENTION, mergeAutoEntities, type AutoDetectOptions} from "./auto-entities"
 import {
     blockquoteEntity,
     customEmojiEntity,
@@ -42,8 +42,6 @@ export interface ToFormattedOptions {
      */
     mentionText?: "label" | "userId" | ((userId: string, label: string) => string)
 }
-
-const AUTO_TYPES_WITHOUT_MENTION = ["url", "email", "phone", "hashtag", "cashtag", "bot_command"] as const
 
 const serializedMention = (
     userId: string,
@@ -98,10 +96,18 @@ export type DumpSpan = {
     dumpTo: number
     docFrom: number
     docTo: number
+    /** True when mentionText rewrote the visible label (even if lengths match). */
+    rewrite?: boolean
+}
+
+export type DumpIndex = {
+    spans: DumpSpan[]
+    dumpLength: number
+    text: string
 }
 
 /** Flatten with the same rules as {@link docToFormattedText}, recording dump↔doc spans. */
-export function collectDumpSpans(doc: Plot.Doc, options: ToFormattedOptions = {}) {
+export function collectDumpSpans(doc: Plot.Doc, options: ToFormattedOptions = {}): DumpIndex {
     let flat = new Flattener(
         options.blockSeparator ?? "\n",
         options.leafText,
@@ -111,7 +117,7 @@ export function collectDumpSpans(doc: Plot.Doc, options: ToFormattedOptions = {}
     )
     walk(doc, flat, 0)
     flat.finish()
-    return {spans: flat.spans, dumpLength: flat.text.length}
+    return {spans: flat.spans, dumpLength: flat.text.length, text: flat.text}
 }
 
 type StructureKind = "pre" | "blockquote" | "unordered_list" | "ordered_list"
@@ -131,6 +137,13 @@ class Flattener {
     readonly blockSep: string
     readonly spans: DumpSpan[] = []
     private lastDocTo = 0
+    private pendingMention: {
+        userId: string
+        label: string
+        docFrom: number
+        docTo: number
+        marks: Mark.Set
+    } | null = null
     private runs = new Map<string, {start: number; mark: Mark}>()
     /** Explicit structural open stack (enter/leave plot roles). */
     private structure: StructureFrame[] = []
@@ -150,6 +163,7 @@ class Flattener {
     }
 
     openBlock(contentStart: number) {
+        this.flushPendingMention()
         if (this.startedBlocks) {
             this.closeAllRuns()
             let dumpFrom = this.offset
@@ -200,7 +214,51 @@ class Flattener {
 
     append(s: string, marks: Mark.Set, docFrom: number, docTo: number) {
         let userId = mentionUserId(marks)
-        if (userId != null) s = serializedMention(userId, s, this.mentionText)
+        if (userId != null) {
+            if (this.pendingMention && this.pendingMention.userId == userId && this.pendingMention.docTo == docFrom) {
+                this.pendingMention.label += s
+                this.pendingMention.docTo = docTo
+                for (let m of marks) this.pendingMention.marks = m.addToSet(this.pendingMention.marks)
+                return
+            }
+            this.flushPendingMention()
+            this.pendingMention = {userId, label: s, docFrom, docTo, marks}
+            return
+        }
+        this.flushPendingMention()
+        this.appendSlice(s, marks, docFrom, docTo, false)
+    }
+
+    /**
+     * Custom emoji is atomic: alt does not participate in surrounding mark runs.
+     * Close runs, emit plain alt, push entity, leave runs empty.
+     */
+    appendCustomEmoji(param: CustomEmojiParam, docFrom: number, docTo: number) {
+        this.flushPendingMention()
+        this.closeAllRuns()
+        this.pinPendingStructure()
+        let start = this.offset
+        this.text += param.alt
+        this.entities.push(customEmojiEntity(start, param.alt.length, param.documentId))
+        this.recordSpan(start, docFrom, docTo)
+    }
+
+    private recordSpan(dumpFrom: number, docFrom: number, docTo: number, rewrite = false) {
+        if (!this.collectSpans) return
+        this.spans.push({dumpFrom, dumpTo: this.offset, docFrom, docTo, rewrite})
+        this.lastDocTo = docTo
+    }
+
+    private flushPendingMention() {
+        let pending = this.pendingMention
+        if (!pending) return
+        this.pendingMention = null
+        let slice = serializedMention(pending.userId, pending.label, this.mentionText)
+        let rewrite = !!(this.mentionText && this.mentionText != "label") || slice != pending.label
+        this.appendSlice(slice, pending.marks, pending.docFrom, pending.docTo, rewrite)
+    }
+
+    private appendSlice(s: string, marks: Mark.Set, docFrom: number, docTo: number, rewrite: boolean) {
         if (!s) return
         this.pinPendingStructure()
         let wanted = new Set<string>()
@@ -218,28 +276,11 @@ class Flattener {
         }
         let dumpFrom = this.offset
         this.text += s
-        this.recordSpan(dumpFrom, docFrom, docTo)
+        this.recordSpan(dumpFrom, docFrom, docTo, rewrite)
     }
 
-    /**
-     * Custom emoji is atomic: alt does not participate in surrounding mark runs.
-     * Close runs, emit plain alt, push entity, leave runs empty.
-     */
-    appendCustomEmoji(param: CustomEmojiParam, docFrom: number, docTo: number) {
-        this.closeAllRuns()
-        this.pinPendingStructure()
-        let start = this.offset
-        this.text += param.alt
-        this.entities.push(customEmojiEntity(start, param.alt.length, param.documentId))
-        this.recordSpan(start, docFrom, docTo)
-    }
-
-    private recordSpan(dumpFrom: number, docFrom: number, docTo: number) {
-        if (!this.collectSpans) return
-        this.spans.push({dumpFrom, dumpTo: this.offset, docFrom, docTo})
-        this.lastDocTo = docTo
-    }
     finish() {
+        this.flushPendingMention()
         this.closeAllRuns()
     }
 

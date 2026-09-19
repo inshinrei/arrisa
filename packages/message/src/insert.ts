@@ -45,7 +45,7 @@ export const insertCustomEmoji: Command.Pure<CustomEmojiParam> = ({state}, param
 /**
  * Insert a mention: labeled text marked with {@link MentionName}.
  * Requires {@link MentionName} in the schema.
- * Optional `from`/`to` replace a dump-text range (both required; out of range → `false`).
+ * Optional `from`/`to` replace a dump-text range (both required; out of range or `from > to` → `false`).
  * Pass `mentionText` with `from`/`to` when dump offsets were taken under that serializer.
  */
 export const insertMention: Command.Pure<InsertMentionConfig> = ({state}, config) => {
@@ -65,10 +65,10 @@ export function insertMentionSpec(state: EditorState, config: InsertMentionConfi
     let from = state.selection.from
     let to = state.selection.to
     if (config.from != null || config.to != null) {
-        if (config.from == null || config.to == null) return false
+        if (config.from == null || config.to == null || config.from > config.to) return false
         let mappedFrom = docPosAtDumpOffset(state.doc, config.from, "from", {mentionText: config.mentionText})
         let mappedTo = docPosAtDumpOffset(state.doc, config.to, "to", {mentionText: config.mentionText})
-        if (mappedFrom === false || mappedTo === false) return false
+        if (mappedFrom === false || mappedTo === false || mappedFrom > mappedTo) return false
         from = mappedFrom
         to = mappedTo
     }

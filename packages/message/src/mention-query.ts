@@ -5,9 +5,9 @@ import {Node, type Plot} from "@arrisa/doc"
 import {Arrisa, type ClientBox} from "@arrisa/editor"
 import {EditorState} from "@arrisa/state"
 import {Code} from "@arrisa/types"
-import {docPosAtDumpOffset, dumpOffsetAtDocPos} from "./dump-pos"
+import {docPosAtIndex, dumpOffsetAtIndex} from "./dump-pos"
 import {MentionName} from "./schema-elements"
-import {docToFormattedText} from "./to-formatted"
+import {collectDumpSpans} from "./to-formatted"
 
 export type MentionQuery = {
     from: number
@@ -37,8 +37,9 @@ export function detectMentionQuery(state: EditorState): Omit<MentionQuery, "rect
     for (let p: typeof $head.parent | null = $head.parent; p; p = p.parent) {
         if (p.node.type.hasRole(Node.Role.Code)) return null
     }
-    let dump = docToFormattedText(state.doc).text
-    let to = dumpOffsetAtDocPos(state.doc, $head.pos)
+    let index = collectDumpSpans(state.doc)
+    let dump = index.text
+    let to = dumpOffsetAtIndex(index, $head.pos, state.doc.length)
     if (to === false) return null
     let from = -1
     for (let i = to - 1; i >= 0; i--) {
@@ -51,7 +52,7 @@ export function detectMentionQuery(state: EditorState): Omit<MentionQuery, "rect
     }
     if (from < 0) return null
     if (from > 0 && !/\s/.test(dump[from - 1]!)) return null
-    let at = docPosAtDumpOffset(state.doc, from, "from")
+    let at = docPosAtIndex(index, from, "from")
     if (at !== false && mentionCovers(state.doc, at)) return null
     let query = dump.slice(from + 1, to)
     if (/[\s\]]/.test(query)) return null

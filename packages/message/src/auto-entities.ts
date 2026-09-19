@@ -54,6 +54,9 @@ const DETECTORS: readonly Detector[] = [
     },
 ]
 
+/** Default auto types minus `"mention"` (host MentionName schemas). */
+export const AUTO_TYPES_WITHOUT_MENTION = DETECTORS.map((d) => d.type).filter((t) => t != "mention")
+
 function covered(skip: readonly {offset: number; length: number}[], offset: number, length: number): boolean {
     let end = offset + length
     for (let r of skip) {

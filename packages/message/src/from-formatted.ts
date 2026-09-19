@@ -26,10 +26,10 @@ export interface FromFormattedOptions {
     blockSeparator?: string
     /**
      * Replace dump text of a `mention_name` run with a display label.
-     * The document shows the returned string; export with matching `mentionText`
-     * to restore the dump slice.
+     * The document shows the returned string (or `raw` when the callback returns
+     * nullish). Export with matching `mentionText` to restore the dump slice.
      */
-    mentionLabel?: (userId: string, raw: string) => string
+    mentionLabel?: (userId: string, raw: string) => string | null | undefined
 }
 
 /**
@@ -386,7 +386,12 @@ export function materializeRuns(
             for (let e of entities) {
                 if (e.type != "mention_name") continue
                 if (e.offset <= cursor && e.offset + e.length >= at) {
-                    slice = mentionLabel(e.userId, slice)
+                    if (cursor == e.offset) {
+                        let raw = text.slice(e.offset, e.offset + e.length)
+                        slice = mentionLabel(e.userId, raw) ?? raw
+                    } else {
+                        slice = ""
+                    }
                     break
                 }
             }

@@ -168,6 +168,34 @@ describe("insertMention dump range", () => {
         expect(insertMentionSpec(state, {userId: "u", label: "@u", from: 0} as any)).toBe(false)
     })
 
+    it("returns false when dump from is greater than to", () => {
+        let schema = fullInlineSchema()
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("hi @al")]),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        expect(insertMentionSpec(state, {userId: "u@ex", label: "@[u@ex]", from: 5, to: 3})).toBe(false)
+        expect(state.doc.textContent()).toBe("hi @al")
+    })
+
+    it("places the caret after the inserted mention", () => {
+        let schema = fullInlineSchema()
+        let state = EditorState.create({
+            doc: schema.doc([Leaf.text("hi @al")]),
+            selection: EditorSelection.cursor(1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let spec = insertMentionSpec(state, {
+            userId: "u@ex",
+            label: "@[u@ex]",
+            from: 3,
+            to: 6,
+        })
+        state = applySpec(state, spec)
+        expect(state.selection.from).toBe(state.selection.to)
+        expect(state.doc.textContent({from: 0, to: state.selection.head})).toBe("hi @[u@ex]")
+    })
+
     it("maps dump offsets in a block compose doc", () => {
         let proto = EditorState.create({
             doc: "",
@@ -183,6 +211,22 @@ describe("insertMention dump range", () => {
         expect(docToFormattedText(state.doc).text).toBe("hi @[u@ex]")
     })
 
+    it("maps dump offsets across a block separator", () => {
+        let proto = EditorState.create({
+            doc: "",
+            config: composeField({floating: false, placeholder: false, markdown: false, hostElements: true}),
+        })
+        let doc = formattedTextToDoc({text: "hi\n@al"}, proto.schema)
+        let state = EditorState.create({
+            doc,
+            config: composeField({floating: false, placeholder: false, markdown: false, hostElements: true}),
+        })
+        expect(docToFormattedText(state.doc).text).toBe("hi\n@al")
+        let spec = insertMentionSpec(state, {userId: "u@ex", label: "@[u@ex]", from: 3, to: 6})
+        state = applySpec(state, spec)
+        expect(docToFormattedText(state.doc).text).toBe("hi\n@[u@ex]")
+    })
+
     it("maps dump offsets with mentionText when a prior mention is serialized", () => {
         let schema = fullInlineSchema()
         let mention = MentionName.of("u@ex").addToSet(Mark.none)
@@ -191,7 +235,7 @@ describe("insertMention dump range", () => {
             selection: EditorSelection.cursor(0),
             config: [EditorState.schemaElement.of(schema.elements)],
         })
-        let mentionText = (id: string) => `@[${id}]`
+        const mentionText = (id: string) => `@[${id}]`
         let dump = docToFormattedText(state.doc, {mentionText})
         expect(dump.text).toBe("@[u@ex] @al")
         let from = dump.text.indexOf("@al")
@@ -284,6 +328,40 @@ describe("mentionText serialize", () => {
             ]),
         )
     })
+
+    it("serializes adjacent same-user mention leaves once", () => {
+        let schema = fullInlineSchema()
+        let mention = MentionName.of("u@ex").addToSet(Mark.none)
+        let boldMention = Strong.addToSet(mention)
+        let doc = schema.doc([Leaf.text("Al", boldMention), Leaf.text("ice", mention)])
+        let ft = docToFormattedText(doc, {mentionText: (userId) => `@[${userId}]`})
+        expect(ft.text).toBe("@[u@ex]")
+        expect(ft.entities?.filter((e) => e.type == "mention_name")).toEqual([
+            {type: "mention_name", offset: 0, length: 7, userId: "u@ex"},
+        ])
+    })
+
+    it("shifts a later bold entity after a longer serialized mention", () => {
+        let schema = fullInlineSchema()
+        let mention = MentionName.of("u@ex").addToSet(Mark.none)
+        let doc = schema.doc([Leaf.text("Alice", mention), Leaf.text("!", [Strong])])
+        let ft = docToFormattedText(doc, {mentionText: (userId) => `@[${userId}]`})
+        expect(ft.text).toBe("@[u@ex]!")
+        expect(ft.entities).toEqual(
+            expect.arrayContaining([
+                {type: "mention_name", offset: 0, length: 7, userId: "u@ex"},
+                {type: "bold", offset: 7, length: 1},
+            ]),
+        )
+    })
+
+    it("exports mentionText userId as the dump slice", () => {
+        let schema = fullInlineSchema()
+        let doc = schema.doc([Leaf.text("Alice", MentionName.of("u1").addToSet(Mark.none))])
+        let ft = docToFormattedText(doc, {mentionText: "userId"})
+        expect(ft.text).toBe("u1")
+        expect(ft.entities).toEqual([{type: "mention_name", offset: 0, length: 2, userId: "u1"}])
+    })
 })
 
 describe("mentionLabel hydrate", () => {
@@ -300,6 +378,31 @@ describe("mentionLabel hydrate", () => {
         expect(round.entities).toEqual(
             expect.arrayContaining([{type: "mention_name", offset: 3, length: 7, userId: "u@ex"}]),
         )
+    })
+
+    it("applies mentionLabel once when overlapping marks split the dump run", () => {
+        let schema = fullInlineSchema()
+        let ft: FormattedText = {
+            text: "@[u@ex]",
+            entities: [
+                {type: "mention_name", offset: 0, length: 7, userId: "u@ex"},
+                {type: "bold", offset: 0, length: 3},
+            ],
+        }
+        let doc = formattedTextToDoc(ft, schema, {mentionLabel: () => "Alice"})
+        expect(doc.textContent()).toBe("Alice")
+    })
+
+    it("keeps dump text when mentionLabel returns nullish", () => {
+        let schema = fullInlineSchema()
+        let ft: FormattedText = {
+            text: "@[u@ex]",
+            entities: [{type: "mention_name", offset: 0, length: 7, userId: "u@ex"}],
+        }
+        let doc = formattedTextToDoc(ft, schema, {
+            mentionLabel: () => undefined,
+        })
+        expect(doc.textContent()).toBe("@[u@ex]")
     })
 })
 

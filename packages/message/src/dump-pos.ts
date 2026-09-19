@@ -3,7 +3,7 @@
  * positions and back.
  */
 import {type Plot} from "@arrisa/doc"
-import {collectDumpSpans, type ToFormattedOptions} from "./to-formatted"
+import {collectDumpSpans, type DumpIndex, type ToFormattedOptions} from "./to-formatted"
 
 /**
  * Document position for a dump offset, or `false` when out of range.
@@ -16,7 +16,11 @@ export function docPosAtDumpOffset(
     edge: "from" | "to",
     options?: ToFormattedOptions,
 ): number | false {
-    let {spans, dumpLength} = collectDumpSpans(doc, options)
+    return docPosAtIndex(collectDumpSpans(doc, options), offset, edge)
+}
+
+export function docPosAtIndex(index: DumpIndex, offset: number, edge: "from" | "to"): number | false {
+    let {spans, dumpLength} = index
     if (offset < 0 || offset > dumpLength) return false
     if (offset == dumpLength) {
         if (edge != "to") return false
@@ -33,7 +37,7 @@ export function docPosAtDumpOffset(
         }
         let dumpLen = span.dumpTo - span.dumpFrom
         let docLen = span.docTo - span.docFrom
-        if (dumpLen == docLen) return span.docFrom + (offset - span.dumpFrom)
+        if (!span.rewrite && dumpLen == docLen) return span.docFrom + (offset - span.dumpFrom)
         return edge == "from" ? span.docFrom : span.docTo
     }
     return false
@@ -44,25 +48,26 @@ export function docPosAtDumpOffset(
  * Inverse of {@link docPosAtDumpOffset} with `edge: "to"` (caret / exclusive end).
  */
 export function dumpOffsetAtDocPos(doc: Plot.Doc, pos: number, options?: ToFormattedOptions): number | false {
-    if (pos < 0 || pos > doc.length) return false
-    let {spans, dumpLength} = collectDumpSpans(doc, options)
+    return dumpOffsetAtIndex(collectDumpSpans(doc, options), pos, doc.length)
+}
+
+export function dumpOffsetAtIndex(index: DumpIndex, pos: number, docLength: number): number | false {
+    if (pos < 0 || pos > docLength) return false
+    let {spans, dumpLength} = index
     if (!spans.length) return 0
 
-    let found: number | false = false
     for (let span of spans) {
         let dumpLen = span.dumpTo - span.dumpFrom
         let docLen = span.docTo - span.docFrom
-        if (dumpLen == docLen) {
-            if (pos >= span.docFrom && pos <= span.docTo) found = span.dumpFrom + (pos - span.docFrom)
-        } else if (pos == span.docFrom) {
-            found = span.dumpFrom
-        } else if (pos == span.docTo) {
-            found = span.dumpTo
-        } else if (pos > span.docFrom && pos < span.docTo) {
-            found = span.dumpTo
+        let rewrite = !!span.rewrite || dumpLen != docLen
+        if (!rewrite) {
+            if (pos >= span.docFrom && pos <= span.docTo) return span.dumpFrom + (pos - span.docFrom)
+            continue
         }
+        if (pos == span.docFrom) return span.dumpFrom
+        if (pos == span.docTo) return span.dumpTo
+        if (pos > span.docFrom && pos < span.docTo) return span.dumpTo
     }
-    if (found !== false) return found
     if (pos <= spans[0]!.docFrom) return 0
     if (pos >= spans[spans.length - 1]!.docTo) return dumpLength
     return false

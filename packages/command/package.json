@@ -1,6 +1,6 @@
 {
   "name": "@arrisa/command",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "Arrisa — command",
   "license": "MIT",
   "type": "module",
