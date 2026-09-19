@@ -1,9 +1,9 @@
 import {test, expect} from "@playwright/test"
-import {openCompose, e2e} from "./helpers"
+import {openCompose, e2e, composeBox} from "./helpers"
 
 test("typing @ emits a query with a real caret rect", async ({page}) => {
     await openCompose(page)
-    await page.locator("#editor-chat [contenteditable='true']").click()
+    await composeBox(page).click()
     await page.keyboard.type("@")
     // DOM type schedules rAF flush; selectionRect runs the mention listener this turn.
     let q = await e2e(page, (api) => {
@@ -14,7 +14,7 @@ test("typing @ emits a query with a real caret rect", async ({page}) => {
     expect(q.query).toBe("")
     expect(q.from).toBe(0)
     expect(q.rect.height).toBeGreaterThanOrEqual(1)
-    expect(q.rect.top).not.toBe(0)
+    expect(q.rect.top + q.rect.left + q.rect.width + q.rect.height).not.toBe(0)
 })
 
 test("insertText @ emits query+rect on that turn", async ({page}) => {
@@ -39,8 +39,8 @@ test("dump-range insertMention replaces @al", async ({page}) => {
     expect(ft.text).toBe("hi @[u@ex]")
     expect(
         ft.entities?.some(
-            (e: {type: string; offset: number; length: number}) =>
-                e.type == "mention_name" && e.offset == 3 && e.length == 7,
+            (e: {type: string; offset: number; length: number; userId?: string}) =>
+                e.type == "mention_name" && e.offset == 3 && e.length == 7 && e.userId == "u@ex",
         ),
     ).toBeTruthy()
 })

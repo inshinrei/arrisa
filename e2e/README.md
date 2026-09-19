@@ -30,7 +30,7 @@ The runner starts a dedicated `pnpm playground` on `http://127.0.0.1:5173` with 
 | `remountCompose({submit?})` | Remount compose; optional submit chord logs `"send"` |
 | `sendLog` | Host submit log (`"send"` entries) |
 
-Helpers: `openCompose(page)` and `e2e(page, (api) => …)` in `helpers.ts`. Keyboard specs click `#editor-chat [contenteditable='true']` so they do not hit the hidden document editor.
+Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, (api) => …)` in `helpers.ts`. Keyboard specs click `composeBox` (`#editor-chat [contenteditable='true']`) so they do not hit the hidden document editor.
 
 ## Specs
 
