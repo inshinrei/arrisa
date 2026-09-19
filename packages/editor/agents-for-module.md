@@ -83,8 +83,8 @@ KeyBinding.of({key: "Mod-b", run: toggleStrong})
 // macOS Cmd-ArrowLeft/Right = line side (Shift selects); Option-Arrow = word. Do not bind `Mod-ArrowLeft` without `mac: "Alt-ArrowLeft"` or it collides with Cmd line motion.
 // Escape (default + compose) collapses a range to a cursor at head
 composeKeymap()
-// submit omits that chord for host send; the other chord is insertLineBreak
-composeKeymap({submit: "Enter"})
+let submitEnter: ComposeKeymapConfig = {submit: "Enter"}
+composeKeymap(submitEnter)
 EditorState.prec.high(KeyBinding.of({key: "Enter", run: hostSend}))
 // Missing host binding may fall through to beforeinput (insertParagraph → enter)
 ```

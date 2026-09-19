@@ -166,7 +166,8 @@ KeyBinding.defaultKeymap.map((b) => b.extension)
 import {composeKeymap, type ComposeKeymapConfig} from "@arrisa/editor"
 import {EditorState} from "@arrisa/state"
 composeKeymap() // Enter = enter, Shift-Enter = insertLineBreak
-composeKeymap({submit: "Enter"}) // Enter unbound; Shift-Enter = insertLineBreak
+let submitEnter: ComposeKeymapConfig = {submit: "Enter"}
+composeKeymap(submitEnter) // Enter unbound; Shift-Enter = insertLineBreak
 EditorState.prec.high(KeyBinding.of({key: "Enter", run: hostSend}))
 ```
 
