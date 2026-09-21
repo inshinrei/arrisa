@@ -168,4 +168,22 @@ describe("highlightCode", () => {
         has('foo = "hi" // c', undefined, "// c", "comment")
         expect(slices('foo = "hi" // c').some((s) => s.slice == "foo")).toBe(false)
     })
+
+    it("clears type position after values but not comments", () => {
+        let num = "let n = flag ? 1 : 0\nconsole.log(n)"
+        has(num, "ts", "log", "function")
+        expect(slices(num, "ts").some((s) => s.slice == "console" || (s.slice == "log" && s.role == "type"))).toBe(
+            false,
+        )
+        let str = 'let n = flag ? "a" : "b"\nconsole.log(n)'
+        has(str, "ts", "log", "function")
+        expect(slices(str, "ts").some((s) => s.slice == "console" || (s.slice == "log" && s.role == "type"))).toBe(
+            false,
+        )
+        let re = "let n = flag ? 1 : /a/\nconsole.log(n)"
+        has(re, "ts", "log", "function")
+        expect(slices(re, "ts").some((s) => s.slice == "console" || (s.slice == "log" && s.role == "type"))).toBe(false)
+        expect(slices("function\n1\nname", "ts").some((s) => s.slice == "name")).toBe(false)
+        has(":\n/* c */\nUser", "ts", "User", "type")
+    })
 })

@@ -997,6 +997,13 @@ function freshState(): ScanState {
     return {expectType: false, expectFn: false, angle: 0, pendingGeneric: false, yamlValue: false, brace: 0}
 }
 
+/** A value token is not part of a type or a function name. Generics stay open. */
+function clearValueFlags(state: ScanState) {
+    if (state.angle !== 0) return
+    state.expectType = false
+    state.expectFn = false
+}
+
 function scanCode(
     text: string,
     start: number,
@@ -1099,6 +1106,7 @@ function scanCode(
             }
             let end = yamlScalarEnd(text, i, limit)
             push(spans, i, end, "string")
+            clearValueFlags(state)
             i = end
             continue
         }
@@ -1112,11 +1120,13 @@ function scanCode(
                     push(spans, i, i + 1, "string")
                     push(spans, i + 1, i + 1 + el, "escape")
                     push(spans, i + 1 + el, i + 2 + el, "string")
+                    clearValueFlags(state)
                     i = i + 2 + el
                     continue
                 }
             } else if (n && n !== "'" && n !== "\n" && n !== "\r" && text[i + 2] === "'") {
                 push(spans, i, i + 3, "string")
+                clearValueFlags(state)
                 i += 3
                 continue
             }
@@ -1141,6 +1151,7 @@ function scanCode(
             let kind: QuoteKind = lang === "py" && prefixHasF(text, i, plen) ? "fstring" : "none"
             push(spans, i, qAt, "modifier")
             i = scanQuoted(text, qAt, limit, lang, spans, kind, stopPhp)
+            clearValueFlags(state)
             continue
         }
         if (lang === "py" && isTriple(text, i)) {
@@ -1155,20 +1166,24 @@ function scanCode(
         if (text[i] === '"') {
             let kind: QuoteKind = lang === "ruby" ? "ruby" : "none"
             i = scanQuoted(text, i, limit, lang, spans, kind, stopPhp)
+            clearValueFlags(state)
             continue
         }
         if (text[i] === "'" && lang !== "json") {
             i = scanQuoted(text, i, limit, lang, spans, "none", stopPhp)
+            clearValueFlags(state)
             continue
         }
         if (text[i] === "`" && (lang === "js" || lang === "ts")) {
             i = scanQuoted(text, i, limit, lang, spans, "template", stopPhp)
+            clearValueFlags(state)
             continue
         }
         if ((lang === "js" || lang === "ts") && text[i] === "/" && !regexBlocked(text, i)) {
             let end = regexEnd(text, i, limit)
             if (end > i) {
                 push(spans, i, end, "regex")
+                clearValueFlags(state)
                 i = end
                 continue
             }
@@ -1177,12 +1192,14 @@ function scanCode(
             let end = regexEnd(text, i + 1, limit)
             if (end > i) {
                 push(spans, i, end, "regex")
+                clearValueFlags(state)
                 i = end
                 continue
             }
         }
         if (isDigitChar(text[i])) {
             let next = scanNumber(text, i, limit, spans, lang)
+            clearValueFlags(state)
             i = next > i ? next : i + 1
             continue
         }
