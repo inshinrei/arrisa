@@ -82,7 +82,7 @@ type FormattedText = {
 | `composeKeymap` (default keymap off) | always; `submit?: "Enter" \| "Shift-Enter"` omits that chord |
 | Mark exclusivity (`none` / `code-strike` / custom) | `"none"` |
 | Mention + custom emoji schema elements | `hostElements: false` |
-| Markdown input rules (`**bold**`, `` `code` ``, …; no spoiler) | `markdown: true` |
+| Markdown input rules (`**bold**`, `` `code` ``, finished fences; no spoiler) | `markdown: true` |
 | Markdown plain-text paste | `markdownPaste: true` |
 | Floating selection toolbar (`Menu.Group.top`) | `floating: true` |
 | Embedded toolbar (`embeddedMenu`) | `false` |
@@ -143,7 +143,9 @@ Does **not** include history — add `@arrisa/history` in the host.
 
 Typing (input rules) and paste share messenger-style delimiters:
 
-- `**bold**`, `__italic__`, `~~strike~~`, `||spoiler||`, `` `code` ``
+- `**bold**`, `__italic__`, `~~strike~~`, `||spoiler||`. Typing `` `code` `` applies the inline code mark
+- A finished fence becomes a code block when the schema can contain one: one line `` ```code``` ``, one paragraph with line breaks, or a closing `` ``` `` paragraph after an opening `` ``` `` / `` ```lang `` paragraph. Otherwise the backticks stay text
+- `` ``` `` followed by a space at the start of a block is unchanged (empty code block; `` ```lang `` then space sets the language)
 - Paste also understands `[label](url)`, fenced code, and `> ` quotes via `parseMarkdownText`
 - `composeField` omits the spoiler input rule; paste/import skip spoiler entities when `Spoiler` is not in the schema
 
@@ -273,6 +275,7 @@ import {
     markdownStrike,
     markdownSpoiler,
     markdownCode,
+    markdownCodeBlock,
     parseMarkdownText,
     markdownPaste,
     markdownClipboardParser,

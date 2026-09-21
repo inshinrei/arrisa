@@ -60,6 +60,7 @@ export {
     markdownStrike,
     markdownSpoiler,
     markdownCode,
+    markdownCodeBlock,
 } from "./markdown"
 
 export {parseMarkdownText} from "./parse-markdown"

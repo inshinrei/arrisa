@@ -59,7 +59,8 @@ export const MARKDOWN_INLINE_DELIMITERS: readonly MarkdownInlineDelimiter[] = [
         close: "`",
         entity: "code",
         mark: Code,
-        inputSource: "`([^`\\n]+)`$",
+        // Opening backtick must not follow another backtick, so ```x` is not inline code.
+        inputSource: "(?<!`)`([^`\\n]+)`$",
         parseSource: "`([^`\\n]+)`",
     },
 ]

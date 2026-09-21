@@ -14,7 +14,7 @@ import {
 } from "@arrisa/editor"
 import {composeSchema, type LinkConfig} from "@arrisa/schema"
 import {EditorState} from "@arrisa/state"
-import {markdownBold, markdownCode, markdownItalic, markdownStrike} from "./markdown"
+import {markdownBold, markdownCode, markdownCodeBlock, markdownItalic, markdownStrike} from "./markdown"
 import {mentionQueryListener, type MentionQuery} from "./mention-query"
 import {mentionResolve} from "./mention-rule"
 import {markdownPaste} from "./paste-markdown"
@@ -28,7 +28,7 @@ export interface ComposeFieldConfig {
     embedded?: false | EmbeddedMenuConfig
     /** Placeholder text when empty. Default `"Message…"`. Pass `false` to omit. */
     placeholder?: string | false
-    /** Install markdown delimiter input rules (no spoiler). Default true. */
+    /** Delimiter input rules (no spoiler) plus fence → code block. Default true. */
     markdown?: boolean
     /** Parse plain-text markdown on paste. Default true. */
     markdownPaste?: boolean
@@ -63,7 +63,7 @@ export interface ComposeFieldConfig {
  * - {@link composeKeymap} (default keymap off; optional `submit` omits that chord)
  * - optional exclusivity (`"none"` | `"code-strike"` | custom)
  * - optional host elements (`hostElements` default false)
- * - markdown input rules (no spoiler) + paste parser
+ * - markdown input rules (no spoiler; a finished fence becomes a code block) + paste parser
  * - floating and/or embedded toolbar (`Menu.Group.top`)
  * - placeholder
  * - optional `onMentionQuery` picker listener (does not consume Space)
@@ -92,7 +92,13 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
 
     if (hostElements) ext.push(messengerHostElements())
     if (markdown)
-        ext.push([markdownBold.extension, markdownItalic.extension, markdownStrike.extension, markdownCode.extension])
+        ext.push([
+            markdownBold.extension,
+            markdownItalic.extension,
+            markdownStrike.extension,
+            markdownCodeBlock.extension,
+            markdownCode.extension,
+        ])
     if (mdPaste) ext.push(markdownPaste())
     if (resolveMention) ext.push(mentionResolve(resolveMention))
     if (onMentionQuery) ext.push(mentionQueryListener(onMentionQuery))
