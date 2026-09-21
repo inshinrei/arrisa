@@ -36,6 +36,7 @@ import {
     InlineDoc,
     Paragraph,
 } from "@arrisa/types"
+import {codeBlockPainting} from "./code-block-paint"
 
 /** Block document root (`Doc`) — holds block content group. */
 export function blockDoc(): EditorState.Extension {
@@ -125,7 +126,7 @@ export namespace heading {
 
 /**
  * Fenced code block: schema elements, button, Ctrl-Shift-\\, `` ``` `` / `` ```lang ``
- * input rule, and preformatted theme.
+ * input rule, preformatted theme, and token colors.
  */
 export function codeBlock(): EditorState.Extension {
     return [
@@ -135,6 +136,7 @@ export function codeBlock(): EditorState.Extension {
         codeBlock.keyBinding,
         codeBlock.createOnBackticks,
         codeBlock.theme,
+        codeBlockPainting(),
     ]
 }
 

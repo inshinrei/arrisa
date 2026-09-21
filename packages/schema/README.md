@@ -135,7 +135,7 @@ import {
 ```
 
 - `blockDoc()` / `inlineDoc()` — register `Doc` or `InlineDoc`
-- `paragraph()`, `heading()`, `codeBlock()` — textblocks + chrome (`codeBlock` registers `CodeBlock` + `CodeBlockLanguage`, fence input rule, theme)
+- `paragraph()`, `heading()`, `codeBlock()` — textblocks + chrome (`codeBlock` registers `CodeBlock` + `CodeBlockLanguage`, fence input rule, theme, and token colors)
 - `alignment()`, `direction()` — textblock marks + menu submenus
 - `blockquote()`, `horizontalRule()` — structure + input rules
 - `lineBreak()` — hard break leaf (`br`)
@@ -291,6 +291,10 @@ Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string
 Doc comments set `emphasis: "bold"`. Other spans omit `emphasis`.
 
 Language ids are case-folded. Aliases: `typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`.
+
+`codeBlock()` paints those spans on the fenced block. Each token is a decoration with classes `arrisa-tok` and `arrisa-tok-<role>`. Doc comments (`emphasis: "bold"`) also get `arrisa-tok-bold`. Inline `code` marks are not tokenized. Painting does not change dump text or `pre` offsets.
+
+Colors use two layers. Set `--arrisa-code-<name>` (no `-default`) on an ancestor to override a role. Scheme defaults are `--arrisa-code-<name>-default`, chosen by `Arrisa.colorScheme` (`&light` / `&dark`). Neither path re-lexes. Names: `violet`, `indigo`, `lavender`, `sky`, `blue`, `cyan`, `green`, `lime`, `mint`, `peach`, `orange`, `seagreen`, `coral`, `red`, `yellow`, `pink`.
 
 ## Layering / related packages
 
