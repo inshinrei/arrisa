@@ -56,3 +56,4 @@ export {
     insertImage,
     imageDialog,
 } from "./image"
+export {highlightCode, type CodeRole, type CodeSpan} from "./highlight-code"

@@ -272,6 +272,26 @@ messengerSchema({
 
 Chat field hosts should prefer `@arrisa/message`’s `composeField` (block lists/quote/code) or `messengerCompose` (inline/spoiler).
 
+### Code token roles
+
+```ts
+import {highlightCode, type CodeRole, type CodeSpan} from "@arrisa/schema"
+
+let spans = highlightCode(source, "ts")
+```
+
+`highlightCode(text, language?)` returns `CodeSpan[]`. `from` and `to` are UTF-16 indexes into `text` (`from` inclusive, `to` exclusive).
+
+Spans are a view. They are not part of `PreEntity` or the dump.
+
+Blocks over 32_000 UTF-16 units or 400 lines return `[]`.
+
+Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string`, `interpolation`, `escape`, `number`, `constant`, `comment`, `directive`, `tag`, `attribute`, `regex`.
+
+Doc comments set `emphasis: "bold"`. Other spans omit `emphasis`.
+
+Language ids are case-folded. Aliases: `typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`.
+
 ## Layering / related packages
 
 ```

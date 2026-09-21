@@ -95,6 +95,7 @@ insertMentionSpec(editor.state, {
 | Markdown | `markdownInputRules`, per-delimiter rules, `parseMarkdownText`, `markdownPaste`, `markdownClipboardParser`, `looksLikeMarkdown` |
 | Host elements | `CustomEmoji`, `MentionName`, `customEmoji`, `mentionName`, `messengerHostElements`, `CustomEmojiParam` |
 | Insert / resolve | `insertCustomEmoji`, `insertMention`, `*Spec` pure helpers (`from`/`to` dump offsets + matching `mentionText` on mention), `mentionResolve`, `mentionResolveRule` |
+| Code roles | `highlightCode`, `CodeSpan`, `CodeRole` (re-exported; UTF-16 view, not part of `PreEntity` or the dump) |
 
 ## Invariants / pitfalls
 
@@ -109,6 +110,7 @@ insertMentionSpec(editor.state, {
 9. **Exclusivity** — `"code-strike"` isolates Code + Strikethrough from other marks (via `@arrisa/command` mark exclusivity).
 10. **Markdown paste** only runs when `looksLikeMarkdown` is true and parse yields entities; otherwise default paste wins.
 11. Prefer **`let`** in examples; `const` only for arrow functions / true globals.
+12. **`highlightCode(text, language?)`** — returns `CodeSpan[]` with UTF-16 indexes into `text`. Spans are a view. They are not part of `PreEntity` or the dump. Blocks over 32_000 UTF-16 units or 400 lines return `[]`. Doc comments set `emphasis: "bold"`. Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string`, `interpolation`, `escape`, `number`, `constant`, `comment`, `directive`, `tag`, `attribute`, `regex`. Language ids are case-folded (`typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`).
 
 ## What not to do
 

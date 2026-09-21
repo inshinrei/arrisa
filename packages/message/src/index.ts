@@ -93,3 +93,5 @@ export {
 
 export {composeField, type ComposeFieldConfig} from "./compose-field"
 export {detectMentionQuery, type MentionQuery} from "./mention-query"
+
+export {highlightCode, type CodeRole, type CodeSpan} from "@arrisa/schema"

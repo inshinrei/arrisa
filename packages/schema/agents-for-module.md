@@ -41,6 +41,7 @@ let config = [/* blockDoc(), paragraph(), strong(), … */]
 | Marks | `strong`, `emphasis`, `code`, `underline`, `strikethrough`, `spoiler`, `superscript`, `subscript` |
 | Link / color | `link`, `link({prompt})`, `isLinkPasteUrl`, `LinkConfig`, `LinkPrompt`, `LinkPromptRequest`, `color`, `backgroundColor`, `ColorPicker` |
 | Media | `image`, `figure`, `imageResizing`, `imageUploader`, `activeImage`, `insertImage`, `imageDialog` |
+| Code roles | `highlightCode`, `CodeSpan`, `CodeRole` |
 
 Factories return `EditorState.Extension` values. Pass them in `EditorState.create` / `Arrisa.create` `config`.
 
@@ -56,6 +57,7 @@ Factories return `EditorState.Extension` values. Pass them in `EditorState.creat
 8. **Colors** — menu applies only `isSafeCssColor` values; empty string clears the mark.
 9. **Prefer `let` in examples** — `const` only for arrow functions or true module-level constants (Arrisa monorepo style).
 10. **`codeBlock()`** — registers `CodeBlock` + `CodeBlockLanguage`, menu/key, theme, and a fence input rule: type `` ``` `` or `` ```lang `` then a **space** at the start of a textblock.
+11. **`highlightCode(text, language?)`** — returns `CodeSpan[]` with UTF-16 indexes into `text`. Spans are a view. They are not part of `PreEntity` or the dump. Blocks over 32_000 UTF-16 units or 400 lines return `[]`. Doc comments set `emphasis: "bold"`. Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string`, `interpolation`, `escape`, `number`, `constant`, `comment`, `directive`, `tag`, `attribute`, `regex`. Language ids are case-folded (`typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`).
 
 ## What not to do
 
