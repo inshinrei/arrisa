@@ -949,11 +949,6 @@ function scanIdent(
         return j
     }
     if (!isCode(lang)) {
-        // No language id still colors JavaScript keywords. Other identifiers stay plain.
-        if (!lang) {
-            let kw = keywordOf("js", word)
-            if (kw) push(spans, i, j, kw)
-        }
         state.expectFn = false
         if (state.angle === 0) state.expectType = false
         return j

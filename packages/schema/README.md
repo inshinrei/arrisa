@@ -290,7 +290,7 @@ Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string
 
 Doc comments set `emphasis: "bold"`. Other spans omit `emphasis`.
 
-Language ids are case-folded. Aliases: `typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`. An omitted language colors JavaScript keywords and constants; other identifiers stay plain. A non-empty unknown language id does not add keywords.
+Language ids are case-folded. Aliases: `typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`. A missing, empty, or unknown language does not add keywords.
 
 `codeBlock()` paints those spans on the fenced block. Each token is a decoration with classes `arrisa-tok` and `arrisa-tok-<role>`. Doc comments (`emphasis: "bold"`) also get `arrisa-tok-bold`. Inline `code` marks are not tokenized. Painting does not change dump text or `pre` offsets.
 

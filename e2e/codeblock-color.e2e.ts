@@ -4,7 +4,7 @@ import {openCompose, composeBox, e2e} from "./helpers"
 test("typed fence becomes a colored code block", async ({page}) => {
     await openCompose(page)
     await composeBox(page).click()
-    await page.keyboard.type("```")
+    await page.keyboard.type("```ts")
     await page.keyboard.press("Enter")
     await page.keyboard.type("if (ok) return true")
     await page.keyboard.press("Enter")
@@ -22,7 +22,7 @@ test("typed fence becomes a colored code block", async ({page}) => {
 test("changing a code color variable repaints without rewriting the dump", async ({page}) => {
     await openCompose(page)
     await composeBox(page).click()
-    await page.keyboard.type("```")
+    await page.keyboard.type("```ts")
     await page.keyboard.press("Enter")
     await page.keyboard.type("return 1")
     await page.keyboard.press("Enter")

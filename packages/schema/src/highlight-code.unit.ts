@@ -169,12 +169,18 @@ describe("highlightCode", () => {
         expect(slices('foo = "hi" // c').some((s) => s.slice == "foo")).toBe(false)
     })
 
-    it("colors javascript keywords when the language is omitted", () => {
-        has("if (ok) return true", undefined, "if", "kw-flow")
-        has("if (ok) return true", undefined, "return", "kw-flow")
-        has("if (ok) return true", undefined, "true", "constant")
-        plainAt("if (ok) return true", undefined, "ok")
-        expect(slices("if (ok) return true", "not-a-lang").some((s) => s.slice == "if")).toBe(false)
+    it("does not paint keywords when the language is missing", () => {
+        let text = "if (ok) return true"
+        for (let lang of [undefined, "", "not-a-lang"] as const) {
+            let painted = highlightCode(text, lang).some((span) => {
+                let slice = text.slice(span.from, span.to)
+                return slice == "if" || slice == "return"
+            })
+            expect(painted).toBe(false)
+        }
+        has(text, "ts", "if", "kw-flow")
+        has(text, "ts", "return", "kw-flow")
+        has(text, "ts", "true", "constant")
     })
 
     it("clears type position after values but not comments", () => {

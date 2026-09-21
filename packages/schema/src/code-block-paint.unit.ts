@@ -59,16 +59,6 @@ function tsBlock(text: string) {
 }
 
 describe("code block paint", () => {
-    it("paints javascript keywords when the block has no language", () => {
-        let text = "if (ok) return true"
-        let extensions = [blockDoc(), paragraph(), codeBlock()]
-        let proto = makeState(extensions)
-        let state = makeState(extensions, {doc: proto.schema.doc([CodeBlock.create([Leaf.text(text)])])})
-        let from = indexInDoc(state, "if")
-        let hit = exactRange(tokenSet(state), from, from + 2)
-        expect(wrapperClass(hit!)).toBe("arrisa-tok arrisa-tok-kw-flow")
-    })
-
     it("wraps kw-flow tokens", () => {
         let text = "if (ok) return true"
         let extensions = [blockDoc(), paragraph(), codeBlock()]
