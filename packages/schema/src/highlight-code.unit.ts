@@ -169,6 +169,14 @@ describe("highlightCode", () => {
         expect(slices('foo = "hi" // c').some((s) => s.slice == "foo")).toBe(false)
     })
 
+    it("colors javascript keywords when the language is omitted", () => {
+        has("if (ok) return true", undefined, "if", "kw-flow")
+        has("if (ok) return true", undefined, "return", "kw-flow")
+        has("if (ok) return true", undefined, "true", "constant")
+        plainAt("if (ok) return true", undefined, "ok")
+        expect(slices("if (ok) return true", "not-a-lang").some((s) => s.slice == "if")).toBe(false)
+    })
+
     it("clears type position after values but not comments", () => {
         let num = "let n = flag ? 1 : 0\nconsole.log(n)"
         has(num, "ts", "log", "function")

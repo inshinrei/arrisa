@@ -343,7 +343,7 @@ Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string
 
 Doc comments set `emphasis: "bold"`. Other spans omit `emphasis`.
 
-Language ids are case-folded. Aliases: `typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`.
+Language ids are case-folded. Aliases: `typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`. An omitted language colors JavaScript keywords and constants; other identifiers stay plain. A non-empty unknown language id does not add keywords.
 
 ## Layering / related packages
 
