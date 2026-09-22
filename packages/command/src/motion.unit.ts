@@ -65,6 +65,26 @@ describe("moveByUnit", () => {
         expect(headTextblockName(result.state)).toBe("Paragraph")
     })
 
+    it("enters a following code block without inserting a block", () => {
+        let schema = Schema.define([Doc, Paragraph, CodeBlock])
+        let doc = schema.doc([CodeBlock.create([Leaf.text("hi")]), CodeBlock.create([Leaf.text("yo")])])
+        let code = doc.content[0]!
+        if (!code.isPlot) throw new Error("expected a code block")
+        let end = 1 + code.contentLength
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(end, -1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let result = runPure(state, moveByUnit, {dir: "right"})
+        expect(result.applied).toBe(true)
+        expect(result.state.doc.content).toHaveLength(2)
+        expect(result.state.doc.content[0]!.type).toBe(CodeBlock.type)
+        expect(result.state.doc.content[1]!.type).toBe(CodeBlock.type)
+        let parent = result.state.doc.resolve(result.state.selection.head).textblockParent
+        expect(parent?.node.textContent()).toBe("yo")
+    })
+
     it("stays inside the code block when the cursor is not at the end", () => {
         let {state, end} = codeExitState(false)
         state = state.update({selection: EditorSelection.cursor(end - 1, -1)}).state
