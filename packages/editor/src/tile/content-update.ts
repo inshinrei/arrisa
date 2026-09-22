@@ -83,7 +83,13 @@ export class TilePointer {
                     if (side < 0 && !dist) break
                 }
                 if (!dist && next.isNodeInner && !nodeBoundary) break
-                if (next.length <= dist) {
+                // An inner hole (pre>code) has no boundary of its own. Skipping it
+                // when its length equals dist — an empty shell at 0, or the end of
+                // text already in the hole — leaves the builder on the parent, so
+                // the next insert lands beside the hole. A shorter hole is still
+                // skipped, so keeping a whole code block continues to work.
+                let enterHole = next.isPlotContent && !next.isNodeOuter && next.length == dist
+                if (!enterHole && next.length <= dist) {
                     if (walker) walker.skip(next, 0, next.length)
                     dist -= next.length
                     index++
