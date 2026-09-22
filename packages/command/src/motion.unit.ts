@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest"
 import {Leaf, Schema} from "@arrisa/doc"
 import {EditorSelection, EditorState} from "@arrisa/state"
-import {CodeBlock, Doc, Paragraph} from "@arrisa/types"
+import {Blockquote, CodeBlock, Doc, HorizontalRule, Paragraph} from "@arrisa/types"
 import {
     collapseSelection,
     moveByUnit,
@@ -83,6 +83,56 @@ describe("moveByUnit", () => {
         expect(result.state.doc.content[1]!.type).toBe(CodeBlock.type)
         let parent = result.state.doc.resolve(result.state.selection.head).textblockParent
         expect(parent?.node.textContent()).toBe("yo")
+    })
+
+    it("moves into a following blockquote without inserting a block", () => {
+        let schema = Schema.define([Doc, Paragraph, CodeBlock, Blockquote])
+        let doc = schema.doc([
+            CodeBlock.create([Leaf.text("hi")]),
+            Blockquote.create([Paragraph.create([Leaf.text("quoted")])]),
+        ])
+        let code = doc.content[0]!
+        if (!code.isPlot) throw new Error("expected a code block")
+        let end = 1 + code.contentLength
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(end, -1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let result = runPure(state, moveByUnit, {dir: "right"})
+        expect(result.applied).toBe(true)
+        expect(result.state.doc.content).toHaveLength(2)
+        expect(result.state.doc.content[1]!.type).toBe(Blockquote.type)
+        let parent = result.state.doc.resolve(result.state.selection.head).textblockParent
+        expect(parent?.node.type).toBe(Paragraph.type)
+        expect(parent?.node.textContent()).toBe("quoted")
+    })
+
+    it("does not skip a horizontal rule or insert a paragraph before it", () => {
+        let schema = Schema.define([Doc, Paragraph, CodeBlock, HorizontalRule])
+        let doc = schema.doc([
+            CodeBlock.create([Leaf.text("hi")]),
+            HorizontalRule,
+            Paragraph.create([Leaf.text("after")]),
+        ])
+        let code = doc.content[0]!
+        if (!code.isPlot) throw new Error("expected a code block")
+        let end = 1 + code.contentLength
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(end, -1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let result = runPure(state, moveByUnit, {dir: "right"})
+        expect(result.applied).toBe(true)
+        expect(result.state.doc.content).toHaveLength(3)
+        expect(result.state.doc.content[0]!.type).toBe(CodeBlock.type)
+        expect(result.state.doc.content[1]!.type).toBe(HorizontalRule.type)
+        expect(result.state.doc.content[2]!.type).toBe(Paragraph.type)
+        let parent = result.state.doc.resolve(result.state.selection.head).textblockParent
+        expect(parent?.node.textContent() ?? "").not.toBe("after")
+        let ruleAt = result.state.doc.content[0]!.length
+        expect(result.state.selection.from).toBeLessThanOrEqual(ruleAt)
     })
 
     it("stays inside the code block when the cursor is not at the end", () => {

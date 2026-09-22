@@ -1,6 +1,6 @@
 {
   "name": "@arrisa/history",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Arrisa — undo/redo history for editor state",
   "license": "MIT",
   "type": "module",

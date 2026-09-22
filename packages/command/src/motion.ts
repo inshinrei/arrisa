@@ -33,19 +33,23 @@ function extendSel(base: EditorSelection, head: EditorSelection.Text) {
 }
 
 /**
- * Arrow forward at the end of a code block enters the next textblock sibling.
- * Insert the parent's default textblock only when no textblock sibling follows.
+ * Arrow forward at the end of a code block.
+ * Normal motion enters a paragraph, quote, or list. A following code block is
+ * a cursor barrier, so step to that direct sibling's content start. Insert a
+ * default textblock only when nothing follows — do not skip a rule or quote.
  */
 function exitCodeBlock(state: EditorState, selection: EditorSelection.Text): Transaction.Spec | null {
     let block = state.doc.resolve(selection.head).textblockParent
     if (!block || !block.parent || !block.node.type.hasRole(Node.Role.Code)) return null
     if (selection.head != block.end) return null
-    let pos = block.after
-    for (let i = block.index + 1; i < block.parent.node.content.length; i++) {
-        let sibling = block.parent.node.content[i]!
-        if (sibling.isPlot && sibling.isTextblock) return setSelection(EditorSelection.cursor(pos + 1, 1))
-        pos += sibling.length
+    let next = selection.nextNormalCursor(state, true)
+    if (next) {
+        let landed = state.doc.resolve(next.head).textblockParent
+        if (landed && landed.pos != block.pos) return null
     }
+    let sibling = block.parent.node.content[block.index + 1]
+    if (sibling?.isPlot && sibling.isTextblock) return setSelection(EditorSelection.cursor(block.after + 1, 1))
+    if (sibling) return null
     let tag = state.schema.defaultContentPlot(block.parent.node.type)
     if (!tag || !state.schema.canContain(block.parent.node.type, tag.type)) return null
     return {
