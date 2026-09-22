@@ -1,6 +1,7 @@
 /**
  * Selection motion commands: by unit/word/line/page, line and document edges.
  */
+import {Node} from "@arrisa/doc"
 import {EditorSelection, type EditorState, type Transaction} from "@arrisa/state"
 import {type Command, Arrisa} from "./command"
 
@@ -32,6 +33,30 @@ function extendSel(base: EditorSelection, head: EditorSelection.Text) {
 }
 
 /**
+ * Arrow forward at the end of a code block lands on the following line.
+ * When nothing follows, insert the parent's default textblock after the block.
+ */
+function exitCodeBlock(state: EditorState, selection: EditorSelection.Text): Transaction.Spec | null {
+    let block = state.doc.resolve(selection.head).textblockParent
+    if (!block || !block.parent || !block.node.type.hasRole(Node.Role.Code)) return null
+    if (selection.head != block.end) return null
+    let next = selection.nextNormalCursor(state, true)
+    if (next) {
+        let landed = state.doc.resolve(next.head).textblockParent
+        if (landed && landed.before != block.before) return null
+    }
+    let tag = state.schema.defaultContentPlot(block.parent.node.type)
+    if (!tag || !state.schema.canContain(block.parent.node.type, tag.type)) return null
+    let at = block.after
+    return {
+        changes: {from: at, insert: [tag.create()]},
+        selection: EditorSelection.cursor(at + 1),
+        scrollIntoView: true,
+        userEvent: "insert.paragraph",
+    }
+}
+
+/**
  * Move one normal cursor step (or collapse a range to its bound when not
  * extending). May select a node when stepping across a selectable boundary.
  */
@@ -41,6 +66,10 @@ export const moveByUnit: Command.Pure<{dir: "left" | "right" | "forward" | "back
 ) => {
     let forward = isForward(dir, state),
         selection = asTextSel(state.selection, forward)
+    if (forward && !extend && selection.empty) {
+        let exited = exitCodeBlock(state, selection)
+        if (exited) return exited
+    }
     if (!selection.empty && !extend) {
         let next = selection.normalCursorAtBound(state, forward)
         return next ? setSelection(next) : false
