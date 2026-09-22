@@ -1307,13 +1307,22 @@ function scanCode(
             i++
             continue
         }
-        if (
-            (text[i] === "&" || text[i] === "*") &&
-            state.expectType &&
-            state.angle === 0
-        ) {
+        if ((text[i] === "&" || text[i] === "*") && state.expectType && state.angle === 0) {
             let prev = prevNonSpace(text, i)
             if (prev === ":" || prev === "&" || prev === "*" || prev === "(" || prev === "," || prev === "<") {
+                i++
+                continue
+            }
+        }
+        // `(`, `,`, and a bare `<` are not type syntax by themselves. They only
+        // keep type position when a reference sigil follows, so `if (x)` stays plain.
+        if (state.angle === 0 && (text[i] === "(" || text[i] === "," || text[i] === "<")) {
+            let next = skipWs(text, i + 1, limit)
+            if (text[next] === "&" || text[next] === "*") {
+                state.expectType = true
+                state.sawType = false
+                state.expectFn = false
+                state.pendingGeneric = false
                 i++
                 continue
             }

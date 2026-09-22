@@ -221,6 +221,16 @@ describe("highlightCode", () => {
         has("new Foo.Bar", "ts", "Bar", "type")
     })
 
+    it("keeps type position for reference sigils after parens and commas", () => {
+        for (let text of ["let x: (&str, &str)", "fn f(&str)", "type X = (&str, &str)"]) {
+            let spans = slices(text, "rust").filter((s) => s.slice == "str")
+            let count = 0
+            for (let i = 0; i < text.length; i++) if (text.startsWith("str", i)) count++
+            expect(spans.length).toBe(count)
+            expect(spans.every((s) => s.role == "type" && s.emphasis == null)).toBe(true)
+        }
+    })
+
     it("does not throw on deeply nested templates", () => {
         let text = ""
         for (let i = 0; i < 80; i++) text += "`${"
