@@ -90,6 +90,43 @@ body {
 
 .pg-editor-chat {
   min-height: 120px;
+  --arrisa-code-violet: #7042ac;
+  --arrisa-code-indigo: #4c47c8;
+  --arrisa-code-lavender: #6d5292;
+  --arrisa-code-sky: #2b6d94;
+  --arrisa-code-blue: #205ec2;
+  --arrisa-code-cyan: #097f94;
+  --arrisa-code-green: #1c8022;
+  --arrisa-code-lime: #5b841d;
+  --arrisa-code-mint: #1e7d70;
+  --arrisa-code-peach: #be6116;
+  --arrisa-code-orange: #c84900;
+  --arrisa-code-seagreen: #0f815b;
+  --arrisa-code-coral: #a53848;
+  --arrisa-code-red: #c43131;
+  --arrisa-code-yellow: #987202;
+  --arrisa-code-pink: #a22a60;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pg-editor-chat {
+    --arrisa-code-violet: #b884ff;
+    --arrisa-code-indigo: #8e89ff;
+    --arrisa-code-lavender: #d3b2ff;
+    --arrisa-code-sky: #9edbff;
+    --arrisa-code-blue: #629fff;
+    --arrisa-code-cyan: #22ceec;
+    --arrisa-code-green: #43cc4c;
+    --arrisa-code-lime: #c3f07f;
+    --arrisa-code-mint: #7beadb;
+    --arrisa-code-peach: #ffb980;
+    --arrisa-code-orange: #f68e42;
+    --arrisa-code-seagreen: #42d7a5;
+    --arrisa-code-coral: #fea4a4;
+    --arrisa-code-red: #ff6464;
+    --arrisa-code-yellow: #ffd65c;
+    --arrisa-code-pink: #ffbfdc;
+  }
 }
 
 .pg-link-field {

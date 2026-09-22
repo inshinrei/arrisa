@@ -171,10 +171,11 @@ export function createChatEditor(
     toolbar: HTMLElement,
     linkPrompt: NonNullable<LinkConfig["prompt"]>,
     options: ChatEditorOptions = {},
+    doc: string = "",
 ): Arrisa {
     return Arrisa.create({
         parent,
-        doc: "",
+        doc,
         config: composeExtensions(toolbar, linkPrompt, options),
     })
 }

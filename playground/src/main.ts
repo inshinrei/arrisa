@@ -46,7 +46,9 @@ function chatOptions(extra?: EditorState.Extension, submit?: "Enter" | "Shift-En
 }
 
 let docEditor = createDocEditor(docMount)
-let chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt, chatOptions())
+let chatSample = `<p>Colored code</p>
+<pre><code class="language-ts">if (ok) return true</code></pre>`
+let chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt, chatOptions(), e2eMode ? "" : chatSample)
 let activeEditor: Arrisa = docEditor
 
 function trackFocus(editor: Arrisa) {
