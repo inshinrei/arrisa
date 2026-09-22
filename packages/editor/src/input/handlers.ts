@@ -21,8 +21,8 @@ import {
     toggleUnderline,
     deleteSelection,
 } from "@arrisa/command"
-import {ChangeSet, Slice, Leaf} from "@arrisa/doc"
-import {EditorState, EditorSelection} from "@arrisa/state"
+import {ChangeSet, Slice, Leaf, Node} from "@arrisa/doc"
+import {EditorState, EditorSelection, Transaction} from "@arrisa/state"
 import type {Arrisa} from "../editor"
 import browser from "../browser"
 import {KeyBinding} from "../key-map"
@@ -117,6 +117,55 @@ export function copy(editor: Arrisa, event: ClipboardEvent) {
         })
     }
     return true
+}
+
+/**
+ * Cursor in the parent gap at a code block's `after` (no textblock parent).
+ * The keystroke's DOM range points inside that code element, so ignore it.
+ * Type into the following textblock, or one new default textblock.
+ */
+export function codeGapType(state: EditorState, insert: string): Transaction.Spec | null {
+    let sel = state.selection
+    if (!sel.isCursor) return null
+    let head = state.doc.resolve(sel.head)
+    if (head.textblockParent) return null
+    let before = head.nodeBefore
+    if (!before || !before.isPlot || !before.isTextblock || !before.type.hasRole(Node.Role.Code)) return null
+    let after = head.nodeAfter
+    if (after && after.isPlot && after.isTextblock) {
+        let start = head.pos + 1
+        let spec = insertText({state}, {from: start, to: start, insert, userEvent: "input.type"})
+        return spec || null
+    }
+    let parent = head.parent.node.type
+    let tag = state.schema.defaultContentPlot(parent)
+    if (!tag || !state.schema.canContain(parent, tag.type)) return null
+    let block = tag.create(insert ? [Leaf.text(insert, state.sel.activeMarks)] : [])
+    return {
+        changes: {from: head.pos, insert: [block]},
+        selection: (_cx, changes) => {
+            let placed = changes.findInserted((part) => part.type == tag.type)
+            let caret = (placed == null ? head.pos : placed) + 1 + insert.length
+            return EditorSelection.cursor(caret, -1)
+        },
+        scrollIntoView: true,
+        userEvent: "input.type",
+    }
+}
+
+/**
+ * A typed character whose DOM range sits in a code block the cursor is not in
+ * belongs at the cursor. The line after a code block is that case: the view
+ * may not have painted it yet, so the range is still inside the code element.
+ */
+export function rangeOutsideCodeBlock(state: EditorState, from: number, to: number) {
+    let sel = state.selection
+    if (!sel.isCursor) return {from, to}
+    let landed = state.doc.resolve(from).textblockParent
+    if (!landed || !landed.node.type.hasRole(Node.Role.Code)) return {from, to}
+    let block = state.doc.resolve(sel.head).textblockParent
+    if (block && block.pos == landed.pos) return {from, to}
+    return {from: sel.head, to: sel.head}
 }
 
 export const baseHandlers: {[e in keyof HTMLElementEventMap]?: (editor: Arrisa, event: HTMLElementEventMap[e]) => boolean} = {
@@ -224,6 +273,16 @@ export const baseHandlers: {[e in keyof HTMLElementEventMap]?: (editor: Arrisa, 
 
     beforeinput(editor, event) {
         let type = event.inputType
+        // Tab already indents or moves focus on keydown. Blink and WebKit
+        // still emit a paragraph break or a tab character for that key.
+        let tabJustPressed =
+            (editor.inputState.lastKey == "Tab" || editor.inputState.lastKeyCode == 9) &&
+            Date.now() - editor.inputState.lastKeyTime < 1000
+        if (
+            tabJustPressed &&
+            (type == "insertParagraph" || type == "insertLineBreak" || (type == "insertText" && event.data == "\t"))
+        )
+            return true
 
         let command = inputTypeCommands[type]
         if (command) {
@@ -245,7 +304,15 @@ export const baseHandlers: {[e in keyof HTMLElementEventMap]?: (editor: Arrisa, 
         if (type == "insertText") {
             if (browser.safari && editor.inputState.composing) compositionEnd(editor)
             let insert = event.data!.replace(/\r\n?|\n/g, " ")
+            let atGap = codeGapType(editor.state, insert)
+            if (atGap) {
+                editor.dispatch(atGap)
+                return true
+            }
             let {from, to} = inputEventRange(event, editor, true)
+            let outside = rangeOutsideCodeBlock(editor.state, from, to)
+            from = outside.from
+            to = outside.to
             LOG_input && console.log("beforeinput", type, from, to, JSON.stringify(insert))
             Command.dispatch(editor, insertText, {from, to, insert, userEvent: "input.type"})
             return true

@@ -71,6 +71,7 @@ const LOG_input = false
 export class InputState {
     shiftKey = false
     lastKeyCode: number = 0
+    lastKey = ""
     lastKeyTime: number = 0
     lastTouchTime = 0
     lastScrollTop = 0
@@ -159,6 +160,7 @@ export class InputState {
             )
 
         this.lastKeyCode = event.keyCode
+        this.lastKey = event.key
         this.lastKeyTime = Date.now()
         this.shiftKey = event.keyCode == 16 || event.shiftKey
         return false
