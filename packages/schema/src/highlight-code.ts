@@ -31,6 +31,8 @@ export interface CodeSpan {
 
 const MAX_UNITS = 32_000
 const MAX_LINES = 400
+/** Nested template / f-string holes. Past this, holes stay inside the string. */
+const MAX_NEST = 32
 
 const ALIAS: Record<string, string> = {
     typescript: "ts",
@@ -353,6 +355,8 @@ type QuoteKind = "none" | "template" | "ruby" | "fstring"
 
 interface ScanState {
     expectType: boolean
+    /** A type name was painted, so `.` continues the type (`Foo.Bar`). */
+    sawType: boolean
     expectFn: boolean
     angle: number
     pendingGeneric: boolean
@@ -727,10 +731,11 @@ function scanQuoted(
     spans: CodeSpan[],
     kind: QuoteKind,
     stopPhp: boolean,
+    depth = 0,
 ): number {
     if (start >= limit) return start
     let quote = text[start]
-    if (lang === "py") {
+    if (lang === "py" && kind !== "fstring") {
         let close = findPlainClose(text, start + 1, limit, quote)
         let after = close >= 0 ? skipWs(text, close + 1, limit) : 0
         if (close >= 0 && text[after] !== ":" && startsWithSql(text.slice(start + 1, close))) {
@@ -745,15 +750,23 @@ function scanQuoted(
     let i = start + 1
     while (i < limit) {
         if (kind === "template" && text.startsWith("${", i)) {
+            if (depth >= MAX_NEST) {
+                i += 2
+                continue
+            }
             push(spans, chunk, i + 2, "string")
-            i = scanCode(text, i + 2, limit, lang, spans, true, stopPhp)
+            i = scanCode(text, i + 2, limit, lang, spans, true, stopPhp, depth + 1)
             if (stopPhp && text.startsWith("?>", i)) return i
             chunk = i
             continue
         }
         if (kind === "ruby" && text.startsWith("#{", i)) {
+            if (depth >= MAX_NEST) {
+                i += 2
+                continue
+            }
             push(spans, chunk, i + 2, "string")
-            i = scanCode(text, i + 2, limit, lang, spans, true, stopPhp)
+            i = scanCode(text, i + 2, limit, lang, spans, true, stopPhp, depth + 1)
             chunk = i
             continue
         }
@@ -762,8 +775,12 @@ function scanQuoted(
                 i += 2
                 continue
             }
+            if (depth >= MAX_NEST) {
+                i++
+                continue
+            }
             push(spans, chunk, i + 1, "string")
-            i = scanCode(text, i + 1, limit, lang, spans, true, stopPhp)
+            i = scanCode(text, i + 1, limit, lang, spans, true, stopPhp, depth + 1)
             chunk = i
             continue
         }
@@ -865,6 +882,7 @@ function yamlScalarEnd(text: string, i: number, limit: number): number {
     let j = i
     while (j < limit && text[j] !== "\n" && text[j] !== "\r") {
         if (text[j] === "#" && (j === i || isSpace(text[j - 1]))) break
+        if (text[j] === "}" || text[j] === "]" || text[j] === ",") break
         j++
     }
     while (j > i && isSpace(text[j - 1])) j--
@@ -974,13 +992,16 @@ function scanIdent(
     let keepType = false
     if (role === kw && kw && TYPE_INTRO.has(word)) {
         state.expectType = true
+        state.sawType = false
         keepType = true
     } else if (role == null && TYPE_INTRO.has(word)) {
         state.expectType = true
+        state.sawType = false
         keepType = true
     }
     if (role === "type" && (text[j] === "<" || text[j] === ".")) {
         state.expectType = true
+        state.sawType = text[j] === "."
         keepType = true
         if (text[j] === "<") state.pendingGeneric = true
         else state.pendingGeneric = false
@@ -994,13 +1015,22 @@ function scanIdent(
 }
 
 function freshState(): ScanState {
-    return {expectType: false, expectFn: false, angle: 0, pendingGeneric: false, yamlValue: false, brace: 0}
+    return {
+        expectType: false,
+        sawType: false,
+        expectFn: false,
+        angle: 0,
+        pendingGeneric: false,
+        yamlValue: false,
+        brace: 0,
+    }
 }
 
 /** A value token is not part of a type or a function name. Generics stay open. */
 function clearValueFlags(state: ScanState) {
     if (state.angle !== 0) return
     state.expectType = false
+    state.sawType = false
     state.expectFn = false
 }
 
@@ -1012,7 +1042,9 @@ function scanCode(
     spans: CodeSpan[],
     hole: boolean,
     stopPhp: boolean,
+    depth = 0,
 ): number {
+    if (depth > MAX_NEST) return start
     let i = start
     let state = freshState()
     while (i < limit) {
@@ -1039,7 +1071,7 @@ function scanCode(
             let open = phpOpenLength(text, i, limit)
             if (open > 0) {
                 push(spans, i, i + open, "directive")
-                let inner = scanCode(text, i + open, limit, "php", spans, false, true)
+                let inner = scanCode(text, i + open, limit, "php", spans, false, true, depth)
                 if (text.startsWith("?>", inner)) {
                     push(spans, inner, inner + 2, "directive")
                     i = inner + 2
@@ -1150,7 +1182,7 @@ function scanCode(
             }
             let kind: QuoteKind = lang === "py" && prefixHasF(text, i, plen) ? "fstring" : "none"
             push(spans, i, qAt, "modifier")
-            i = scanQuoted(text, qAt, limit, lang, spans, kind, stopPhp)
+            i = scanQuoted(text, qAt, limit, lang, spans, kind, stopPhp, depth)
             clearValueFlags(state)
             continue
         }
@@ -1165,17 +1197,17 @@ function scanCode(
         }
         if (text[i] === '"') {
             let kind: QuoteKind = lang === "ruby" ? "ruby" : "none"
-            i = scanQuoted(text, i, limit, lang, spans, kind, stopPhp)
+            i = scanQuoted(text, i, limit, lang, spans, kind, stopPhp, depth)
             clearValueFlags(state)
             continue
         }
         if (text[i] === "'" && lang !== "json") {
-            i = scanQuoted(text, i, limit, lang, spans, "none", stopPhp)
+            i = scanQuoted(text, i, limit, lang, spans, "none", stopPhp, depth)
             clearValueFlags(state)
             continue
         }
         if (text[i] === "`" && (lang === "js" || lang === "ts")) {
-            i = scanQuoted(text, i, limit, lang, spans, "template", stopPhp)
+            i = scanQuoted(text, i, limit, lang, spans, "template", stopPhp, depth)
             clearValueFlags(state)
             continue
         }
@@ -1262,20 +1294,35 @@ function scanCode(
             }
             if (colonType(lang)) {
                 state.expectType = true
+                state.sawType = false
                 state.expectFn = false
                 state.pendingGeneric = false
                 i++
                 continue
             }
         }
-        if (text[i] === "." && state.expectType) {
+        if (text[i] === "." && state.expectType && state.sawType) {
             state.expectFn = false
             state.pendingGeneric = false
             i++
             continue
         }
+        if (
+            (text[i] === "&" || text[i] === "*") &&
+            state.expectType &&
+            state.angle === 0
+        ) {
+            let prev = prevNonSpace(text, i)
+            if (prev === ":" || prev === "&" || prev === "*" || prev === "(" || prev === "," || prev === "<") {
+                i++
+                continue
+            }
+        }
         state.expectFn = false
-        if (state.angle === 0) state.expectType = false
+        if (state.angle === 0) {
+            state.expectType = false
+            state.sawType = false
+        }
         state.pendingGeneric = false
         i++
     }

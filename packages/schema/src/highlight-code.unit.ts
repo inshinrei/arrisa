@@ -200,4 +200,33 @@ describe("highlightCode", () => {
         expect(slices("function\n1\nname", "ts").some((s) => s.slice == "name")).toBe(false)
         has(":\n/* c */\nUser", "ts", "User", "type")
     })
+
+    it("paints an f-string hole inside a SQL-looking Python string", () => {
+        has('f"SELECT {name} FROM t"', "py", "name", "interpolation")
+        has('"SELECT name FROM users"', "py", "SELECT", "kw-flow")
+        has('"SELECT name FROM users"', "py", "FROM", "kw-flow")
+    })
+
+    it("stops a YAML scalar before a closing brace", () => {
+        has("{color: red}", "yaml", "red", "string")
+        expect(slices("{color: red}", "yaml").some((s) => s.slice.includes("}"))).toBe(false)
+    })
+
+    it("paints reference types and leaves new.target plain as a type", () => {
+        has("let x: &str", "rust", "str", "type")
+        has("fn f<'a>(x: &'a str)", "rust", "str", "type")
+        has("fn f<'a>(x: &'a str)", "rust", "'a", "modifier")
+        expect(slices("new.target", "js").some((s) => s.slice == "target" && s.role == "type")).toBe(false)
+        has("new Foo.Bar", "ts", "Foo", "type")
+        has("new Foo.Bar", "ts", "Bar", "type")
+    })
+
+    it("does not throw on deeply nested templates", () => {
+        let text = ""
+        for (let i = 0; i < 80; i++) text += "`${"
+        text += "name"
+        for (let i = 0; i < 80; i++) text += "}`"
+        expect(() => highlightCode(text, "js")).not.toThrow()
+        expect(Array.isArray(highlightCode(text, "js"))).toBe(true)
+    })
 })

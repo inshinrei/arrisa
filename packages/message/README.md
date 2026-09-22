@@ -145,7 +145,7 @@ Typing (input rules) and paste share messenger-style delimiters:
 
 - `**bold**`, `__italic__`, `~~strike~~`, `||spoiler||`. Typing `` `code` `` applies the inline code mark
 - A finished fence becomes a code block when the schema can contain one: one line `` ```code``` ``, one paragraph with line breaks, or a closing `` ``` `` paragraph after an opening `` ``` `` / `` ```lang `` paragraph. Otherwise the backticks stay text
-- `` ``` `` followed by a space at the start of a block is unchanged (empty code block; `` ```lang `` then space sets the language)
+- `` ``` `` followed by a space at the start of a block still creates an empty code block. `` ```lang `` then space sets the language.
 - Paste also understands `[label](url)`, fenced code, and `> ` quotes via `parseMarkdownText`
 - `composeField` omits the spoiler input rule; paste/import skip spoiler entities when `Spoiler` is not in the schema
 

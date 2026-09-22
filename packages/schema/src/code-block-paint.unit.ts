@@ -174,4 +174,15 @@ describe("code block paint", () => {
         let hit = exactRange(tokenSet(state), from, from + "return".length)
         expect(wrapperClass(hit!)).toBe("arrisa-tok arrisa-tok-kw-flow")
     })
+
+    it("paints a js doc comment with arrisa-tok-bold", () => {
+        let text = "/** doc */"
+        let extensions = [blockDoc(), paragraph(), codeBlock()]
+        let proto = makeState(extensions)
+        let block = CodeBlock.withMarks(CodeBlockLanguage.of("js").addToSet(CodeBlock.marks)).create([Leaf.text(text)])
+        let state = makeState(extensions, {doc: proto.schema.doc([block])})
+        let from = indexInDoc(state, text)
+        let hit = exactRange(tokenSet(state), from, from + text.length)
+        expect(wrapperClass(hit!)).toContain("arrisa-tok-bold")
+    })
 })

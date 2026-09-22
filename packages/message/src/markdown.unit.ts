@@ -234,4 +234,24 @@ describe("markdown code fences", () => {
         })
         expect(sawBlock).toBe(false)
     })
+
+    it("does not convert a finished fence typed inside a code block", () => {
+        let state = makeBlockState()
+        state = typeChars(state, "``` ")
+        expect(state.doc.content[0]!.type).toBe(CodeBlock.type)
+        state = typeChars(state, "```hello```")
+        expect(state.doc.content.length).toBe(1)
+        expect(state.doc.content[0]!.type).toBe(CodeBlock.type)
+        expect(state.doc.textContent()).toBe("```hello```")
+    })
+
+    it("closes an empty sibling fence into an empty code block", () => {
+        let state = makeBlockState()
+        state = typeChars(state, "```")
+        state = dispatch(state, enter({state}, null))
+        state = typeChars(state, "```")
+        expect(state.doc.content.length).toBe(1)
+        expect(state.doc.content[0]!.type).toBe(CodeBlock.type)
+        expect(state.doc.textContent()).toBe("")
+    })
 })
