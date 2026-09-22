@@ -37,6 +37,7 @@ import {
     Paragraph,
 } from "@arrisa/types"
 import {codeBlockPainting} from "./code-block-paint"
+import {indentCodeBlock, outdentCodeBlock} from "./code-indent"
 
 /** Block document root (`Doc`) — holds block content group. */
 export function blockDoc(): EditorState.Extension {
@@ -125,8 +126,8 @@ export namespace heading {
 }
 
 /**
- * Fenced code block: schema elements, button, Ctrl-Shift-\\, `` ``` `` / `` ```lang ``
- * input rule, preformatted theme, and token colors.
+ * Fenced code block: schema elements, button, Ctrl-Shift-\\, Tab indent,
+ * `` ``` `` / `` ```lang `` input rule, preformatted theme, and token colors.
  */
 export function codeBlock(): EditorState.Extension {
     return [
@@ -134,6 +135,12 @@ export function codeBlock(): EditorState.Extension {
         EditorState.schemaElement.of(CodeBlockLanguage),
         codeBlock.button,
         codeBlock.keyBinding,
+        KeyBinding.of({
+            key: "Tab",
+            run: indentCodeBlock,
+            shift: outdentCodeBlock,
+            allowDefault: true,
+        }),
         codeBlock.createOnBackticks,
         codeBlock.theme,
         codeBlockPainting(),

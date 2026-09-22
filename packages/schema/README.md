@@ -135,7 +135,7 @@ import {
 ```
 
 - `blockDoc()` / `inlineDoc()` — register `Doc` or `InlineDoc`
-- `paragraph()`, `heading()`, `codeBlock()` — textblocks + chrome (`codeBlock` registers `CodeBlock` + `CodeBlockLanguage`, fence input rule, theme, and token colors)
+- `paragraph()`, `heading()`, `codeBlock()` — textblocks + chrome (`codeBlock` registers `CodeBlock` + `CodeBlockLanguage`, fence input rule, theme, and token colors). Tab inside a code block inserts four spaces; Shift-Tab removes up to four spaces before the caret or at the start of the line; elsewhere Tab moves focus.
 - `alignment()`, `direction()` — textblock marks + menu submenus
 - `blockquote()`, `horizontalRule()` — structure + input rules
 - `lineBreak()` — hard break leaf (`br`)
