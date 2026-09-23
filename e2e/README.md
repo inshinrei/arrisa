@@ -42,6 +42,7 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, (api) => …)` 
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / word and select-all chords |
 | `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
 | `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows |
+| `caret-click.e2e.ts` | Click, double-click, triple-click, Shift-click, drag — plain text and mixed paragraph/code |
 
 ## Assertions
 
