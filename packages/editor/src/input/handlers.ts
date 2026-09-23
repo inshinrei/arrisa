@@ -93,6 +93,16 @@ export function inputEventRange(event: InputEvent, editor: Arrisa, preferSel = f
         if (comp && comp.target == range.endContainer) to = comp.targetPos + range.endOffset
         else to = editor.viewState.mapPosPending(to, 1)
     }
+    // Shift-Enter updates state before the DOM flush; Blink may still report the
+    // pre-break caret. Type at the real selection when both sit in the same textblock.
+    if (preferSel && !editor.inputState.composing && from == to && editor.state.selection.empty) {
+        let head = editor.state.selection.head
+        if (from != head) {
+            let fromBlock = editor.state.doc.resolve(from).textblockParent
+            let headBlock = editor.state.doc.resolve(head).textblockParent
+            if (fromBlock && headBlock && fromBlock.pos == headBlock.pos) return {from: head, to: head}
+        }
+    }
     return {from, to}
 }
 

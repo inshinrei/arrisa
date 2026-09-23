@@ -41,6 +41,7 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, (api) => …)` 
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / word and select-all chords |
 | `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
+| `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows |
 
 ## Assertions
 

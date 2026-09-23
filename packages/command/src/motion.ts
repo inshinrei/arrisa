@@ -33,23 +33,36 @@ function extendSel(base: EditorSelection, head: EditorSelection.Text) {
 }
 
 /**
- * Arrow forward at the end of a code block.
- * Normal motion enters a paragraph, quote, or list. A following code block is
- * a cursor barrier, so step to that direct sibling's content start. Insert a
- * default textblock only when nothing follows — do not skip a rule or quote.
+ * Arrow at the edge of a code block.
+ * Normal motion enters a paragraph, quote, or list. An adjacent code block is
+ * a cursor barrier, so step to that direct sibling's content edge. Insert a
+ * default textblock only when moving forward with nothing following — do not
+ * skip a rule or quote. Extending never inserts and does not land in a
+ * non-textblock gap.
  */
-function exitCodeBlock(state: EditorState, selection: EditorSelection.Text): Transaction.Spec | null {
+function codeBlockEdge(
+    state: EditorState,
+    selection: EditorSelection.Text,
+    forward: boolean,
+    extend: boolean,
+): Transaction.Spec | false | null {
     let block = state.doc.resolve(selection.head).textblockParent
     if (!block || !block.parent || !block.node.type.hasRole(Node.Role.Code)) return null
-    if (selection.head != block.end) return null
-    let next = selection.nextNormalCursor(state, true)
+    if (selection.head != (forward ? block.end : block.start)) return null
+    let next = selection.nextNormalCursor(state, forward)
     if (next) {
         let landed = state.doc.resolve(next.head).textblockParent
         if (landed && landed.pos != block.pos) return null
     }
-    let sibling = block.parent.node.content[block.index + 1]
-    if (sibling?.isPlot && sibling.isTextblock) return setSelection(EditorSelection.cursor(block.after + 1, 1))
+    let sibling = block.parent.node.content[block.index + (forward ? 1 : -1)]
+    if (sibling?.isPlot && sibling.isTextblock) {
+        let dest = forward
+            ? EditorSelection.cursor(block.after + 1, 1)
+            : EditorSelection.cursor(block.before - 1, -1)
+        return setSelection(extend ? extendSel(selection, dest) : dest)
+    }
     if (sibling) return null
+    if (extend || !forward) return false
     let tag = state.schema.defaultContentPlot(block.parent.node.type)
     if (!tag || !state.schema.canContain(block.parent.node.type, tag.type)) return null
     return {
@@ -70,9 +83,9 @@ export const moveByUnit: Command.Pure<{dir: "left" | "right" | "forward" | "back
 ) => {
     let forward = isForward(dir, state),
         selection = asTextSel(state.selection, forward)
-    if (forward && !extend && selection.empty) {
-        let exited = exitCodeBlock(state, selection)
-        if (exited) return exited
+    if (selection.empty) {
+        let crossed = codeBlockEdge(state, selection, forward, !!extend)
+        if (crossed !== null) return crossed
     }
     if (!selection.empty && !extend) {
         let next = selection.normalCursorAtBound(state, forward)
@@ -98,10 +111,17 @@ export const moveByWord: Command.Pure<{dir: "left" | "right"; extend?: boolean}>
 }
 
 function nextVertical(editor: Arrisa, sel: EditorSelection, forward: boolean, distance?: number, allowNode?: boolean) {
+    let {state} = editor
     let next = editor.moveVertically(sel, forward, distance, allowNode)
-    if (next) return next
-    let end = (forward ? EditorSelection.atEnd : EditorSelection.atStart)(editor.state)
-    return end.head == editor.state.selection.head ? null : end
+    if (next && (next instanceof EditorSelection.Node || state.doc.resolve(next.head).textblockParent)) return next
+    let block = state.doc.resolve(sel.head).textblockParent
+    if (block) {
+        let edge = (forward ? EditorSelection.atEnd : EditorSelection.atStart)(state, block)
+        if (edge.head != sel.head) return edge
+    }
+    let end = (forward ? EditorSelection.atEnd : EditorSelection.atStart)(state)
+    if (end.head == sel.head || !state.doc.resolve(end.head).textblockParent) return null
+    return end
 }
 
 /** Move one visual line up or down (view geometry). */

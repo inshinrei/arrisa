@@ -4,12 +4,13 @@ import {EditorSelection, EditorState} from "@arrisa/state"
 import {Blockquote, CodeBlock, Doc, HorizontalRule, Paragraph} from "@arrisa/types"
 import {
     collapseSelection,
+    moveByLine,
     moveByUnit,
     moveByWord,
     moveToDocSide,
     selectAll,
 } from "./motion"
-import {para, runPure, stateFromBlocks} from "./test-helpers"
+import {apply, mockArrisa, para, runPure, stateFromBlocks} from "./test-helpers"
 
 function codeExitState(withNext: boolean) {
     let schema = Schema.define([Doc, Paragraph, CodeBlock])
@@ -147,8 +148,27 @@ describe("moveByUnit", () => {
     it("does not insert a paragraph when extending from the end of a code block", () => {
         let {state} = codeExitState(false)
         let result = runPure(state, moveByUnit, {dir: "right", extend: true})
+        expect(result.applied).toBe(false)
         expect(result.state.doc.content).toHaveLength(1)
         expect(result.state.doc.content[0]!.type).toBe(CodeBlock.type)
+        expect(headTextblockName(result.state)).toBe("CodeBlock")
+    })
+
+    it("enters a previous code block on arrow left", () => {
+        let schema = Schema.define([Doc, Paragraph, CodeBlock])
+        let doc = schema.doc([CodeBlock.create([Leaf.text("hi")]), CodeBlock.create([Leaf.text("yo")])])
+        let first = doc.content[0]!
+        let start = first.length + 1
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(start, 1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        let result = runPure(state, moveByUnit, {dir: "left"})
+        expect(result.applied).toBe(true)
+        expect(result.state.doc.content).toHaveLength(2)
+        let parent = result.state.doc.resolve(result.state.selection.head).textblockParent
+        expect(parent?.node.textContent()).toBe("hi")
     })
 })
 
@@ -211,5 +231,33 @@ describe("collapseSelection", () => {
     it("returns false when the selection is already an empty cursor", () => {
         let {state} = stateFromBlocks((s) => [para(s, "hello")], 1)
         expect(collapseSelection({state}, null)).toBe(false)
+    })
+})
+
+describe("moveByLine", () => {
+    function loneCode(cursorAt: number) {
+        let schema = Schema.define([Doc, Paragraph, CodeBlock])
+        let doc = schema.doc([CodeBlock.create([Leaf.text("hi")])])
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(cursorAt, -1),
+            config: [EditorState.schemaElement.of(schema.elements)],
+        })
+        return mockArrisa(state)
+    }
+
+    it("stays in a lone code block when vertical geometry finds no line", () => {
+        let editor = loneCode(3)
+        let spec = moveByLine(editor, {dir: "up"})
+        expect(spec).not.toBe(false)
+        let next = apply(editor.state, spec as Exclude<typeof spec, false>)
+        expect(headTextblockName(next)).toBe("CodeBlock")
+        expect(next.selection.head).toBeGreaterThan(0)
+    })
+
+    it("does not leave a lone code block at the document start", () => {
+        let editor = loneCode(1)
+        expect(moveByLine(editor, {dir: "up"})).toBe(false)
+        expect(headTextblockName(editor.state)).toBe("CodeBlock")
     })
 })

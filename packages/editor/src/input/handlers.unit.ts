@@ -39,6 +39,44 @@ describe("inputEventRange", () => {
 
         expect(inputEventRange(event, editor)).toEqual({from: 1, to: 3})
     })
+
+    it("prefers the caret when the DOM range sits before a line break the selection already crossed", () => {
+        let paragraph = Plot.define("Paragraph", {inlineContent: true, shape: {element: "p"}})
+        let br = Leaf.define("LineBreak", {inline: true, role: Node.Role.LineBreak, shape: {element: "br"}})
+        let docType = Plot.defineDoc({blockContent: paragraph})
+        let schema = Schema.define([docType, paragraph, br])
+        let collapsed = {
+            getTargetRanges() {
+                return [{startContainer: {}, startOffset: 2, endContainer: {}, endOffset: 2, collapsed: true}]
+            },
+        } as unknown as InputEvent
+        const editorAt = (doc: ReturnType<Schema["doc"]>, head: number) =>
+            ({
+                state: EditorState.create({
+                    doc,
+                    selection: EditorSelection.cursor(head),
+                    config: [EditorState.schemaElement.of(schema.elements)],
+                }),
+                inputState: {composing: null},
+                viewState: {pending: []},
+                docTile: {
+                    posFromDOM() {
+                        return 3
+                    },
+                },
+            }) as any
+        expect(inputEventRange(collapsed, editorAt(schema.doc([paragraph.create([Leaf.text("ab"), br])]), 4), true)).toEqual({
+            from: 4,
+            to: 4,
+        })
+        expect(
+            inputEventRange(
+                collapsed,
+                editorAt(schema.doc([paragraph.create([Leaf.text("ab"), br, Leaf.text("c")])]), 5),
+                true,
+            ),
+        ).toEqual({from: 5, to: 5})
+    })
 })
 
 describe("beforeinput after Tab", () => {
