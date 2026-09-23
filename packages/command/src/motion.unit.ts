@@ -260,4 +260,26 @@ describe("moveByLine", () => {
         expect(moveByLine(editor, {dir: "up"})).toBe(false)
         expect(headTextblockName(editor.state)).toBe("CodeBlock")
     })
+
+    it("enters the next textblock when vertical geometry misses at a code edge", () => {
+        let schema = Schema.define([Doc, Paragraph, CodeBlock])
+        let doc = schema.doc([CodeBlock.create([Leaf.text("hi")]), Paragraph.create([Leaf.text("after")])])
+        let code = doc.content[0]!
+        if (!code.isPlot) throw new Error("expected a code block")
+        let end = 1 + code.contentLength
+        let editor = mockArrisa(
+            EditorState.create({
+                doc,
+                selection: EditorSelection.cursor(end, -1),
+                config: [EditorState.schemaElement.of(schema.elements)],
+            }),
+        )
+        let spec = moveByLine(editor, {dir: "down"})
+        expect(spec).not.toBe(false)
+        let next = apply(editor.state, spec as Exclude<typeof spec, false>)
+        expect(headTextblockName(next)).toBe("Paragraph")
+        let parent = next.doc.resolve(next.selection.head).textblockParent
+        expect(parent?.node.textContent()).toBe("after")
+        expect(next.selection.head).toBe(parent!.start)
+    })
 })

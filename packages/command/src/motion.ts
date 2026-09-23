@@ -115,13 +115,27 @@ function nextVertical(editor: Arrisa, sel: EditorSelection, forward: boolean, di
     let next = editor.moveVertically(sel, forward, distance, allowNode)
     if (next && (next instanceof EditorSelection.Node || state.doc.resolve(next.head).textblockParent)) return next
     let block = state.doc.resolve(sel.head).textblockParent
-    if (block) {
-        let edge = (forward ? EditorSelection.atEnd : EditorSelection.atStart)(state, block)
-        if (edge.head != sel.head) return edge
+    if (!block) return null
+    let edge = (forward ? EditorSelection.atEnd : EditorSelection.atStart)(state, block)
+    if (edge.head != sel.head) return edge
+    let neighbor = EditorSelection.cursor(sel.head, sel.headSide).nextNormalCursor(state, forward)
+    if (neighbor) {
+        let landed = state.doc.resolve(neighbor.head).textblockParent
+        if (landed && landed.pos != block.pos) {
+            return EditorSelection.cursor(neighbor.head, neighbor.headSide, sel.goalColumn)
+        }
     }
-    let end = (forward ? EditorSelection.atEnd : EditorSelection.atStart)(state)
-    if (end.head == sel.head || !state.doc.resolve(end.head).textblockParent) return null
-    return end
+    if (block.parent) {
+        let sibling = block.parent.node.content[block.index + (forward ? 1 : -1)]
+        if (sibling?.isPlot && sibling.isTextblock) {
+            return EditorSelection.cursor(
+                forward ? block.after + 1 : block.before - 1,
+                forward ? 1 : -1,
+                sel.goalColumn,
+            )
+        }
+    }
+    return null
 }
 
 /** Move one visual line up or down (view geometry). */
