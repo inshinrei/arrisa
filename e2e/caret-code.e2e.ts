@@ -1,11 +1,6 @@
-import {expect, test, type Page} from "@playwright/test"
+import {expect, test} from "@playwright/test"
 import {composeBox, openCompose} from "./helpers"
-import {caretSnap, findText, waitFrames, wordKey} from "./caret"
-
-async function typeFence(page: Page, lang: string) {
-    await page.keyboard.type("```" + lang)
-    await page.keyboard.press("Space")
-}
+import {caretSnap, clickDocPos, findText, typeFence, waitFrames, wordKey} from "./caret"
 
 test("arrows walk inside a code block and stay in CodeBlock", async ({page}) => {
     await openCompose(page)
@@ -54,10 +49,13 @@ test("shift-arrow right at the end of a code block does not insert a paragraph",
     await composeBox(page).click()
     await typeFence(page, "py")
     await page.keyboard.type("ab")
+    let end = await caretSnap(page)
     await page.keyboard.press("Shift+ArrowRight")
     let snap = await caretSnap(page)
     expect(snap.names).toEqual(["CodeBlock"])
     expect(snap.block).toBe("CodeBlock")
+    expect(snap.empty).toBe(true)
+    expect(snap.head).toBe(end.head)
 })
 
 test("arrow right from a code block enters a following paragraph", async ({page}) => {
@@ -161,6 +159,24 @@ test("arrow down from a paragraph enters the code block below", async ({page}) =
     let back = await caretSnap(page)
     expect(back.block).toBe("Paragraph")
     expect(back.blockText).toBe("hello")
+})
+
+test("arrow down from a code block enters the paragraph below", async ({page}) => {
+    await openCompose(page)
+    await composeBox(page).click()
+    await typeFence(page, "py")
+    await page.keyboard.type("ab")
+    await page.keyboard.press("ArrowRight")
+    await page.keyboard.type("bye")
+    let ab = await findText(page, "ab")
+    await clickDocPos(page, ab.from, 1)
+    let inCode = await caretSnap(page)
+    expect(inCode.block).toBe("CodeBlock")
+    expect(inCode.blockText).toBe("ab")
+    await page.keyboard.press("ArrowDown")
+    let below = await caretSnap(page)
+    expect(below.block).toBe("Paragraph")
+    expect(below.blockText).toBe("bye")
 })
 
 test("word motion inside code skips identifiers", async ({page}) => {

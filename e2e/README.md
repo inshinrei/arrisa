@@ -30,7 +30,7 @@ The runner starts a dedicated `pnpm playground` on `http://127.0.0.1:5173` with 
 | `remountCompose({submit?})` | Remount compose; optional submit chord logs `"send"` |
 | `sendLog` | Host submit log (`"send"` entries) |
 
-Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, (api) => …)` in `helpers.ts`. Keyboard specs click `composeBox` (`#editor-chat [contenteditable='true']`) so they do not hit the hidden document editor.
+Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `helpers.ts`. Two-arg form passes the harness as `fn`'s first argument. A third `arg` object is merged as `{api, …arg}` so Playwright can serialize extra values. Keyboard specs click `composeBox` (`#editor-chat [contenteditable='true']`) so they do not hit the hidden document editor.
 
 ## Specs
 
@@ -39,9 +39,9 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, (api) => …)` 
 | `harness.e2e.ts` | `/?e2e=1` installs `__arrisaE2e` on the messenger tab |
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
-| `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / word and select-all chords |
+| `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / `docPosCoords` / `typeFence` / word and select-all chords |
 | `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
-| `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows |
+| `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows including ArrowDown off a code line |
 | `caret-click.e2e.ts` | Click, double-click, triple-click, Shift-click, drag — plain text and mixed paragraph/code |
 
 ## Assertions

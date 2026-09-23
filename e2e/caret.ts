@@ -28,6 +28,11 @@ export async function waitFrames(page: Page, n = 2) {
     }, n)
 }
 
+export async function typeFence(page: Page, lang: string) {
+    await page.keyboard.type("```" + lang)
+    await page.keyboard.press("Space")
+}
+
 export async function caretSnap(page: Page): Promise<CaretSnap> {
     await waitFrames(page)
     let logical = await e2e(page, (api) => {
@@ -48,7 +53,16 @@ export async function caretSnap(page: Page): Promise<CaretSnap> {
             text: state.doc.textContent(),
         }
     })
-    // Range selections remove `arrisa-cursor`; locator.evaluate would wait out the test.
+    if (logical.empty) {
+        await page.waitForFunction(
+            () => {
+                let el = document.querySelector("#editor-chat arrisa-cursor")
+                return el instanceof HTMLElement && el.className.length > 0
+            },
+            undefined,
+            {timeout: 2000},
+        )
+    }
     let cursorClass = await page.evaluate(() => {
         let el = document.querySelector("#editor-chat arrisa-cursor")
         return el instanceof HTMLElement ? el.className : ""
@@ -57,32 +71,41 @@ export async function caretSnap(page: Page): Promise<CaretSnap> {
 }
 
 export async function findText(page: Page, needle: string, which = 0) {
-    let handle = await page.evaluateHandle(() => (window as any).__arrisaE2e)
-    try {
-        // Playwright serializes the evaluate callback; pass needle/which instead of closing over them.
-        let found = await page.evaluate(
-            ({api, needle, which}: {api: any; needle: string; which: number}) => {
-                let doc = api.chatEditor.state.doc
-                let hits: {from: number; to: number}[] = []
-                doc.iterate((node: {isText: boolean; param: unknown; length: number}, pos: number) => {
-                    if (!node.isText || typeof node.param != "string") return
-                    let from = 0
-                    for (;;) {
-                        let i = node.param.indexOf(needle, from)
-                        if (i < 0) break
-                        hits.push({from: pos + i, to: pos + i + needle.length})
-                        from = i + needle.length
-                    }
-                })
-                return hits[which] ?? null
-            },
-            {api: handle, needle, which},
-        )
-        if (!found) throw new Error(`findText: ${JSON.stringify(needle)} #${which} missing`)
-        return found
-    } finally {
-        await handle.dispose()
-    }
+    let found = await e2e(
+        page,
+        ({api, needle, which}: {api: any; needle: string; which: number}) => {
+            let doc = api.chatEditor.state.doc
+            let hits: {from: number; to: number}[] = []
+            doc.iterate((node: {isText: boolean; param: unknown; length: number}, pos: number) => {
+                if (!node.isText || typeof node.param != "string") return
+                let from = 0
+                for (;;) {
+                    let i = node.param.indexOf(needle, from)
+                    if (i < 0) break
+                    hits.push({from: pos + i, to: pos + i + needle.length})
+                    from = i + needle.length
+                }
+            })
+            return hits[which] ?? null
+        },
+        {needle, which},
+    )
+    if (!found) throw new Error(`findText: ${JSON.stringify(needle)} #${which} missing`)
+    return found
+}
+
+export async function docPosCoords(page: Page, pos: number, assoc: -1 | 1 = 1) {
+    return e2e(
+        page,
+        ({api, pos, assoc}: {api: any; pos: number; assoc: -1 | 1}) => {
+            let editor = api.chatEditor
+            editor.focus()
+            editor.selectionRect()
+            let rect = editor.coordsAtPos(pos, assoc)
+            return {x: assoc > 0 ? rect.left + 2 : rect.left - 2, y: (rect.top + rect.bottom) / 2}
+        },
+        {pos, assoc},
+    )
 }
 
 export async function clickDocPos(
@@ -91,26 +114,9 @@ export async function clickDocPos(
     assoc: -1 | 1 = 1,
     opts: {shift?: boolean; clickCount?: number} = {},
 ) {
-    let handle = await page.evaluateHandle(() => (window as any).__arrisaE2e)
-    let box: {x: number; y: number; width: number; height: number}
-    try {
-        box = await page.evaluate(
-            ({api, pos, assoc}: {api: any; pos: number; assoc: -1 | 1}) => {
-                let editor = api.chatEditor
-                editor.focus()
-                editor.selectionRect()
-                let rect = editor.coordsAtPos(pos, assoc)
-                return {x: rect.left, y: (rect.top + rect.bottom) / 2, width: rect.width, height: rect.height}
-            },
-            {api: handle, pos, assoc},
-        )
-    } finally {
-        await handle.dispose()
-    }
-    let x = assoc > 0 ? box.x + 2 : box.x - 2
-    let y = box.y
+    let box = await docPosCoords(page, pos, assoc)
     if (opts.shift) await page.keyboard.down("Shift")
-    await page.mouse.click(x, y, {clickCount: opts.clickCount ?? 1})
+    await page.mouse.click(box.x, box.y, {clickCount: opts.clickCount ?? 1})
     if (opts.shift) await page.keyboard.up("Shift")
 }
 

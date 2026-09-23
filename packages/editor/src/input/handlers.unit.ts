@@ -77,6 +77,37 @@ describe("inputEventRange", () => {
             ),
         ).toEqual({from: 5, to: 5})
     })
+
+    it("keeps a DOM range that sits in a different textblock", () => {
+        let paragraph = Plot.define("Paragraph", {inlineContent: true, shape: {element: "p"}})
+        let docType = Plot.defineDoc({blockContent: paragraph})
+        let schema = Schema.define([docType, paragraph])
+        let doc = schema.doc([paragraph.create([Leaf.text("ab")]), paragraph.create([Leaf.text("cd")])])
+        let head = doc.content[0]!.length + 1
+        let editor = {
+            state: EditorState.create({
+                doc,
+                selection: EditorSelection.cursor(head),
+                config: [EditorState.schemaElement.of(schema.elements)],
+            }),
+            inputState: {composing: null},
+            viewState: {pending: []},
+            docTile: {
+                posFromDOM() {
+                    return 2
+                },
+            },
+        } as any
+        let event = {
+            getTargetRanges() {
+                return [{startContainer: {}, startOffset: 1, endContainer: {}, endOffset: 1, collapsed: true}]
+            },
+        } as unknown as InputEvent
+        expect(inputEventRange(event, editor, true)).toEqual({from: 2, to: 2})
+        expect(editor.state.doc.resolve(2).textblockParent?.pos).not.toBe(
+            editor.state.doc.resolve(head).textblockParent?.pos,
+        )
+    })
 })
 
 describe("beforeinput after Tab", () => {

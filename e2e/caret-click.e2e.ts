@@ -1,35 +1,11 @@
 import {expect, test, type Page} from "@playwright/test"
 import {composeBox, openCompose} from "./helpers"
-import {caretSnap, clickDocPos, findText} from "./caret"
-
-async function typeFence(page: Page, lang: string) {
-    await page.keyboard.type("```" + lang)
-    await page.keyboard.press("Space")
-}
+import {caretSnap, clickDocPos, docPosCoords, findText, typeFence} from "./caret"
 
 async function seedHelloThere(page: Page) {
     await openCompose(page)
     await composeBox(page).click()
     await page.keyboard.type("hello there")
-}
-
-/** Same coords as clickDocPos; extra args cannot close over e2e(). */
-async function pointerAt(page: Page, pos: number, assoc: -1 | 1) {
-    let handle = await page.evaluateHandle(() => (window as any).__arrisaE2e)
-    try {
-        return await page.evaluate(
-            ({api, pos, assoc}: {api: any; pos: number; assoc: -1 | 1}) => {
-                let editor = api.chatEditor
-                editor.focus()
-                editor.selectionRect()
-                let rect = editor.coordsAtPos(pos, assoc)
-                return {x: assoc > 0 ? rect.left + 2 : rect.left - 2, y: (rect.top + rect.bottom) / 2}
-            },
-            {api: handle, pos, assoc},
-        )
-    } finally {
-        await handle.dispose()
-    }
 }
 
 test("click places the caret in a plain paragraph", async ({page}) => {
@@ -82,8 +58,8 @@ test("drag selects a range across two words", async ({page}) => {
     await seedHelloThere(page)
     let hello = await findText(page, "hello")
     let there = await findText(page, "there")
-    let a = await pointerAt(page, hello.from, 1)
-    let b = await pointerAt(page, there.to, -1)
+    let a = await docPosCoords(page, hello.from, 1)
+    let b = await docPosCoords(page, there.to, -1)
     await page.mouse.move(a.x, a.y)
     await page.mouse.down()
     await page.mouse.move(b.x, b.y, {steps: 8})
