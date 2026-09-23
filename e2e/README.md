@@ -39,6 +39,8 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, (api) => …)` 
 | `harness.e2e.ts` | `/?e2e=1` installs `__arrisaE2e` on the messenger tab |
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
+| `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / word and select-all chords |
+| `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
 
 ## Assertions
 
