@@ -25,12 +25,13 @@ When production files in a row change, run the specs in that row (or the full su
 | Production paths | Specs |
 |------------------|-------|
 | `packages/editor/src/input/**`, `packages/editor/src/key-map.ts`, `packages/editor/src/compose-keymap.ts` | `caret-*.e2e.ts`, `format-*.e2e.ts`, `compose-submit.e2e.ts` |
-| `packages/command/src/mark.ts`, `packages/command/src/mark-exclusivity.ts`, `packages/schema/src/mark.ts` | `format-marks.e2e.ts`, `format-type.e2e.ts`, `format-heavy.e2e.ts` |
+| `packages/command/src/mark.ts`, `packages/command/src/mark-exclusivity.ts`, `packages/schema/src/mark.ts`, `packages/schema/src/clear-formatting.ts` | `format-marks.e2e.ts`, `format-type.e2e.ts`, `format-heavy.e2e.ts` |
 | `packages/schema/src/list.ts`, `packages/schema/src/block.ts` (blockquote / codeBlock) | `format-blocks.e2e.ts`, `codeblock-*.e2e.ts` |
 | `packages/schema/src/link.ts`, `packages/command/src/mark.ts` (applyLink / removeLinks) | `format-link.e2e.ts` |
+| `packages/editor/src/menu-dom.ts`, `packages/command/src/menu.ts` | `format-marks.e2e.ts`, `format-type.e2e.ts`, `format-blocks.e2e.ts`, `format-link.e2e.ts` |
 | `packages/message/src/markdown*.ts`, `packages/message/src/paste-markdown.ts`, `packages/message/src/parse-markdown.ts` | `format-markdown.e2e.ts` |
 | `packages/message/src/to-formatted.ts`, `packages/message/src/from-formatted.ts`, `packages/message/src/entities.ts` | `format-heavy.e2e.ts`, `compose-mention.e2e.ts` |
-| `packages/message/src/compose-field.ts`, `packages/message/src/mention-query.ts`, `packages/message/src/insert.ts` | `compose-submit.e2e.ts`, `compose-mention.e2e.ts` |
+| `packages/message/src/compose-field.ts`, `packages/message/src/mention-query.ts`, `packages/message/src/insert.ts` | `compose-submit.e2e.ts`, `compose-mention.e2e.ts`, `format-*.e2e.ts` |
 | `packages/editor/src/dom/coords.ts`, `packages/command/src/motion.ts` | `caret-*.e2e.ts`, `codeblock-*.e2e.ts` |
 | `packages/schema/src/code-indent.ts`, `packages/schema/src/highlight-code.ts`, `packages/schema/src/code-block-paint.ts` | `codeblock-*.e2e.ts` |
 
@@ -58,13 +59,18 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / `docPosCoords` / `typeFence` / word and select-all chords |
-| `format.ts` | Shared dump / `hasFlag` / `selectNeedle` / `clickFormat` (including overflow **More**) and mark chords |
+| `format.ts` | Shared dump / `hasFlag` / `selectNeedle` (adjacent leaves, including mark splits) / `focusCompose` / `clickFormat` (overflow **More**) and mark chords |
 | `format-marks.e2e.ts` | Keyboard and toolbar mark toggles on a selected word; stacked bold+italic; mid-word slice |
 | `format-type.e2e.ts` | Keyboard stored bold and toolbar stored italic on the next typed word; keyboard toggle off; clear stacked marks; undo/redo after keyboard bold |
 | `format-markdown.e2e.ts` | Typing `**bold**` / `__italic__` / `~~strike~~` / `` `code` `` drops delimiters; adjacent markdown runs; paste markdown bold+code and markdown links |
 | `format-blocks.e2e.ts` | Typing `- ` / `1. ` / `> ` and toolbar Toggle bullet list / Toggle ordered list / Toggle blockquote; bold in a list item; italic in a quote; formatted paragraph then fenced code |
 | `format-link.e2e.ts` | Mod-k and toolbar Create link with the host prompt; paste URL onto a selection wraps without inserting the URL text; stacked bold+link |
 | `format-heavy.e2e.ts` | Overlapping bold+italic slices, emoji UTF-16 bold length, two-paragraph select-all bold, mixed list+quote+code+mention+auto URL dump, send with autoDetect |
+| `codeblock-type.e2e.ts` | Typed text stays inside an empty code block |
+| `codeblock-after.e2e.ts` | Typed text stays on the line after a code block |
+| `codeblock-exit.e2e.ts` | Arrow right at the end of a code block moves to the next line |
+| `codeblock-tab.e2e.ts` | Tab indent / Shift-Tab outdent; Shift-Enter caret; vertical caret after a code block |
+| `codeblock-color.e2e.ts` | Fenced block coloring, CSS variable repaint, inline backticks still a code mark |
 | `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
 | `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows including ArrowDown off a code line |
 | `caret-click.e2e.ts` | Click, double-click, triple-click, Shift-click, drag — plain text and mixed paragraph/code |

@@ -1,10 +1,6 @@
-import {expect, test, type Page} from "@playwright/test"
-import {composeBox, e2e, openCompose} from "./helpers"
-import {clickFormat, dump, hasFlag, MARK_BUTTONS, MARK_KEYS, selectNeedle} from "./format"
-
-// Toolbar clicks focus the control (Playwright). Restore the editor without a
-// contenteditable center-click, which would move the caret into existing text.
-const focusCompose = (page: Page) => e2e(page, (api) => api.chatEditor.focus())
+import {expect, test} from "@playwright/test"
+import {composeBox, openCompose} from "./helpers"
+import {clickFormat, dump, focusCompose, hasFlag, MARK_BUTTONS, MARK_KEYS, selectNeedle} from "./format"
 
 test("keyboard stored bold applies to the next typed word and turns off", async ({page}) => {
     await openCompose(page)

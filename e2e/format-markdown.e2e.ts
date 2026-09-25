@@ -53,6 +53,7 @@ test("markdown bold then typed italic delimiters sit as adjacent runs", async ({
     let ft = await dump(page)
     expect(ft.text).toBe("bold and ital")
     expect(hasFlag(ft, "bold", 0, 4)).toBe(true)
+    expect(hasFlag(ft, "bold", 0, 9)).toBe(false)
     expect(hasFlag(ft, "italic", 9, 4)).toBe(true)
 })
 

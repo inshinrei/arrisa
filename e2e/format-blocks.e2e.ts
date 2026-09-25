@@ -42,6 +42,7 @@ test("toolbar ordered list wraps the current paragraph", async ({page}) => {
     await page.keyboard.type("one")
     await clickFormat(page, "Toggle ordered list")
     expect(await e2e(page, blockNames)).toContain("OrderedList")
+    expect((await dump(page)).entities?.some((e) => e.type == "ordered_list")).toBe(true)
 })
 
 test("typing > space creates a blockquote", async ({page}) => {
@@ -58,6 +59,7 @@ test("toolbar quote wraps the current paragraph", async ({page}) => {
     await page.keyboard.type("quoted")
     await clickFormat(page, "Toggle blockquote")
     expect(await e2e(page, blockNames)).toContain("Blockquote")
+    expect((await dump(page)).entities?.some((e) => e.type == "blockquote")).toBe(true)
 })
 
 test("bold inside a bullet item dumps both list and bold", async ({page}) => {

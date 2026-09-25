@@ -9,11 +9,7 @@ test("overlapping bold then italic on a later slice dumps both runs", async ({pa
     await page.keyboard.type("abcd")
     await selectNeedle(page, "abc")
     await page.keyboard.press(MARK_KEYS.bold)
-    // "cd" spans the bold split; findText is per text node.
-    let c = await findText(page, "c")
-    let d = await findText(page, "d")
-    await clickDocPos(page, c.from, 1)
-    await clickDocPos(page, d.to, -1, {shift: true})
+    await selectNeedle(page, "cd")
     await page.keyboard.press(MARK_KEYS.italic)
     let ft = await dump(page)
     expect(ft.text).toBe("abcd")
@@ -44,7 +40,14 @@ test("select-all bold covers two paragraphs", async ({page}) => {
     let ft = await dump(page)
     expect(ft.text).toMatch(/one/)
     expect(ft.text).toMatch(/two/)
-    expect(ft.entities?.some((e) => e.type == "bold" && e.length >= 3)).toBe(true)
+    let one = ft.text.indexOf("one")
+    let two = ft.text.indexOf("two")
+    expect(
+        ft.entities?.some((e) => e.type == "bold" && e.offset <= one && e.offset + e.length >= one + 3),
+    ).toBe(true)
+    expect(
+        ft.entities?.some((e) => e.type == "bold" && e.offset <= two && e.offset + e.length >= two + 3),
+    ).toBe(true)
 })
 
 test("heavy announcement dumps list, quote, code, marks, mention, and auto url", async ({page}) => {

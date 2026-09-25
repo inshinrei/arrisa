@@ -1,5 +1,5 @@
 import type {Page} from "@playwright/test"
-import {clickDocPos, findText, waitFrames} from "./caret"
+import {clickDocPos, waitFrames} from "./caret"
 import {e2e} from "./helpers"
 
 export type FlagType = "bold" | "italic" | "underline" | "strike" | "code"
@@ -41,8 +41,42 @@ export function hasFlag(ft: Dump, type: FlagType, offset: number, length: number
     return Boolean(ft.entities?.some((e) => e.type == type && e.offset == offset && e.length == length))
 }
 
+/** Restore compose after a toolbar click without a contenteditable center-click. */
+export const focusCompose = (page: Page) => e2e(page, (api) => api.chatEditor.focus())
+
+/** Select `needle` across adjacent text leaves (mark splits). Block gaps are separate runs. */
 export async function selectNeedle(page: Page, needle: string, which = 0) {
-    let range = await findText(page, needle, which)
+    let range = await e2e(
+        page,
+        ({api, needle, which}: {api: any; needle: string; which: number}) => {
+            let doc = api.chatEditor.state.doc
+            let runs: {text: string; map: number[]}[] = []
+            doc.iterate((node: {isText: boolean; param: unknown; length: number}, pos: number) => {
+                if (!node.isText || typeof node.param != "string") return
+                let last = runs[runs.length - 1]
+                let adjacent = last && last.map.length > 0 && last.map[last.map.length - 1]! + 1 == pos
+                let run = adjacent ? last! : {text: "", map: [] as number[]}
+                if (!adjacent) runs.push(run)
+                for (let i = 0; i < node.param.length; i++) {
+                    run.map.push(pos + i)
+                    run.text += node.param[i]
+                }
+            })
+            let hits: {from: number; to: number}[] = []
+            for (let run of runs) {
+                let from = 0
+                for (;;) {
+                    let i = run.text.indexOf(needle, from)
+                    if (i < 0) break
+                    hits.push({from: run.map[i]!, to: run.map[i + needle.length - 1]! + 1})
+                    from = i + needle.length
+                }
+            }
+            return hits[which] ?? null
+        },
+        {needle, which},
+    )
+    if (!range) throw new Error(`selectNeedle: ${JSON.stringify(needle)} #${which} missing`)
     await clickDocPos(page, range.from, 1)
     await clickDocPos(page, range.to, -1, {shift: true})
     return range
