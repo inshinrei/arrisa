@@ -40,6 +40,8 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / `docPosCoords` / `typeFence` / word and select-all chords |
+| `format.ts` | Shared dump / `hasFlag` / `selectNeedle` / `clickFormat` (including overflow **More**) and mark chords |
+| `format-marks.e2e.ts` | Keyboard and toolbar mark toggles on a selected word; stacked bold+italic; mid-word slice |
 | `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
 | `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows including ArrowDown off a code line |
 | `caret-click.e2e.ts` | Click, double-click, triple-click, Shift-click, drag — plain text and mixed paragraph/code |
