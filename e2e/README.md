@@ -43,6 +43,7 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 | `format.ts` | Shared dump / `hasFlag` / `selectNeedle` / `clickFormat` (including overflow **More**) and mark chords |
 | `format-marks.e2e.ts` | Keyboard and toolbar mark toggles on a selected word; stacked bold+italic; mid-word slice |
 | `format-type.e2e.ts` | Keyboard stored bold and toolbar stored italic on the next typed word; keyboard toggle off; clear stacked marks; undo/redo after keyboard bold |
+| `format-markdown.e2e.ts` | Typing `**bold**` / `__italic__` / `~~strike~~` / `` `code` `` drops delimiters; adjacent markdown runs; paste markdown bold+code and markdown links |
 | `caret-plain.e2e.ts` | Plain-text unit, word, line, paragraph, doc-side, select-all, Escape |
 | `caret-code.e2e.ts` | Keyboard motion inside code, exit/enter, adjacent blocks, Shift-Enter lines, paragraph↔code arrows including ArrowDown off a code line |
 | `caret-click.e2e.ts` | Click, double-click, triple-click, Shift-click, drag — plain text and mixed paragraph/code |

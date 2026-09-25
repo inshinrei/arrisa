@@ -41,7 +41,7 @@ function typeChars(state: EditorState, chars: string) {
     for (let ch of chars) {
         let head = cur.selection.head
         let tr = cur.update({
-            changes: {from: head, to: head, insert: Slice.of([Leaf.text(ch)])},
+            changes: {from: head, to: head, insert: Slice.of([Leaf.text(ch, cur.sel.activeMarks)])},
             selection: EditorSelection.cursor(head + ch.length),
             userEvent: "input.type",
         })
@@ -89,6 +89,22 @@ describe("markdownInputRules", () => {
         let leaf = state.doc.content.find((n) => n.isText && n.isLeaf)
         expect(leaf && leaf.isText ? leaf.param : null).toBe("c")
         expect(Code.isInSet(leaf!.marks)).toBeTruthy()
+    })
+
+    it("does not keep the converted mark stored for following typed text", () => {
+        let state = makeState("")
+        state = typeChars(state, "**hi** x __y__")
+        expect(state.doc.textContent()).toBe("hi x y")
+        let strong = ""
+        let em = ""
+        state.doc.iterate((node) => {
+            if (!node.isText) return
+            let t = String(node.param)
+            if (Strong.isInSet(node.marks)) strong += t
+            if (Emphasis.isInSet(node.marks)) em += t
+        })
+        expect(strong).toBe("hi")
+        expect(em).toBe("y")
     })
 
     it("does not treat ```x` as inline code", () => {

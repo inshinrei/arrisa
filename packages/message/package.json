@@ -1,6 +1,6 @@
 {
   "name": "@arrisa/message",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "description": "Arrisa — messenger compose, formatted text, and entity I/O",
   "license": "MIT",
   "type": "module",

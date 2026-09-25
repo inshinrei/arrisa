@@ -23,7 +23,8 @@ function markRule(expr: RegExp, mark: Mark): InputRule {
                     to: full.to.pos,
                     insert: [Leaf.text(inner.text, mark.addToSet(Mark.none))],
                 },
-                selection: {anchor: full.from.pos + inner.text.length},
+                // Clear stored marks so typing after the converted run is unmarked.
+                selection: {anchor: full.from.pos + inner.text.length, marks: Mark.none},
                 userEvent: "input.mark",
             }
         },
