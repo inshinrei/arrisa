@@ -16,6 +16,24 @@ pnpm test:e2e e2e/compose-mention.e2e.ts
 
 The runner starts a dedicated `pnpm playground` on `http://127.0.0.1:5173` with `ARRISA_E2E=1` so Vite does not open a browser (`server.open: false`, `strictPort: true`). Locally it reuses a server already bound to that port unless `CI` is set.
 
+`pnpm release:prepare` runs this suite. Do not skip it for a release.
+
+## Required when
+
+When production files in a row change, run the specs in that row (or the full suite) before commit.
+
+| Production paths | Specs |
+|------------------|-------|
+| `packages/editor/src/input/**`, `packages/editor/src/key-map.ts`, `packages/editor/src/compose-keymap.ts` | `caret-*.e2e.ts`, `format-*.e2e.ts`, `compose-submit.e2e.ts` |
+| `packages/command/src/mark.ts`, `packages/command/src/mark-exclusivity.ts`, `packages/schema/src/mark.ts` | `format-marks.e2e.ts`, `format-type.e2e.ts`, `format-heavy.e2e.ts` |
+| `packages/schema/src/list.ts`, `packages/schema/src/block.ts` (blockquote / codeBlock) | `format-blocks.e2e.ts`, `codeblock-*.e2e.ts` |
+| `packages/schema/src/link.ts`, `packages/command/src/mark.ts` (applyLink / removeLinks) | `format-link.e2e.ts` |
+| `packages/message/src/markdown*.ts`, `packages/message/src/paste-markdown.ts`, `packages/message/src/parse-markdown.ts` | `format-markdown.e2e.ts` |
+| `packages/message/src/to-formatted.ts`, `packages/message/src/from-formatted.ts`, `packages/message/src/entities.ts` | `format-heavy.e2e.ts`, `compose-mention.e2e.ts` |
+| `packages/message/src/compose-field.ts`, `packages/message/src/mention-query.ts`, `packages/message/src/insert.ts` | `compose-submit.e2e.ts`, `compose-mention.e2e.ts` |
+| `packages/editor/src/dom/coords.ts`, `packages/command/src/motion.ts` | `caret-*.e2e.ts`, `codeblock-*.e2e.ts` |
+| `packages/schema/src/code-indent.ts`, `packages/schema/src/highlight-code.ts`, `packages/schema/src/code-block-paint.ts` | `codeblock-*.e2e.ts` |
+
 ## `?e2e=1`
 
 `window.__arrisaE2e` is assigned **only** when `location.search` contains `e2e=1` (for example `/?e2e=1`, then the Messenger tab).

@@ -120,7 +120,7 @@ On `feat` / `fix` / `perf` / `revert` commits, bump that lockstep **patch** in t
 ```bash
 pnpm version:sync                    # copy root version onto published packages
 pnpm version:bump patch|minor|major  # standard semver on root, then sync
-pnpm release:prepare                 # test, typecheck, build, then version:sync
+pnpm release:prepare                 # test, typecheck, e2e, build, then version:sync
 pnpm release:publish                 # publish every public package under packages/*
 pnpm release                         # prepare, then publish
 pnpm release:publish -- --dry-run    # extra flags are passed to pnpm publish

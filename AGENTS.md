@@ -91,7 +91,7 @@ From the repo root:
 | `pnpm playground` | Start the playground Vite app |
 | `pnpm test:e2e` | Playground Playwright e2e (`e2e/*.e2e.ts`) |
 | `pnpm test:e2e:install` | Install Playwright Chromium |
-| `pnpm release:prepare` | Test, typecheck, build, then version:sync |
+| `pnpm release:prepare` | Test, typecheck, playground e2e, build, then version:sync |
 | `pnpm release:publish` | Publish public `packages/*` to npm (`-- --dry-run` supported) |
 | `pnpm release` | `release:prepare` then `release:publish` |
 | `pnpm version:sync` | Copy root version onto published packages |
@@ -111,6 +111,8 @@ Always run relevant tests before committing behavior changes. Run `pnpm build` w
 - Playground e2e lives in `e2e/*.e2e.ts` (Playwright). Run `pnpm test:e2e`.
 - Add or update tests for behavior changes in the same package.
 - Prefer pure state/doc tests over full DOM when possible; use editor tests when the view layer is involved.
+- `pnpm release:prepare` runs `pnpm test:e2e` after unit tests and typecheck. A release is not prepared if Playwright fails.
+- When changing production logic listed in `e2e/README.md` **Required when**, run the mapped specs (or `pnpm test:e2e`) in the same change. Do not land compose/format/caret/code-block behavior without the covering e2e.
 
 ## Documentation policy
 
@@ -156,7 +158,7 @@ When editing a package:
 1. Read that package’s `README.md` and `agents-for-module.md` (if present) plus `src/index.ts`.
 2. Keep the dependency graph acyclic.
 3. Update docs if the public surface or usage patterns change.
-4. Run package tests; run build if you need to verify `dist/AGENTS.md` copy.
+4. Run package tests. If the change hits a path in `e2e/README.md` **Required when**, run those Playwright specs (or `pnpm test:e2e`) before commit.
 5. If the commit type is `feat`, `fix`, `perf`, or `revert`, bump the lockstep patch in the same commit (`pnpm version:bump patch`).
 
 ## Decision guidance
