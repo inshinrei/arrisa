@@ -172,8 +172,8 @@ export class MenuSubmenu implements MenuElement {
         this.button.setAttribute("aria-expanded", "false")
         if (item.description) {
             let desc = typeof item.description == "function" ? item.description(editor.state) : item.description
-            this.dom.title = desc
-            this.dom.setAttribute("aria-label", desc)
+            this.button.title = desc
+            this.button.setAttribute("aria-label", desc)
         }
         if (item.label) {
             labelButton(editor, this.button, item.label)

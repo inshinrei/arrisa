@@ -348,8 +348,9 @@ describe("embedded menubar chrome click", () => {
             editor.host = host
             let input = new InputState(editor)
 
-            let more = host.elts.find((e) => e.children && e.dom.getAttribute("aria-label") == "More")
+            let more = host.elts.find((e) => e.children && e.focusDOM.getAttribute("aria-label") == "More")
             expect(more).toBeTruthy()
+            expect(more!.focusDOM.tagName).toBe("BUTTON")
             let underEl = host.elts.find((e) => e.dom.getAttribute("aria-label") == "Toggle underline")
             expect(underEl).toBeTruthy()
             expect(underEl!.focusDOM.role == "menuitem" || underEl!.dom.role == "menuitem").toBe(true)

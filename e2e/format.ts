@@ -56,8 +56,6 @@ export async function clickFormat(page: Page, name: string) {
         return
     }
     let more = bar.getByRole("button", {name: "More", exact: true})
-    // Overflow "More" labels the submenu host; the inner trigger has no name.
-    if ((await more.count()) == 0) more = bar.getByLabel("More", {exact: true}).getByRole("button")
     if ((await more.count()) > 0) {
         await more.click()
         await waitFrames(page)
