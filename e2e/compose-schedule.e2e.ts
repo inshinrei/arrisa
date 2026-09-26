@@ -155,6 +155,20 @@ test("custom action list is invoked from ArrowDown", async ({page}) => {
     expect(after.sendLog).not.toContain("send")
 })
 
+test("typing past the phrase clears paint and chip; deleting extra text restores them", async ({page}) => {
+    await openCompose(page)
+    await composeBox(page).click()
+    await page.keyboard.type("tomorrow at 14:00")
+    await expect(scheduleChip(page)).toBeVisible()
+    await expect(phrasePaint(page)).toHaveText("tomorrow at 14:00")
+    await page.keyboard.type(" later")
+    await expect(scheduleChip(page)).toHaveCount(0)
+    await expect(phrasePaint(page)).toHaveCount(0)
+    for (let i = 0; i < 6; i++) await page.keyboard.press("Backspace")
+    await expect(scheduleChip(page)).toBeVisible()
+    await expect(phrasePaint(page)).toHaveText("tomorrow at 14:00")
+})
+
 test("Escape hides the chip and keeps paint", async ({page}) => {
     await openCompose(page)
     await composeBox(page).click()

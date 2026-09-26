@@ -8,7 +8,6 @@ import {EditorState, type Transaction} from "@arrisa/state"
 import {docPosAtDumpOffset} from "./dump-pos"
 import {acceptScheduleQuery, scheduleAccepted} from "./schedule-accept"
 import {
-    detectSchedulePhrases,
     detectScheduleQuery,
     scheduleActionId,
     scheduleChipField,
@@ -27,23 +26,12 @@ const schedulePhraseDeco = Decoration.Range.wrapper("span", {
 })
 
 function paintSchedulePhrases(state: EditorState) {
-    let hits = detectSchedulePhrases(state)
-    let mapped: [number, number][] = []
-    for (let hit of hits) {
-        let from = docPosAtDumpOffset(state.doc, hit.from, "from")
-        let to = docPosAtDumpOffset(state.doc, hit.to, "to")
-        if (from === false || to === false || from >= to) continue
-        mapped.push([from, to])
-    }
-    mapped.sort((a, b) => a[0] - b[0] || a[1] - b[1])
-    let ranges: [number, number, Decoration.Range][] = []
-    let lastTo = -1
-    for (let [from, to] of mapped) {
-        if (from < lastTo) continue
-        ranges.push([from, to, schedulePhraseDeco])
-        lastTo = to
-    }
-    return ranges.length ? RangeSet.create(ranges) : RangeSet.empty
+    let hit = detectScheduleQuery(state)
+    if (!hit) return RangeSet.empty
+    let from = docPosAtDumpOffset(state.doc, hit.from, "from")
+    let to = docPosAtDumpOffset(state.doc, hit.to, "to")
+    if (from === false || to === false || from >= to) return RangeSet.empty
+    return RangeSet.create([[from, to, schedulePhraseDeco]])
 }
 
 function defaultLabel(state: EditorState, hit: ScheduleActionHit) {

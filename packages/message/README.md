@@ -89,7 +89,7 @@ type FormattedText = {
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
 | Mention picker query (`onMentionQuery`) | omitted. Word-start `@query` + caret box; `null` when unfocused / no query / no rect. Does **not** consume Space. Leave `resolveMention` unset for picker hosts. |
-| Schedule query (`scheduleQuery`) | omitted / `false` (off). `true` ≡ `scheduleQuery({})`. A config `{now, locale, invokers, joiners, onAccept, onQuery, enabled}` is passed through. Paints typed datetime phrases and offers a caret chip. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
+| Schedule query (`scheduleQuery`) | omitted / `false` (off). `true` ≡ `scheduleQuery({})`. A config `{now, locale, invokers, joiners, onAccept, onQuery, enabled, actions}` is passed through. Paints the caret-tied phrase and offers a caret action list. Arrisa does not send and does not draw an armed banner; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
 | Link add prompt | `linkPrompt` → `link({prompt})` (default `"floating"`) |
 | Submit chord (`submit`) | omitted (Enter splits, Shift-Enter breaks). `"Enter"` / `"Shift-Enter"` omits that chord; the other is `insertLineBreak`. Host binds send with `EditorState.prec.high(KeyBinding.of({key, run}))`. Arrisa does not send. A missing host binding may fall through to `beforeinput` split. |
 
@@ -348,7 +348,7 @@ detectMentionQuery(state) // {from, to, query} | null
 
 ### Schedule query
 
-Opt-in typed datetime offer. Not an AutoEntity and not a schema mark. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set.
+Opt-in typed datetime offer. Not an AutoEntity and not a schema mark. Arrisa does not send and does not draw an armed / queued mark under the field — hosts render that from `onAccept`. Phrase paint and the action list apply only while the caret sits on the complete phrase; typing past it clears both, deleting the extra text restores them. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set.
 
 ```ts
 import {

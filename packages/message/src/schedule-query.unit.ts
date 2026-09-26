@@ -195,7 +195,7 @@ describe("detectSchedulePhrases", () => {
         expect(detectSchedulePhrases(composeState("tomorrow at 14:00", 17), {now, enabled: () => false})).toEqual([])
     })
 
-    it("still paints when the caret is past the phrase", () => {
+    it("still finds a phrase when the caret is past it", () => {
         let text = "tomorrow at 14:00 later"
         expect(detectScheduleQuery(composeState(text, text.length), opts)).toBeNull()
         expect(detectSchedulePhrases(composeState(text, text.length), opts)).toEqual([

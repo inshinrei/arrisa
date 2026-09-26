@@ -117,6 +117,18 @@ describe("scheduleQuery paint", () => {
         let state = stateFor("ok got tomorrow at 14:00", undefined, {enabled: () => false})
         expect(schedulePaint(state)).toEqual([])
     })
+
+    it("clears paint when the caret moves past the phrase", () => {
+        expect(schedulePaint(stateFor("tomorrow at 14:00 later"))).toEqual([])
+    })
+
+    it("paints again when the caret returns to the phrase", () => {
+        let text = "tomorrow at 14:00 later"
+        let state = stateFor(text, 17)
+        let from = docPosAtDumpOffset(state.doc, 0, "from")
+        let to = docPosAtDumpOffset(state.doc, 17, "to")
+        expect(schedulePaint(state)).toContainEqual({from, to})
+    })
 })
 
 describe("scheduleQuery chip tooltip", () => {

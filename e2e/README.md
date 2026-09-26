@@ -63,7 +63,7 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 | `harness.e2e.ts` | `/?e2e=1` installs `__arrisaE2e` on the messenger tab |
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
-| `compose-schedule.e2e.ts` | typed datetime offer, `at HH:mm` closest 24h, chip, accept, Enter fall-through, ArrowUp/ArrowDown+Enter, custom Later action, Escape hides chip, skip code, mention wins |
+| `compose-schedule.e2e.ts` | typed datetime offer, `at HH:mm` closest 24h, chip, accept, Enter fall-through, ArrowUp/ArrowDown+Enter, custom Later action, type-past clears paint, Escape hides chip, skip code, mention wins |
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / `docPosCoords` / `typeFence` / word and select-all chords |
 | `format.ts` | Shared dump / `hasFlag` / `selectNeedle` (adjacent leaves, including mark splits) / `focusCompose` / `clickFormat` (overflow **More**) and mark chords |
 | `format-marks.e2e.ts` | Keyboard and toolbar mark toggles on a selected word; stacked bold+italic; mid-word slice |

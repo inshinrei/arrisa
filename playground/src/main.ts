@@ -58,7 +58,8 @@ function setArmed(hit: Omit<ScheduleQuery, "rect"> | null) {
         scheduleLabel.textContent = ""
         return
     }
-    scheduleLabel.textContent = `Scheduled for ${hit.label}`
+    let when = new Date(hit.scheduledTime * 1000)
+    scheduleLabel.textContent = `Host mark · send ${when.toLocaleString()}`
     scheduleMark.hidden = false
 }
 
