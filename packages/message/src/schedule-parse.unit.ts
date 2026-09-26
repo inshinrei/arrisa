@@ -63,8 +63,31 @@ describe("findSchedulePhrases", () => {
 
     it("is case-insensitive and requires a word start", () => {
         expect(hit("Tomorrow At 14:00")).toHaveLength(1)
-        expect(hit("atomorrow at 14:00")).toEqual([])
+        expect(hit("atomorrow at 14:00")).toEqual([
+            {
+                from: 13,
+                to: 18,
+                phrase: "14:00",
+                label: "14:00",
+                scheduledTime: unix(2026, 8, 27, 14, 0),
+            },
+        ])
         expect(hit("x14:00")).toEqual([])
+    })
+
+    it("falls back to bare time when a joiner has no day", () => {
+        expect(hit("meet at 14:00")).toEqual([
+            {
+                from: 8,
+                to: 13,
+                phrase: "14:00",
+                label: "14:00",
+                scheduledTime: unix(2026, 8, 27, 14, 0),
+            },
+        ])
+        expect(hit("at 14:00")[0]!.phrase).toBe("14:00")
+        expect(hit("foo в 14:00", "ru")[0]!.phrase).toBe("14:00")
+        expect(hit("в 14:00", "ru")[0]!.phrase).toBe("14:00")
     })
 
     it("does not parse relative or dateless forms", () => {

@@ -158,12 +158,12 @@ export function findSchedulePhrases(text: string, opts?: ScheduleParseOpts): Sch
         let joinAt = joinerStart(text, t.timeFrom, pack)
         if (joinAt >= 0) {
             let day = matchDay(text, joinAt, days)
-            if (!day) continue
-            from = day.from
-            spec = day.spec
-        } else if (!isWordStart(text, t.timeFrom)) {
-            continue
+            if (day) {
+                from = day.from
+                spec = day.spec
+            }
         }
+        if (!spec && !isWordStart(text, t.timeFrom)) continue
         if (overlaps(from, t.timeTo, hits)) continue
 
         let todayAt = new Date(now.getTime())

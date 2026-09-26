@@ -1,6 +1,6 @@
 {
   "name": "@arrisa/collab",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "Arrisa — collaborative editing (OT pipeline + corrections)",
   "license": "MIT",
   "type": "module",
