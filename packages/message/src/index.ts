@@ -100,6 +100,8 @@ export {
     type ScheduleQuery,
     type ScheduleQueryConfig,
     type ScheduleInvoker,
+    type ScheduleAction,
+    type ScheduleActionHit,
 } from "./schedule-query"
 export {scheduleQuery} from "./schedule-plugin"
 export {acceptScheduleQuery} from "./schedule-accept"

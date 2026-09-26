@@ -20,10 +20,11 @@ type ArrisaE2e = {
     chatEditor: Arrisa
     lastMentionQuery: MentionQuery | null
     lastScheduleAccept: Omit<ScheduleQuery, "rect"> | null
+    lastScheduleAction: string | null
     dump: (opts?: ToFormattedOptions) => FormattedText
     insertMention: (p: {userId: string; label: string; from?: number; to?: number}) => boolean
     insertText: (text: string) => boolean
-    remountCompose: (opts: {submit?: "Enter" | "Shift-Enter"}) => void
+    remountCompose: (opts: {submit?: "Enter" | "Shift-Enter"; schedulePreset?: "two-actions"}) => void
     sendLog: string[]
     scheduleQuery: () => ReturnType<typeof detectScheduleQuery>
 }
@@ -65,9 +66,29 @@ function onScheduleAccept(hit: Omit<ScheduleQuery, "rect">) {
     setArmed(hit)
 }
 
-function chatOptions(extra?: EditorState.Extension, submit?: "Enter" | "Shift-Enter"): ChatEditorOptions {
-    if (!e2eMode) return extra ? {extra, onScheduleAccept} : {onScheduleAccept}
-    return {submit, onMentionQuery: e2eMentionQuery, onScheduleAccept, extra}
+function twoScheduleActions(hit: Omit<ScheduleQuery, "rect">) {
+    return [
+        {id: "schedule", label: `Schedule ${hit.label}`},
+        {
+            id: "later",
+            label: `Later ${hit.label}`,
+            run: (h: Omit<ScheduleQuery, "rect">) => {
+                if (e2eApi) {
+                    e2eApi.lastScheduleAction = "later"
+                    e2eApi.lastScheduleAccept = h
+                }
+            },
+        },
+    ]
+}
+
+function chatOptions(
+    extra?: EditorState.Extension,
+    submit?: "Enter" | "Shift-Enter",
+    scheduleActions?: ChatEditorOptions["scheduleActions"],
+): ChatEditorOptions {
+    if (!e2eMode) return extra ? {extra, onScheduleAccept, scheduleActions} : {onScheduleAccept, scheduleActions}
+    return {submit, onMentionQuery: e2eMentionQuery, onScheduleAccept, extra, scheduleActions}
 }
 
 let docEditor = createDocEditor(docMount)
@@ -211,11 +232,12 @@ function e2eScheduleQuery() {
     return detectScheduleQuery(chatEditor.state)
 }
 
-function remountCompose(opts: {submit?: "Enter" | "Shift-Enter"}) {
+function remountCompose(opts: {submit?: "Enter" | "Shift-Enter"; schedulePreset?: "two-actions"}) {
     if (e2eApi) {
         e2eApi.sendLog.length = 0
         e2eApi.lastMentionQuery = null
         e2eApi.lastScheduleAccept = null
+        e2eApi.lastScheduleAction = null
     }
     let submit = opts.submit
     let extra: EditorState.Extension | undefined
@@ -230,7 +252,8 @@ function remountCompose(opts: {submit?: "Enter" | "Shift-Enter"}) {
             }),
         )
     }
-    remountChat(chatOptions(extra, submit))
+    let scheduleActions = opts.schedulePreset == "two-actions" ? twoScheduleActions : undefined
+    remountChat(chatOptions(extra, submit, scheduleActions))
 }
 
 // —— Debug surface ——
@@ -242,6 +265,7 @@ if (e2eMode) {
         chatEditor,
         lastMentionQuery: null,
         lastScheduleAccept: null,
+        lastScheduleAction: null,
         dump: e2eDump,
         insertMention: e2eInsertMention,
         insertText: e2eInsertText,

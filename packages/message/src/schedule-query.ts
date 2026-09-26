@@ -23,6 +23,15 @@ export type ScheduleQuery = {
     rect: ClientBox
 }
 
+export type ScheduleActionHit = Omit<ScheduleQuery, "rect">
+
+export type ScheduleAction = {
+    id: string
+    label: string
+    /** If set, runs instead of {@link ScheduleQueryConfig.onAccept} after the phrase is deleted. */
+    run?: (hit: ScheduleActionHit) => void
+}
+
 export type ScheduleQueryConfig = {
     enabled?: (state: EditorState) => boolean
     now?: () => Date
@@ -31,32 +40,45 @@ export type ScheduleQueryConfig = {
     invokers?: readonly ScheduleInvoker[] | (() => readonly ScheduleInvoker[])
     /** Words between an invoker/date and the clock. Default en `at`, ru `в`/`во`. */
     joiners?: readonly string[] | (() => readonly string[])
+    /**
+     * Accept actions in the caret list. Default: one focusable
+     * `schedule` action labeled from `schedule_suggestion`.
+     */
+    actions?: (hit: ScheduleActionHit, state: EditorState) => readonly ScheduleAction[]
     onQuery?: (q: ScheduleQuery | null) => void
-    onAccept?: (hit: Omit<ScheduleQuery, "rect">) => void
+    onAccept?: (hit: ScheduleActionHit) => void
 }
 
 export const scheduleQueryConfig = EditorState.Facet.define<ScheduleQueryConfig, ScheduleQueryConfig>({
     combine: (values) => values[0] ?? {},
 })
 
-type ScheduleChip = "visible" | "focused" | "hidden"
+export type ScheduleChip = {mode: "visible" | "focused" | "hidden"; index: number}
 
 export const setScheduleChip = Transaction.Effect.define<ScheduleChip>()
 
+export const scheduleActionId = Transaction.Effect.define<string>()
+
 export const scheduleChipField = EditorState.Field.define<ScheduleChip | null>({
     create(state) {
-        return detectScheduleQuery(state) ? "visible" : null
+        return detectScheduleQuery(state) ? {mode: "visible", index: 0} : null
     },
     update(value, tr) {
         let hit = detectScheduleQuery(tr.state)
         if (!hit) return null
         let prev = detectScheduleQuery(tr.startState)
         let same = !!prev && prev.from == hit.from && prev.to == hit.to
-        let mode: ScheduleChip = same && value ? value : "visible"
-        if (same) for (let e of tr.effects) if (e.is(setScheduleChip)) mode = e.value
-        return mode
+        let next: ScheduleChip = same && value ? value : {mode: "visible", index: 0}
+        if (same) for (let e of tr.effects) if (e.is(setScheduleChip)) next = e.value
+        return next
     },
 })
+
+function chipEq(a: ScheduleChip | null | undefined, b: ScheduleChip | null | undefined) {
+    if (a == b) return true
+    if (!a || !b) return false
+    return a.mode == b.mode && a.index == b.index
+}
 
 const skipEntityType = (type: string) =>
     type == "pre" || type == "code" || type == "text_url" || type == "custom_emoji" || type == "mention_name"
@@ -168,19 +190,19 @@ export function scheduleQueryListener(
     opts?: ScheduleQueryConfig,
 ): EditorState.Extension {
     return Arrisa.updateListener.of((update) => {
-        let mode = update.state.field(scheduleChipField, false)
+        let chip = update.state.field(scheduleChipField, false)
         if (
             !update.docChanged &&
             !update.selectionSet &&
             !update.focusChanged &&
-            mode === update.startState.field(scheduleChipField, false)
+            chipEq(chip, update.startState.field(scheduleChipField, false))
         )
             return
         if (!update.editor.hasFocus) {
             cb(null)
             return
         }
-        if (mode === "hidden" || mode === null) {
+        if (chip && chip.mode == "hidden") {
             cb(null)
             return
         }

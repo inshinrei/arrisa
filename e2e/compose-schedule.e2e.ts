@@ -96,6 +96,24 @@ test("Enter without ArrowUp sends", async ({page}) => {
     expect(after.accept).toBeNull()
 })
 
+test("ArrowDown then Enter accepts and consumes Enter", async ({page}) => {
+    await openCompose(page)
+    await e2e(page, (api) => api.remountCompose({submit: "Enter"}))
+    await composeBox(page).click()
+    await page.keyboard.type("ok got tomorrow at 14:00")
+    await expect(scheduleChip(page)).toBeVisible()
+    await page.keyboard.press("ArrowDown")
+    await expect(scheduleChip(page)).toHaveClass(/arrisa-schedule-chip-focused/)
+    await page.keyboard.press("Enter")
+    let after = await e2e(page, (api) => {
+        api.chatEditor.selectionRect()
+        return {dump: api.dump(), accept: api.lastScheduleAccept, sendLog: api.sendLog}
+    })
+    expect(after.dump.text).toBe("ok got")
+    expect(after.accept?.phrase).toBe("tomorrow at 14:00")
+    expect(after.sendLog).not.toContain("send")
+})
+
 test("ArrowUp then Enter accepts and consumes Enter", async ({page}) => {
     await openCompose(page)
     await e2e(page, (api) => api.remountCompose({submit: "Enter"}))
@@ -110,6 +128,29 @@ test("ArrowUp then Enter accepts and consumes Enter", async ({page}) => {
         return {dump: api.dump(), accept: api.lastScheduleAccept, sendLog: api.sendLog}
     })
     expect(after.dump.text).toBe("ok got")
+    expect(after.accept?.phrase).toBe("tomorrow at 14:00")
+    expect(after.sendLog).not.toContain("send")
+})
+
+test("custom action list is invoked from ArrowDown", async ({page}) => {
+    await openCompose(page)
+    await e2e(page, (api) => api.remountCompose({submit: "Enter", schedulePreset: "two-actions"}))
+    await composeBox(page).click()
+    await page.keyboard.type("ok got tomorrow at 14:00")
+    await expect(page.getByRole("button", {name: "Schedule tomorrow at 14:00"})).toBeVisible()
+    await expect(page.getByRole("button", {name: "Later tomorrow at 14:00"})).toBeVisible()
+    await page.keyboard.press("ArrowDown")
+    await page.keyboard.press("ArrowDown")
+    await expect(page.getByRole("button", {name: "Later tomorrow at 14:00"})).toHaveClass(
+        /arrisa-schedule-chip-focused/,
+    )
+    await page.keyboard.press("Enter")
+    let after = await e2e(page, (api) => {
+        api.chatEditor.selectionRect()
+        return {dump: api.dump(), accept: api.lastScheduleAccept, action: api.lastScheduleAction, sendLog: api.sendLog}
+    })
+    expect(after.dump.text).toBe("ok got")
+    expect(after.action).toBe("later")
     expect(after.accept?.phrase).toBe("tomorrow at 14:00")
     expect(after.sendLog).not.toContain("send")
 })

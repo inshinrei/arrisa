@@ -12,7 +12,13 @@ import {
     horizontalRule,
     codeBlock,
 } from "@arrisa/schema"
-import {composeField, messengerCompose, type MentionQuery, type ScheduleQuery} from "@arrisa/message"
+import {
+    composeField,
+    messengerCompose,
+    type MentionQuery,
+    type ScheduleQuery,
+    type ScheduleQueryConfig,
+} from "@arrisa/message"
 import {phrases} from "@arrisa/phrases"
 import type {LinkConfig, LinkPromptRequest} from "@arrisa/schema"
 import type {EditorState} from "@arrisa/state"
@@ -25,6 +31,7 @@ export type ChatEditorOptions = {
     scheduleNow?: () => Date
     scheduleLocale?: string
     onScheduleAccept?: (hit: Omit<ScheduleQuery, "rect">) => void
+    scheduleActions?: ScheduleQueryConfig["actions"]
 }
 
 /** History field + handlers so default keymap Mod-z/y hit real undo/redo. */
@@ -154,6 +161,7 @@ export function composeExtensions(
                 now: options.scheduleNow ?? (() => new Date()),
                 locale: options.scheduleLocale ?? "en",
                 onAccept: options.onScheduleAccept,
+                actions: options.scheduleActions,
             },
         }),
         historyChrome(),

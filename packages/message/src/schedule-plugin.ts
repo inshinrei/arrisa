@@ -1,19 +1,23 @@
 /**
- * Schedule phrase paint, caret chip, and accept keymap.
+ * Schedule phrase paint, caret action list, and accept keymap.
  */
 import {Command} from "@arrisa/command"
 import {Arrisa, Decoration, KeyBinding, RangeSet, Tooltip} from "@arrisa/editor"
 import {phrases} from "@arrisa/phrases"
-import {EditorState} from "@arrisa/state"
+import {EditorState, type Transaction} from "@arrisa/state"
 import {docPosAtDumpOffset} from "./dump-pos"
 import {acceptScheduleQuery, scheduleAccepted} from "./schedule-accept"
 import {
     detectSchedulePhrases,
     detectScheduleQuery,
+    scheduleActionId,
     scheduleChipField,
     scheduleQueryConfig,
     scheduleQueryListener,
     setScheduleChip,
+    type ScheduleAction,
+    type ScheduleActionHit,
+    type ScheduleChip,
     type ScheduleQueryConfig,
 } from "./schedule-query"
 
@@ -42,23 +46,55 @@ function paintSchedulePhrases(state: EditorState) {
     return ranges.length ? RangeSet.create(ranges) : RangeSet.empty
 }
 
+function defaultLabel(state: EditorState, hit: ScheduleActionHit) {
+    return phrases.get(state, "schedule_suggestion").split("{phrase}").join(hit.label)
+}
+
+function scheduleActions(state: EditorState, hit: ScheduleActionHit): ScheduleAction[] {
+    let cfg = state.facet(scheduleQueryConfig)
+    if (cfg.actions) return [...cfg.actions(hit, state)]
+    return [{id: "schedule", label: defaultLabel(state, hit)}]
+}
+
+function mergeEffects(spec: Transaction.Spec, extra: Transaction.Effect<string>): Transaction.Spec {
+    let effects = spec.effects
+    let list = effects == null ? [] : Array.isArray(effects) ? [...effects] : [effects]
+    list.push(extra)
+    return {...spec, effects: list}
+}
+
+function dispatchAccept(editor: Arrisa, actionId: string) {
+    let spec = acceptScheduleQuery({state: editor.state}, null)
+    if (!spec) return false
+    editor.dispatch(mergeEffects(spec, scheduleActionId.of(actionId)))
+    return true
+}
+
 const createScheduleChip = (editor: Arrisa): Tooltip.View => {
-    let dom = document.createElement("button")
-    dom.type = "button"
-    dom.className = "arrisa-schedule-chip"
+    let dom = document.createElement("div")
+    dom.className = "arrisa-schedule-actions"
     const sync = () => {
         let hit = detectScheduleQuery(editor.state)
-        let label = hit
-            ? phrases.get(editor.state, "schedule_suggestion").split("{phrase}").join(hit.label)
-            : ""
-        dom.textContent = label
-        dom.setAttribute("aria-label", label)
-        dom.title = label
-        dom.classList.toggle("arrisa-schedule-chip-focused", editor.state.field(scheduleChipField) == "focused")
+        let chip = editor.state.field(scheduleChipField, false)
+        dom.replaceChildren()
+        if (!hit || !chip || chip.mode == "hidden") return
+        let actions = scheduleActions(editor.state, hit)
+        for (let i = 0; i < actions.length; i++) {
+            let action = actions[i]!
+            let btn = document.createElement("button")
+            btn.type = "button"
+            btn.className = "arrisa-schedule-chip"
+            if (chip.mode == "focused" && chip.index == i) btn.classList.add("arrisa-schedule-chip-focused")
+            btn.textContent = action.label
+            btn.setAttribute("aria-label", action.label)
+            btn.title = action.label
+            let id = action.id
+            btn.addEventListener("mousedown", (e) => e.preventDefault())
+            btn.addEventListener("click", () => dispatchAccept(editor, id))
+            dom.append(btn)
+        }
     }
     sync()
-    dom.addEventListener("mousedown", (e) => e.preventDefault())
-    dom.addEventListener("click", () => Command.dispatch(editor, acceptScheduleQuery))
     return {
         dom,
         overlap: true,
@@ -69,8 +105,8 @@ const createScheduleChip = (editor: Arrisa): Tooltip.View => {
 }
 
 const scheduleChipTooltip = Tooltip.show.compute((state) => {
-    let mode = state.field(scheduleChipField, false)
-    if (!mode || mode == "hidden") return null
+    let chip = state.field(scheduleChipField, false)
+    if (!chip || chip.mode == "hidden") return null
     let hit = detectScheduleQuery(state)
     if (!hit) return null
     let pos = docPosAtDumpOffset(state.doc, hit.to, "to")
@@ -84,54 +120,71 @@ const scheduleChipTooltip = Tooltip.show.compute((state) => {
     }
 })
 
-const focusScheduleChip: Command = (target) => {
-    let editor = target as unknown as Arrisa
-    let mode = editor.state.field(scheduleChipField, false)
-    if (!mode) return false
-    if (mode != "focused") editor.dispatch({effects: setScheduleChip.of("focused")})
+function focusChip(editor: Arrisa, dir: -1 | 1) {
+    let chip = editor.state.field(scheduleChipField, false)
+    if (!chip) return false
+    let hit = detectScheduleQuery(editor.state)
+    if (!hit) return false
+    let n = scheduleActions(editor.state, hit).length
+    if (!n) return false
+    let index = dir < 0 ? n - 1 : 0
+    if (chip.mode == "focused") {
+        index = Math.max(0, Math.min(n - 1, chip.index + dir))
+    }
+    let next: ScheduleChip = {mode: "focused", index}
+    if (chip.mode == next.mode && chip.index == next.index) return true
+    editor.dispatch({effects: setScheduleChip.of(next)})
     return true
 }
+
+const focusScheduleChipUp: Command = (target) => focusChip(target as unknown as Arrisa, -1)
+
+const focusScheduleChipDown: Command = (target) => focusChip(target as unknown as Arrisa, 1)
 
 const acceptFocusedScheduleChip: Command = (target) => {
     let editor = target as unknown as Arrisa
-    if (editor.state.field(scheduleChipField, false) != "focused") return false
-    return Command.dispatch(editor, acceptScheduleQuery)
-}
-
-const blurScheduleChip: Command = (target) => {
-    let editor = target as unknown as Arrisa
-    if (editor.state.field(scheduleChipField, false) != "focused") return false
-    editor.dispatch({effects: setScheduleChip.of("visible")})
-    return true
+    let chip = editor.state.field(scheduleChipField, false)
+    if (!chip || chip.mode != "focused") return false
+    let hit = detectScheduleQuery(editor.state)
+    if (!hit) return false
+    let actions = scheduleActions(editor.state, hit)
+    let id = actions[chip.index]?.id ?? "schedule"
+    return dispatchAccept(editor, id)
 }
 
 const escapeScheduleChip: Command = (target) => {
     let editor = target as unknown as Arrisa
-    let mode = editor.state.field(scheduleChipField, false)
-    if (!mode || mode == "hidden") return false
-    if (mode == "focused") {
-        editor.dispatch({effects: setScheduleChip.of("visible")})
+    let chip = editor.state.field(scheduleChipField, false)
+    if (!chip || chip.mode == "hidden") return false
+    if (chip.mode == "focused") {
+        editor.dispatch({effects: setScheduleChip.of({mode: "visible", index: chip.index})})
         return true
     }
-    editor.dispatch({effects: setScheduleChip.of("hidden")})
+    editor.dispatch({effects: setScheduleChip.of({mode: "hidden", index: chip.index})})
     return true
 }
 
 const scheduleChipKeymap = EditorState.prec.highest([
-    KeyBinding.of({key: "ArrowUp", run: focusScheduleChip}),
+    KeyBinding.of({key: "ArrowUp", run: focusScheduleChipUp}),
+    KeyBinding.of({key: "ArrowDown", run: focusScheduleChipDown}),
     KeyBinding.of({key: "Enter", run: acceptFocusedScheduleChip}),
-    KeyBinding.of({key: "ArrowDown", run: blurScheduleChip}),
     KeyBinding.of({key: "Escape", run: escapeScheduleChip}),
 ])
 
 const scheduleChipTheme = Arrisa.theme({
-    ".arrisa-tooltip:has(.arrisa-schedule-chip)": {
+    ".arrisa-tooltip:has(.arrisa-schedule-actions)": {
         boxShadow: "none",
         backgroundColor: "transparent",
         padding: "0",
     },
+    ".arrisa-schedule-actions": {
+        display: "flex",
+        flexDirection: "column",
+        gap: "2px",
+        alignItems: "stretch",
+    },
     ".arrisa-schedule-chip": {
-        display: "inline-block",
+        display: "block",
         font: "inherit",
         fontSize: "90%",
         lineHeight: "1.2",
@@ -144,13 +197,14 @@ const scheduleChipTheme = Arrisa.theme({
         cursor: "pointer",
         whiteSpace: "nowrap",
         boxShadow: "none",
+        textAlign: "left",
     },
     ".arrisa-schedule-chip-focused": {
         outline: "2px solid var(--arrisa-highlight-color)",
     },
 })
 
-/** Paint schedule phrases and offer a caret chip (unless the host sets `onQuery`). */
+/** Paint schedule phrases and offer a caret action list (unless the host sets `onQuery`). */
 export function scheduleQuery(config?: ScheduleQueryConfig): EditorState.Extension {
     let cfg = config ?? {}
     let ext: EditorState.Extension[] = [
@@ -161,11 +215,18 @@ export function scheduleQuery(config?: ScheduleQueryConfig): EditorState.Extensi
         scheduleChipTheme,
         scheduleChipKeymap,
         Arrisa.updateListener.of((update) => {
-            if (!cfg.onAccept) return
             for (let tr of update.transactions) {
+                let hit: ScheduleActionHit | undefined
+                let actionId = "schedule"
                 for (let e of tr.effects) {
-                    if (e.is(scheduleAccepted)) cfg.onAccept(e.value)
+                    if (e.is(scheduleAccepted)) hit = e.value
+                    if (e.is(scheduleActionId)) actionId = e.value
                 }
+                if (!hit) continue
+                let actions = scheduleActions(update.startState, hit)
+                let action = actions.find((a) => a.id == actionId)
+                if (action?.run) action.run(hit)
+                else cfg.onAccept?.(hit)
             }
         }),
     ]

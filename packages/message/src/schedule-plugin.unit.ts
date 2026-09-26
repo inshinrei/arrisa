@@ -158,13 +158,36 @@ describe("scheduleQuery keymap", () => {
         expect(editor.state.doc.textContent()).toBe("ok got")
     })
 
-    it("blurs a focused chip on ArrowDown without accepting", () => {
+    it("focuses the default action on ArrowDown then Enter accepts", () => {
         let editor = fakeEditor(stateFor("ok got tomorrow at 14:00"))
-        expect(runKey(editor, "ArrowUp")).toBe(true)
-        expect(runKey(editor, "ArrowDown")).toBe(true)
-        expect(editor.state.doc.textContent()).toBe("ok got tomorrow at 14:00")
         expect(runKey(editor, "Enter")).toBe(false)
-        expect(editor.state.facet(Tooltip.show).filter(isScheduleChip).length).toBe(1)
+        expect(runKey(editor, "ArrowDown")).toBe(true)
+        let result = runKey(editor, "Enter")
+        expect(result).not.toBe(false)
+        expect(editor.state.doc.textContent()).toBe("ok got")
+    })
+
+    it("runs a custom list action after ArrowDown", () => {
+        let ran: string[] = []
+        let editor = fakeEditor(
+            stateFor("ok got tomorrow at 14:00", undefined, {
+                actions: (hit) => [
+                    {id: "schedule", label: `Schedule ${hit.label}`},
+                    {
+                        id: "later",
+                        label: `Later ${hit.label}`,
+                        run: () => {
+                            ran.push("later")
+                        },
+                    },
+                ],
+            }),
+        )
+        expect(runKey(editor, "ArrowDown")).toBe(true)
+        expect(runKey(editor, "ArrowDown")).toBe(true)
+        expect(runKey(editor, "Enter")).not.toBe(false)
+        expect(ran).toEqual(["later"])
+        expect(editor.state.doc.textContent()).toBe("ok got")
     })
 
     it("hides the chip on Escape while unfocused and refocuses from hidden via ArrowUp", () => {

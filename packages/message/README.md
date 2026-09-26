@@ -360,6 +360,7 @@ import {
     type ScheduleQuery,
     type ScheduleQueryConfig,
     type ScheduleInvoker,
+    type ScheduleAction,
 } from "@arrisa/message"
 
 composeField({
@@ -382,7 +383,7 @@ scheduleQuery({
 detectScheduleQuery(state) // {from, to, phrase, scheduledTime, label} | null
 ```
 
-`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. Clock is 24h `H:mm` / `HH:mm` (minutes two digits). `invokers` is `{kind, words}` with `kind` `"today"` / `"tomorrow"` / `"next-week"` / `"weekday"` (`weekday` 0–6, Sunday=0). Omitting `invokers` / `joiners` uses the `locale` pack. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and emits `scheduleAccepted`; the plugin `updateListener` calls `onAccept`.
+`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. Clock is 24h `H:mm` / `HH:mm` (minutes two digits). `invokers` is `{kind, words}` with `kind` `"today"` / `"tomorrow"` / `"next-week"` / `"weekday"` (`weekday` 0–6, Sunday=0). Omitting `invokers` / `joiners` uses the `locale` pack. The caret list is one focusable action by default (`Schedule {phrase}`). Pass `actions(hit, state)` to replace it; each `{id, label, run?}` is a button. ArrowUp / ArrowDown focus the list (Up starts at the last item, Down at the first). Enter runs the focused action. An action with `run` is called after the phrase is deleted; otherwise `onAccept` fires. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and emits `scheduleAccepted`; the plugin `updateListener` calls `onAccept` or `run`.
 
 ### Code token roles
 

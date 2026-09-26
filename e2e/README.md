@@ -46,11 +46,12 @@ When production files in a row change, run the specs in that row (or the full su
 | `chatEditor` | Mounted compose `Arrisa` |
 | `lastMentionQuery` | Last `onMentionQuery` payload, or `null` |
 | `lastScheduleAccept` | Last `onScheduleAccept` payload, or `null` |
+| `lastScheduleAction` | Last custom schedule action id, or `null` |
 | `scheduleQuery()` | `detectScheduleQuery` of the compose state (no rect) |
 | `dump(opts?)` | `docToFormattedText` of the compose document |
 | `insertMention({userId, label, from?, to?})` | Dump-range or selection insert |
 | `insertText(text)` | `Command.dispatch` with `userEvent: "input.type"` |
-| `remountCompose({submit?})` | Remount compose; optional submit chord logs `"send"` |
+| `remountCompose({submit?, schedulePreset?})` | Remount compose; optional submit chord logs `"send"`; `schedulePreset: "two-actions"` installs Schedule + Later |
 | `sendLog` | Host submit log (`"send"` entries) |
 
 Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `helpers.ts`. Two-arg form passes the harness as `fn`'s first argument. A third `arg` object is merged as `{api, …arg}` so Playwright can serialize extra values. Keyboard specs click `composeBox` (`#editor-chat [contenteditable='true']`) so they do not hit the hidden document editor.
@@ -62,7 +63,7 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 | `harness.e2e.ts` | `/?e2e=1` installs `__arrisaE2e` on the messenger tab |
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
-| `compose-schedule.e2e.ts` | typed datetime offer, `at HH:mm` closest 24h, chip, accept, Enter fall-through, ArrowUp+Enter, Escape hides chip, skip code, mention wins |
+| `compose-schedule.e2e.ts` | typed datetime offer, `at HH:mm` closest 24h, chip, accept, Enter fall-through, ArrowUp/ArrowDown+Enter, custom Later action, Escape hides chip, skip code, mention wins |
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / `docPosCoords` / `typeFence` / word and select-all chords |
 | `format.ts` | Shared dump / `hasFlag` / `selectNeedle` (adjacent leaves, including mark splits) / `focusCompose` / `clickFormat` (overflow **More**) and mark chords |
 | `format-marks.e2e.ts` | Keyboard and toolbar mark toggles on a selected word; stacked bold+italic; mid-word slice |
