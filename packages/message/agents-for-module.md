@@ -7,7 +7,7 @@
 ## When to use
 
 - Building a **chat / messenger compose** field (inline marks, markdown shortcuts, floating toolbar).
-- **Block chat field** (`composeField`): paragraphs, lists, quotes, fenced code — no spoiler/headings/media.
+- **Block chat field** (`composeField`): paragraphs, lists, quotes, fenced code — no spoiler/headings/media. Opt-in `scheduleQuery` paints typed datetime phrases and offers a caret chip; Arrisa does not send.
 - Converting between the editor document and a **plain text + UTF-16 entity** wire format (`FormattedText`).
 - Host features: **mentions** (`MentionName`), **custom emoji** (`CustomEmoji`), optional `@name ` resolve.
 
@@ -28,6 +28,12 @@ import {
     insertCustomEmoji,
     detectMentionQuery,
     type MentionQuery,
+    scheduleQuery,
+    detectScheduleQuery,
+    scheduleQueryListener,
+    acceptScheduleQuery,
+    type ScheduleQuery,
+    type ScheduleQueryConfig,
 } from "@arrisa/message"
 
 let editor = Arrisa.create({
@@ -53,8 +59,14 @@ composeField({
     hostElements: true,
     // Picker hosts: omit resolveMention. Query offsets are dump UTF-16.
     onMentionQuery: (q: MentionQuery | null) => hostShowMentionPicker(q),
+    scheduleQuery: {
+        now: () => new Date(),
+        locale: "en",
+        onAccept: (hit) => hostArmSchedule(hit),
+    },
 })
 // detectMentionQuery(editor.state) — dump {from,to,query} without rect / DOM
+// detectScheduleQuery(editor.state) — dump {from,to,phrase,scheduledTime,label} without rect
 // Host send: EditorState.prec.high(KeyBinding.of({key: "Enter", run}))
 // Missing host binding may fall through to beforeinput (insertParagraph → enter).
 // Default toggle removes existing links or opens add UI; does not prefill href.
@@ -88,6 +100,7 @@ insertMentionSpec(editor.state, {
 |------|---------|
 | Compose | `composeField`, `ComposeFieldConfig`, `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
 | Mention query | `MentionQuery` (`from`/`to` dump offsets, `query`, `rect: ClientBox`), `detectMentionQuery(state)` (no rect; null if not a word-start `@query`) |
+| Schedule query | `composeField({scheduleQuery})` default off (`true` ≡ `scheduleQuery({})`). `ScheduleQuery` (`from`/`to` dump offsets, `phrase`, `scheduledTime` unix seconds, `label`, `rect`), `ScheduleQueryConfig`, `scheduleQuery(config?)`, `detectScheduleQuery(state)` (no rect), `scheduleQueryListener`, `acceptScheduleQuery`. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
 | Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/`UnorderedListEntity`/`OrderedListEntity`/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
 | I/O | `docToFormattedText`, `formattedTextToDoc`, `materializeRuns`, option types |
 | Auto | `detectAutoEntities`, `mergeAutoEntities`, `AutoDetectOptions` |
@@ -113,6 +126,7 @@ insertMentionSpec(editor.state, {
 12. **`highlightCode(text, language?)`** — returns `CodeSpan[]` with UTF-16 indexes into `text`. Spans are a view. They are not part of `PreEntity` or the dump. Blocks over 32_000 UTF-16 units or 400 lines return `[]`. Doc comments set `emphasis: "bold"`. Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string`, `interpolation`, `escape`, `number`, `constant`, `comment`, `directive`, `tag`, `attribute`, `regex`. Language ids are case-folded (`typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`). A missing, empty, or unknown language does not add keywords.
 13. **Fences while typing** — `` `code` `` applies the inline code mark. A finished fence (one line `` ```code``` ``, one paragraph with line breaks, or a closing `` ``` `` paragraph after `` ``` `` / `` ```lang ``) becomes a code block when the schema can contain one. `` ``` `` followed by a space at the start of a block still creates an empty code block, and `` ```lang `` then space sets the language. A fence inside an existing code block does not run. Inline documents leave the backticks as text.
 14. **Markdown delimiter pairs** — `**`, `__`, `~~`, and `` ` `` apply the mark to the inner text and clear stored marks, so typing after the run is unmarked.
+15. **Schedule query is opt-in** — `composeField({scheduleQuery})` is off unless `true` or a config object is passed. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins (`detectScheduleQuery` is `null` while `detectMentionQuery` is open). Chip is Arrisa Tooltip unless `onQuery` is set. Phrase paint class is `.arrisa-schedule-phrase`. Chip label is `phrases.get(state, "schedule_suggestion")` with `{phrase}` replaced by `hit.label` (not PhraseSet `$1`). Hosts override with `phrases.translatePartial({schedule_suggestion: "Запланировать {phrase}"})`.
 
 ## What not to do
 
@@ -120,6 +134,7 @@ insertMentionSpec(editor.state, {
 - Do **not** use code-unit offsets from another language’s UTF-8 API without conversion.
 - Do **not** treat schema validation as sanitization for HTML or remote payloads.
 - Do **not** skip registering host elements when calling `insertMention` / `insertCustomEmoji` (needs marks/nodes in schema — `messengerCompose` default `hostElements: true`; `composeField` default `false`, pass `hostElements: true`).
+- Do **not** invent a dump entity type for datetime or persist armed schedule state in Arrisa; `onAccept` is the host arming hook. Arrisa does not send.
 - Do **not** pull monorepo-only paths; depend on the published package surface only.
 
 ## Related packages

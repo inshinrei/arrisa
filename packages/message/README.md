@@ -89,6 +89,7 @@ type FormattedText = {
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
 | Mention picker query (`onMentionQuery`) | omitted. Word-start `@query` + caret box; `null` when unfocused / no query / no rect. Does **not** consume Space. Leave `resolveMention` unset for picker hosts. |
+| Schedule query (`scheduleQuery`) | omitted / `false` (off). `true` ≡ `scheduleQuery({})`. A config `{now, locale, onAccept, onQuery, enabled}` is passed through. Paints typed datetime phrases and offers a caret chip. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
 | Link add prompt | `linkPrompt` → `link({prompt})` (default `"floating"`) |
 | Submit chord (`submit`) | omitted (Enter splits, Shift-Enter breaks). `"Enter"` / `"Shift-Enter"` omits that chord; the other is `insertLineBreak`. Host binds send with `EditorState.prec.high(KeyBinding.of({key, run}))`. Arrisa does not send. A missing host binding may fall through to `beforeinput` split. |
 
@@ -123,6 +124,18 @@ Default toggle **removes** existing links or opens add UI; it does **not** prefi
 | Unfocused, non-collapsed selection, or no caret box | `null` |
 
 Does **not** consume Space or wrap text. Keep `resolveMention` unset when the host owns a picker (`insertMention` / `insertMentionSpec` with the query `from`/`to`).
+
+`composeField({scheduleQuery})` is **opt-in** (default off). Typed datetime phrases (e.g. `tomorrow at 14:00`) are painted and offered as a caret chip. Arrisa does not send or queue; `onAccept` is the host arming hook. If a mention query is open, schedule detect returns `null` (mention wins). The chip is an Arrisa Tooltip unless `onQuery` is set (host chip; Arrisa still paints and still owns accept/keymap).
+
+```ts
+composeField({
+    scheduleQuery: {
+        now: () => new Date(),
+        locale: "en",
+        onAccept: (hit) => hostArmSchedule(hit),
+    },
+})
+```
 
 `messengerCompose(config?)` remains the **inline/spoiler** path:
 
@@ -179,6 +192,11 @@ composeField({
     hostElements: false,
     resolveMention: (u) => ids[u] ?? null, // omit when using onMentionQuery
     onMentionQuery: (q) => hostShowMentionPicker(q),
+    scheduleQuery: {             // default off; true ≡ scheduleQuery({})
+        now: () => new Date(),
+        locale: "en",
+        onAccept: (hit) => hostArmSchedule(hit),
+    },
     linkPrompt: "floating",      // or false | (req) => { req.apply(url) }
     submit: "Enter",             // omit Enter; host binds send. or "Shift-Enter"
 })
@@ -322,6 +340,41 @@ mentionResolve((name) => name == "alice" ? "user-alice" : null)
 // Picker path (no Space): dump range without a live editor
 detectMentionQuery(state) // {from, to, query} | null
 ```
+
+### Schedule query
+
+Opt-in typed datetime offer. Not an AutoEntity and not a schema mark. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set.
+
+```ts
+import {
+    composeField,
+    scheduleQuery,
+    detectScheduleQuery,
+    scheduleQueryListener,
+    acceptScheduleQuery,
+    type ScheduleQuery,
+    type ScheduleQueryConfig,
+} from "@arrisa/message"
+
+composeField({
+    scheduleQuery: {
+        now: () => new Date(),
+        locale: "en",
+        onAccept: (hit) => hostArmSchedule(hit),
+    },
+})
+
+// Standalone (composeField({scheduleQuery: true}) ≡ scheduleQuery({}))
+scheduleQuery({
+    now: () => new Date(),
+    locale: "en",
+    onAccept: (hit) => hostArmSchedule(hit),
+})
+
+detectScheduleQuery(state) // {from, to, phrase, scheduledTime, label} | null
+```
+
+`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and delivers `onAccept`.
 
 ### Code token roles
 

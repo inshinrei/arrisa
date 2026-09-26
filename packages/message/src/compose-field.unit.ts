@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest"
-import {Leaf, Slice} from "@arrisa/doc"
+import {Attributes, Leaf, Slice, type Elt} from "@arrisa/doc"
 import {EditorSelection, EditorState, Transaction} from "@arrisa/state"
-import {Arrisa, KeyBinding, Tooltip} from "@arrisa/editor"
+import {Arrisa, Decoration, KeyBinding, Tooltip} from "@arrisa/editor"
 import {
     Blockquote,
     BulletList,
@@ -14,11 +14,15 @@ import {
     Spoiler,
     Strong,
 } from "@arrisa/types"
-import {composeField} from "./compose-field"
+import {composeField, type ComposeFieldConfig} from "./compose-field"
+import {docPosAtDumpOffset} from "./dump-pos"
 import {flagEntity} from "./entities"
 import {formattedTextToDoc} from "./from-formatted"
 import {entityToMark} from "./mark-map"
 import {docToFormattedText} from "./to-formatted"
+
+const NOW = new Date(2026, 8, 26, 15, 0, 0)
+const now = () => new Date(NOW.getTime())
 
 function typeChars(state: EditorState, chars: string) {
     let cur = state
@@ -139,7 +143,54 @@ describe("composeField", () => {
         })
         expect(state.facet(Arrisa.updateListener).length).toBe(0)
     })
+
+    it("does not paint schedule phrases by default", () => {
+        let state = scheduleComposeState("tomorrow at 14:00", {
+            floating: false,
+            placeholder: false,
+            markdown: false,
+        })
+        expect(schedulePhrasePaint(state)).toEqual([])
+    })
+
+    it("paints schedule phrases when scheduleQuery is configured", () => {
+        let state = scheduleComposeState("tomorrow at 14:00", {
+            floating: false,
+            placeholder: false,
+            markdown: false,
+            scheduleQuery: {now},
+        })
+        expect(schedulePhrasePaint(state).length).toBeGreaterThan(0)
+    })
 })
+
+function wrapperClass(deco: Decoration.Range): string | null {
+    if (!("elt" in deco)) return null
+    let elt = (deco as {elt: Elt}).elt
+    return Attributes.get(elt.attrs, "class")
+}
+
+function schedulePhrasePaint(state: EditorState) {
+    let found: {from: number; to: number}[] = []
+    for (let source of state.facet(Decoration.Range.source)) {
+        let set = source(state)
+        for (let i = 0; i < set.length; i++) {
+            if (wrapperClass(set.values[i]!)?.includes("arrisa-schedule-phrase")) {
+                found.push({from: set.from[i]!, to: set.to[i]!})
+            }
+        }
+    }
+    return found
+}
+
+function scheduleComposeState(text: string, config: ComposeFieldConfig) {
+    let ext = composeField(config)
+    let proto = EditorState.create({doc: "", config: ext})
+    let doc = formattedTextToDoc({text}, proto.schema)
+    let pos = docPosAtDumpOffset(doc, text.length, "to")
+    if (pos === false) throw new Error("bad caret")
+    return EditorState.create({doc, selection: EditorSelection.cursor(pos), config: ext})
+}
 
 function mockEditor(state: EditorState) {
     let current = state

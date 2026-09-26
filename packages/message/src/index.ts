@@ -94,5 +94,13 @@ export {
 
 export {composeField, type ComposeFieldConfig} from "./compose-field"
 export {detectMentionQuery, type MentionQuery} from "./mention-query"
+export {
+    detectScheduleQuery,
+    scheduleQueryListener,
+    type ScheduleQuery,
+    type ScheduleQueryConfig,
+} from "./schedule-query"
+export {scheduleQuery} from "./schedule-plugin"
+export {acceptScheduleQuery} from "./schedule-accept"
 
 export {highlightCode, type CodeRole, type CodeSpan} from "@arrisa/schema"

@@ -19,6 +19,8 @@ import {mentionQueryListener, type MentionQuery} from "./mention-query"
 import {mentionResolve} from "./mention-rule"
 import {markdownPaste} from "./paste-markdown"
 import {messengerHostElements} from "./schema-elements"
+import {scheduleQuery} from "./schedule-plugin"
+import type {ScheduleQueryConfig} from "./schedule-query"
 
 export interface ComposeFieldConfig {
     exclusivity?: "none" | "code-strike" | {isolating: readonly Mark.Type[]}
@@ -48,6 +50,13 @@ export interface ComposeFieldConfig {
      * Leave {@link ComposeFieldConfig.resolveMention} unset for picker hosts.
      */
     onMentionQuery?: (q: MentionQuery | null) => void
+    /**
+     * Opt-in typed datetime offer (paint + caret chip). Default off.
+     * `true` ≡ {@link scheduleQuery}(`{}`). A config object is passed through.
+     * Arrisa does not send; {@link ScheduleQueryConfig.onAccept} is the host arming hook.
+     * Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set.
+     */
+    scheduleQuery?: boolean | ScheduleQueryConfig
     /** Forwarded to {@link composeSchema} as `link.prompt`. */
     linkPrompt?: LinkConfig["prompt"]
     /**
@@ -67,6 +76,7 @@ export interface ComposeFieldConfig {
  * - floating and/or embedded toolbar (`Menu.Group.top`)
  * - placeholder
  * - optional `onMentionQuery` picker listener (does not consume Space)
+ * - optional `scheduleQuery` datetime offer (default off; Arrisa does not send)
  *
  * Does not include history — add `@arrisa/history` in the host.
  */
@@ -81,6 +91,7 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
         hostElements = false,
         resolveMention,
         onMentionQuery,
+        scheduleQuery: scheduleQueryOpt = false,
         linkPrompt,
         submit,
     } = config
@@ -102,6 +113,9 @@ export function composeField(config: ComposeFieldConfig = {}): EditorState.Exten
     if (mdPaste) ext.push(markdownPaste())
     if (resolveMention) ext.push(mentionResolve(resolveMention))
     if (onMentionQuery) ext.push(mentionQueryListener(onMentionQuery))
+    if (scheduleQueryOpt) {
+        ext.push(scheduleQuery(scheduleQueryOpt === true ? {} : scheduleQueryOpt))
+    }
 
     if (floating !== false) {
         let fconf: FloatingMenuConfig =

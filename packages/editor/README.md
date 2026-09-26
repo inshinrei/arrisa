@@ -73,7 +73,7 @@ A non-empty selection also collapses on `pointerdown` outside `editor.dom`, exce
 
 ### Decorations
 
-Point decorations (widgets, attrs, shapes at a position) and range decorations (wrappers/attrs over spans), plus tag-level shape/wrapper/widget/attribute overrides via `Decoration.Tag.*`.
+Point decorations (widgets, attrs, shapes at a position) and range decorations (wrappers/attrs over spans), plus tag-level shape/wrapper/widget/attribute overrides via `Decoration.Tag.*`. Schedule phrase paint uses class `.arrisa-schedule-phrase` and color `var(--arrisa-schedule-phrase, #005bd1)`.
 
 ### Input rules
 

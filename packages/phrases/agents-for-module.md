@@ -69,6 +69,7 @@ let full = phrases.translate({
 let partial = phrases.translatePartial({
     undo: "annuler",
     redo: "rétablir",
+    schedule_suggestion: "Запланировать {phrase}",
 })
 
 EditorState.create({
@@ -102,6 +103,7 @@ Document-only transactions do **not** set `didChange`.
 | `$$` | Literal `$` |
 | `$9` with fewer inserts | Left unchanged |
 | No inserts | Template unchanged |
+| `{phrase}` in `schedule_suggestion` | Literal substring for the schedule chip (not `$1`). Keep `{phrase}` in overrides. |
 
 ## Invariants / pitfalls
 
@@ -135,6 +137,7 @@ Document-only transactions do **not** set `didChange`.
 - [ ] Are you passing `EditorState` into `get` / `ref`?
 - [ ] Are locale extensions registered in config with correct precedence?
 - [ ] Use `$1`/`$2` for dynamic numbers/names instead of string concatenation at call sites.
+- [ ] For `schedule_suggestion`, keep `{phrase}` in the template (`"Запланировать {phrase}"`) — do not use `$1`.
 - [ ] Use `PhraseSet.didChange` before rebuilding label-heavy UI after reconfigure.
 
 Read the package `README.md` for catalog scope and install notes.

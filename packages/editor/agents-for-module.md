@@ -96,6 +96,7 @@ import {Decoration, Widget, PointSet, RangeSet} from "@arrisa/editor"
 
 // PointSet / RangeSet sources via Decoration.Point.source / Range.source
 // Tag overrides: Decoration.Tag.shape | wrapper | widget | attribute
+// Schedule phrase: class .arrisa-schedule-phrase, color var(--arrisa-schedule-phrase, #005bd1)
 ```
 
 ### Plugins
@@ -127,6 +128,7 @@ Arrisa.htmlSanitize.of((html) => DOMPurify.sanitize(html))
 9. **Layering** — editor may import command; command/history/doc/state must not import editor.
 10. **Outside-pointer chrome** — `pointerdown` outside `editor.dom` does **not** collapse a non-empty selection when the path is `arrisa-menubar` / `.arrisa-menubar` or that editor’s `MenuHost.dom`. Do not add `arrisa-floating-menu` on a host parent to fake chrome.
 11. **`composeKeymap({submit})` is not send** — Arrisa omits that chord; the host binds it with `EditorState.prec.high(KeyBinding.of({key, run}))`. A missing host binding may fall through to `beforeinput` split.
+12. **Schedule phrase paint** — class `.arrisa-schedule-phrase`, color `var(--arrisa-schedule-phrase, #005bd1)`. Hosts bind the CSS variable.
 
 ## What not to do
 

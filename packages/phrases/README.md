@@ -61,6 +61,7 @@ myPhrases.get(state, "status", 3) // "Saved 3 items"
 - `$$` — literal `$`.
 - Markers without a matching argument are left unchanged.
 - With no insert args, the template is returned as-is (including `$1`).
+- `schedule_suggestion` is **not** `$1` interpolation. The schedule chip replaces the literal `{phrase}` substring with the hit label. Hosts override with `phrases.translatePartial({schedule_suggestion: "Запланировать {phrase}"})`.
 
 ### Override merge order
 
@@ -95,7 +96,7 @@ import {
 
 | Export | Scope (examples) |
 |--------|------------------|
-| `phrases` | Undo/redo, block styles, mark toggles, link/color labels, alignment, direction, dialog close. |
+| `phrases` | Undo/redo, block styles, mark toggles, link/color labels, alignment, direction, dialog close, schedule suggestion (`schedule_suggestion`: `"Schedule {phrase}"`). |
 | `imagePhrases` | Insert/update image dialog, figure styles, alt, upload states. |
 | `colorNames` | Palette labels (`red`, `darker`, `none`, …). |
 | `tablePhrases` | Dimension live/title (`$1`×`$2`), insert/modify table, row/col ops, merge/split. |
