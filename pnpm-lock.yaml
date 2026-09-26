@@ -96,6 +96,9 @@ importers:
       '@arrisa/editor':
         specifier: workspace:*
         version: link:../editor
+      '@arrisa/phrases':
+        specifier: workspace:*
+        version: link:../phrases
       '@arrisa/schema':
         specifier: workspace:*
         version: link:../schema

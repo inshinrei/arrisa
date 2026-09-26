@@ -94,3 +94,11 @@ describe("theme facets", () => {
         expect(makeState([cursorBlinkRate.of(800), cursorBlinkRate.of(400)]).facet(cursorBlinkRate)).toBe(400)
     })
 })
+
+describe("baseStyles schedule phrase", () => {
+    it("paints arrisa-schedule-phrase with --arrisa-schedule-phrase", () => {
+        expect(
+            baseStyles.rules.some((r) => r.includes("arrisa-schedule-phrase") && r.includes("--arrisa-schedule-phrase")),
+        ).toBe(true)
+    })
+})

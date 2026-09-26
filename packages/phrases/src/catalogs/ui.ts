@@ -39,4 +39,5 @@ export const phrases = PhraseSet.define({
     text_dir_ltr: "Left-to-right text",
     text_dir_rtl: "Right-to-left text",
     text_dir_auto: "Automatic text direction",
+    schedule_suggestion: "Schedule {phrase}",
 })

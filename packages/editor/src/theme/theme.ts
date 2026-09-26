@@ -136,6 +136,9 @@ export const baseStyles = buildTheme(
                 backgroundColor: "transparent",
             },
         },
+        ".arrisa-schedule-phrase": {
+            color: "var(--arrisa-schedule-phrase, #005bd1)",
+        },
 
         "arrisa-placeholder": {
             opacity: "0.6",
