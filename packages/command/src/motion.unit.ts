@@ -250,7 +250,7 @@ describe("moveByLine", () => {
         let editor = loneCode(3)
         let spec = moveByLine(editor, {dir: "up"})
         expect(spec).not.toBe(false)
-        let next = apply(editor.state, spec as Exclude<typeof spec, false>)
+        let next = apply(editor.state, spec as Exclude<typeof spec, boolean>)
         expect(headTextblockName(next)).toBe("CodeBlock")
         expect(next.selection.head).toBeGreaterThan(0)
     })
@@ -276,7 +276,7 @@ describe("moveByLine", () => {
         )
         let spec = moveByLine(editor, {dir: "down"})
         expect(spec).not.toBe(false)
-        let next = apply(editor.state, spec as Exclude<typeof spec, false>)
+        let next = apply(editor.state, spec as Exclude<typeof spec, boolean>)
         expect(headTextblockName(next)).toBe("Paragraph")
         let parent = next.doc.resolve(next.selection.head).textblockParent
         expect(parent?.node.textContent()).toBe("after")
