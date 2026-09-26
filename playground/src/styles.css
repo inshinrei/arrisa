@@ -88,8 +88,35 @@ body {
   display: inline-block;
 }
 
+.pg-schedule-mark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  border-left: 3px solid var(--pg-accent);
+  background: color-mix(in srgb, var(--pg-accent) 12%, transparent);
+  font-size: 0.85rem;
+}
+
+.pg-schedule-mark[hidden] {
+  display: none;
+}
+
+.pg-schedule-mark button {
+  cursor: pointer;
+  border: 1px solid var(--pg-border);
+  border-radius: 8px;
+  padding: 0.2rem 0.55rem;
+  background: transparent;
+  color: inherit;
+}
+
 .pg-editor-chat {
   min-height: 120px;
+  --arrisa-schedule-phrase: var(--pg-accent);
   --arrisa-code-violet: #7042ac;
   --arrisa-code-indigo: #4c47c8;
   --arrisa-code-lavender: #6d5292;

@@ -39,15 +39,19 @@
       <section id="panel-chat" class="pg-panel" role="tabpanel" hidden>
         <h2>Messenger mode</h2>
         <p class="pg-hint">
-          <code>composeField()</code> with an embedded menubar (host parent outside
-          <code>editor.dom</code>) — lists, quote, code block, overflow More, Create link prompt;
-          markdown <code>**</code>/<code>__</code>/<code>~~</code>/<code>`</code>; send dumps
-          FormattedText. The sample code block is colored.
-          <code>messengerCompose()</code> is the inline/spoiler preset (not mounted).
+          <code>composeField({scheduleQuery})</code> English pack — type
+          <code>tomorrow at 14:00</code>, <code>at 16:00</code>,
+          <code>monday at 9:05</code>, <code>next week at 14:00</code>, or
+          <code>27.09.26 at 14:00</code>. Click the chip, or ArrowUp then Enter.
+          Accept strips the phrase; it does not send.
         </p>
         <div class="pg-compose">
           <div id="chat-format-bar" class="pg-format-bar"></div>
           <div id="editor-chat" class="pg-editor pg-editor-chat"></div>
+          <div id="chat-schedule-mark" class="pg-schedule-mark" hidden>
+            <span id="chat-schedule-label"></span>
+            <button type="button" id="btn-schedule-clear">Clear</button>
+          </div>
           <div id="chat-link-field" class="pg-link-field" hidden>
             <input type="text" id="chat-link-input" placeholder="Link" aria-label="Link" />
             <button type="button" id="btn-link-apply">Apply</button>

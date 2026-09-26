@@ -44,13 +44,30 @@ function e2eMentionQuery(q: MentionQuery | null) {
     if (e2eApi) e2eApi.lastMentionQuery = q
 }
 
-function e2eScheduleAccept(hit: Omit<ScheduleQuery, "rect">) {
+let scheduleMark = document.getElementById("chat-schedule-mark") as HTMLElement
+let scheduleLabel = document.getElementById("chat-schedule-label") as HTMLElement
+let armed: Omit<ScheduleQuery, "rect"> | null = null
+
+function setArmed(hit: Omit<ScheduleQuery, "rect"> | null) {
+    armed = hit
     if (e2eApi) e2eApi.lastScheduleAccept = hit
+    if (!scheduleMark || !scheduleLabel) return
+    if (!hit) {
+        scheduleMark.hidden = true
+        scheduleLabel.textContent = ""
+        return
+    }
+    scheduleLabel.textContent = `Scheduled for ${hit.label}`
+    scheduleMark.hidden = false
+}
+
+function onScheduleAccept(hit: Omit<ScheduleQuery, "rect">) {
+    setArmed(hit)
 }
 
 function chatOptions(extra?: EditorState.Extension, submit?: "Enter" | "Shift-Enter"): ChatEditorOptions {
-    if (!e2eMode) return extra ? {extra} : {}
-    return {submit, onMentionQuery: e2eMentionQuery, onScheduleAccept: e2eScheduleAccept, extra}
+    if (!e2eMode) return extra ? {extra, onScheduleAccept} : {onScheduleAccept}
+    return {submit, onMentionQuery: e2eMentionQuery, onScheduleAccept, extra}
 }
 
 let docEditor = createDocEditor(docMount)
@@ -133,15 +150,24 @@ document.getElementById("btn-send")!.addEventListener("click", () => {
     let line = [
         `[${time}] HTML: ${html || "(empty)"}`,
         `FormattedText: ${JSON.stringify(formatted, null, 2)}`,
-    ].join("\n")
-    chatOut.textContent = (chatOut.textContent ? chatOut.textContent + "\n\n" : "") + line
+    ]
+    if (armed) {
+        line.push(`Scheduled for ${armed.label} (${armed.scheduledTime})`)
+        setArmed(null)
+    }
+    chatOut.textContent = (chatOut.textContent ? chatOut.textContent + "\n\n" : "") + line.join("\n")
     console.log("chat send", {html, formatted})
+})
+
+document.getElementById("btn-schedule-clear")?.addEventListener("click", () => {
+    setArmed(null)
 })
 
 function remountChat(options: ChatEditorOptions = {}) {
     chatMount.replaceChildren()
     chatToolbar.replaceChildren()
     chatLinkField.hidden = true
+    setArmed(null)
     chatEditor = createChatEditor(chatMount, chatToolbar, linkPrompt, options)
     trackFocus(chatEditor)
     activeEditor = chatEditor
