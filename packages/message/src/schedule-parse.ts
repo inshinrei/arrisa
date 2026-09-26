@@ -153,6 +153,7 @@ export function findSchedulePhrases(text: string, opts?: ScheduleParseOpts): Sch
     let hits: ScheduleParseHit[] = []
 
     for (let t of findTimes(text)) {
+        if (t.hours > 23) continue
         let from = t.timeFrom
         let spec: DaySpec | null = null
         let joinAt = joinerStart(text, t.timeFrom, pack)

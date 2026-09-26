@@ -61,6 +61,11 @@ describe("findSchedulePhrases", () => {
         expect(hit("tomorrow at 9:05")[0]!.scheduledTime).toBe(unix(2026, 8, 27, 9, 5))
     })
 
+    it("rejects 24h clock hours above 23", () => {
+        expect(hit("24:00")).toEqual([])
+        expect(hit("29:00")).toEqual([])
+    })
+
     it("is case-insensitive and requires a word start", () => {
         expect(hit("Tomorrow At 14:00")).toHaveLength(1)
         expect(hit("atomorrow at 14:00")).toEqual([
