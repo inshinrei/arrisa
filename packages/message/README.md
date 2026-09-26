@@ -89,7 +89,7 @@ type FormattedText = {
 | Placeholder | `"Message…"` |
 | Sync `@username ` → mention | only if `resolveMention` provided |
 | Mention picker query (`onMentionQuery`) | omitted. Word-start `@query` + caret box; `null` when unfocused / no query / no rect. Does **not** consume Space. Leave `resolveMention` unset for picker hosts. |
-| Schedule query (`scheduleQuery`) | omitted / `false` (off). `true` ≡ `scheduleQuery({})`. A config `{now, locale, onAccept, onQuery, enabled}` is passed through. Paints typed datetime phrases and offers a caret chip. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
+| Schedule query (`scheduleQuery`) | omitted / `false` (off). `true` ≡ `scheduleQuery({})`. A config `{now, locale, invokers, joiners, onAccept, onQuery, enabled}` is passed through. Paints typed datetime phrases and offers a caret chip. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
 | Link add prompt | `linkPrompt` → `link({prompt})` (default `"floating"`) |
 | Submit chord (`submit`) | omitted (Enter splits, Shift-Enter breaks). `"Enter"` / `"Shift-Enter"` omits that chord; the other is `insertLineBreak`. Host binds send with `EditorState.prec.high(KeyBinding.of({key, run}))`. Arrisa does not send. A missing host binding may fall through to `beforeinput` split. |
 
@@ -125,13 +125,18 @@ Default toggle **removes** existing links or opens add UI; it does **not** prefi
 
 Does **not** consume Space or wrap text. Keep `resolveMention` unset when the host owns a picker (`insertMention` / `insertMentionSpec` with the query `from`/`to`).
 
-`composeField({scheduleQuery})` is **opt-in** (default off). Typed datetime phrases (e.g. `tomorrow at 14:00`) are painted and offered as a caret chip. Arrisa does not send or queue; `onAccept` is the host arming hook. If a mention query is open, schedule detect returns `null` (mention wins). The chip is an Arrisa Tooltip unless `onQuery` is set (host chip; Arrisa still paints and still owns accept/keymap).
+`composeField({scheduleQuery})` is **opt-in** (default off). Typed 24h datetime phrases are painted and offered as a caret chip. v1 matches `at 14:00` (closest 24h), `tomorrow at 14:00`, `next week at 14:00`, `{day} at 14:00` (closest in 7 days), and `27.09.26 at 14:00` (`dd.mm.yy`). `locale` selects the default invoker/joiner pack (`en` / `ru`). Pass `invokers` / `joiners` to replace that pack. Arrisa does not send or queue; `onAccept` is the host arming hook. If a mention query is open, schedule detect returns `null` (mention wins). The chip is an Arrisa Tooltip unless `onQuery` is set (host chip; Arrisa still paints and still owns accept/keymap).
 
 ```ts
 composeField({
     scheduleQuery: {
         now: () => new Date(),
         locale: "en",
+        invokers: [
+            {kind: "tomorrow", words: ["tomorrow", "tmrw"]},
+            {kind: "weekday", words: ["monday"], weekday: 1},
+        ],
+        joiners: ["at"],
         onAccept: (hit) => hostArmSchedule(hit),
     },
 })
@@ -354,6 +359,7 @@ import {
     acceptScheduleQuery,
     type ScheduleQuery,
     type ScheduleQueryConfig,
+    type ScheduleInvoker,
 } from "@arrisa/message"
 
 composeField({
@@ -367,14 +373,16 @@ composeField({
 // Standalone (composeField({scheduleQuery: true}) ≡ scheduleQuery({}))
 scheduleQuery({
     now: () => new Date(),
-    locale: "en",
+    locale: "ru",
+    invokers: [{kind: "tomorrow", words: ["завтра"]}],
+    joiners: ["в", "во"],
     onAccept: (hit) => hostArmSchedule(hit),
 })
 
 detectScheduleQuery(state) // {from, to, phrase, scheduledTime, label} | null
 ```
 
-`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and emits `scheduleAccepted`; the plugin `updateListener` calls `onAccept`.
+`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. Clock is 24h `H:mm` / `HH:mm` (minutes two digits). `invokers` is `{kind, words}` with `kind` `"today"` / `"tomorrow"` / `"next-week"` / `"weekday"` (`weekday` 0–6, Sunday=0). Omitting `invokers` / `joiners` uses the `locale` pack. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and emits `scheduleAccepted`; the plugin `updateListener` calls `onAccept`.
 
 ### Code token roles
 

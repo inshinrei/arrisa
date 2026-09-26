@@ -2,6 +2,12 @@
  * Pure dump-string parser for typed schedule datetime phrases.
  */
 
+export type ScheduleInvoker =
+    | {kind: "today"; words: readonly string[]}
+    | {kind: "tomorrow"; words: readonly string[]}
+    | {kind: "next-week"; words: readonly string[]}
+    | {kind: "weekday"; words: readonly string[]; weekday: number}
+
 export type ScheduleParseHit = {
     from: number
     to: number
@@ -13,59 +19,65 @@ export type ScheduleParseHit = {
 export type ScheduleParseOpts = {
     now?: () => Date
     locale?: string | (() => string)
+    invokers?: readonly ScheduleInvoker[] | (() => readonly ScheduleInvoker[])
+    joiners?: readonly string[] | (() => readonly string[])
 }
 
 const YEAR_SECS = 365 * 24 * 60 * 60
 
 const defaultNow = () => new Date()
 
-type DaySpec = {
+type InvokerToken = {
     token: string
-    kind: "today" | "tomorrow" | "weekday"
-    dow: number
-    next: boolean
+    kind: ScheduleInvoker["kind"]
+    weekday: number
 }
 
 const EN_WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
 
-const longestFirst = (specs: DaySpec[]) => specs.sort((a, b) => b.token.length - a.token.length)
+const longestFirst = (tokens: InvokerToken[]) => tokens.sort((a, b) => b.token.length - a.token.length)
 
-const EN_DAYS = longestFirst([
-    {token: "today", kind: "today", dow: 0, next: false},
-    {token: "tomorrow", kind: "tomorrow", dow: 0, next: false},
-    ...EN_WEEKDAYS.flatMap((name, dow): DaySpec[] => [
-        {token: `next ${name}`, kind: "weekday", dow, next: true},
-        {token: name, kind: "weekday", dow, next: false},
-    ]),
-])
+function flattenInvokers(invokers: readonly ScheduleInvoker[]): InvokerToken[] {
+    let tokens: InvokerToken[] = []
+    for (let inv of invokers) {
+        let weekday = inv.kind == "weekday" ? inv.weekday : 0
+        for (let word of inv.words) {
+            let token = word.trim().toLowerCase()
+            if (!token) continue
+            tokens.push({token, kind: inv.kind, weekday})
+        }
+    }
+    return longestFirst(tokens)
+}
 
-const RU_DAYS = longestFirst([
-    {token: "сегодня", kind: "today", dow: 0, next: false},
-    {token: "завтра", kind: "tomorrow", dow: 0, next: false},
-    {token: "в следующий понедельник", kind: "weekday", dow: 1, next: true},
-    {token: "в следующий вторник", kind: "weekday", dow: 2, next: true},
-    {token: "в следующую среду", kind: "weekday", dow: 3, next: true},
-    {token: "в следующий четверг", kind: "weekday", dow: 4, next: true},
-    {token: "в следующую пятницу", kind: "weekday", dow: 5, next: true},
-    {token: "в следующую субботу", kind: "weekday", dow: 6, next: true},
-    {token: "в следующее воскресенье", kind: "weekday", dow: 0, next: true},
-    {token: "в понедельник", kind: "weekday", dow: 1, next: false},
-    {token: "во вторник", kind: "weekday", dow: 2, next: false},
-    {token: "в вторник", kind: "weekday", dow: 2, next: false},
-    {token: "в среду", kind: "weekday", dow: 3, next: false},
-    {token: "в четверг", kind: "weekday", dow: 4, next: false},
-    {token: "в пятницу", kind: "weekday", dow: 5, next: false},
-    {token: "в субботу", kind: "weekday", dow: 6, next: false},
-    {token: "во воскресенье", kind: "weekday", dow: 0, next: false},
-    {token: "в воскресенье", kind: "weekday", dow: 0, next: false},
-])
+const EN_INVOKERS: ScheduleInvoker[] = [
+    {kind: "today", words: ["today"]},
+    {kind: "tomorrow", words: ["tomorrow"]},
+    {kind: "next-week", words: ["next week"]},
+    ...EN_WEEKDAYS.map((name, weekday): ScheduleInvoker => ({kind: "weekday", words: [name], weekday})),
+]
 
-const weekdayDate = (now: Date, dow: number, next: boolean, ahead: boolean) => {
+const RU_INVOKERS: ScheduleInvoker[] = [
+    {kind: "today", words: ["сегодня"]},
+    {kind: "tomorrow", words: ["завтра"]},
+    {kind: "next-week", words: ["на следующей неделе"]},
+    {kind: "weekday", words: ["в понедельник"], weekday: 1},
+    {kind: "weekday", words: ["во вторник", "в вторник"], weekday: 2},
+    {kind: "weekday", words: ["в среду"], weekday: 3},
+    {kind: "weekday", words: ["в четверг"], weekday: 4},
+    {kind: "weekday", words: ["в пятницу"], weekday: 5},
+    {kind: "weekday", words: ["в субботу"], weekday: 6},
+    {kind: "weekday", words: ["во воскресенье", "в воскресенье"], weekday: 0},
+]
+
+const EN_JOINERS = ["at"]
+const RU_JOINERS = ["во", "в"]
+
+const weekdayDate = (now: Date, dow: number, ahead: boolean) => {
     let dt = new Date(now.getTime())
     let today = dt.getDay()
     let add = (dow - today + 7) % 7
     if (add == 0 && !ahead) add = 7
-    if (next) add += 7
     dt.setDate(dt.getDate() + add)
     return dt
 }
@@ -74,64 +86,90 @@ function isWordStart(text: string, i: number) {
     return i == 0 || /\s/.test(text[i - 1]!)
 }
 
-function joinerStart(text: string, timeFrom: number, pack: "en" | "ru") {
-    if (pack == "en") {
-        if (timeFrom >= 4 && / at /i.test(text.slice(timeFrom - 4, timeFrom))) return timeFrom - 4
-        return -1
-    }
-    if (timeFrom >= 4 && / во /i.test(text.slice(timeFrom - 4, timeFrom))) return timeFrom - 4
-    if (timeFrom >= 3 && / в /i.test(text.slice(timeFrom - 3, timeFrom))) return timeFrom - 3
-    return -1
+function localePack(locale: string): "en" | "ru" {
+    return String(locale).toLowerCase().startsWith("ru") ? "ru" : "en"
 }
 
-function matchDay(text: string, end: number, specs: DaySpec[]): {from: number; spec: DaySpec} | null {
-    for (let spec of specs) {
+function resolveList<T>(value: T[] | readonly T[] | (() => readonly T[]) | undefined, fallback: readonly T[]): readonly T[] {
+    if (value == null) return fallback
+    return typeof value == "function" ? value() : value
+}
+
+function joinerBefore(text: string, timeFrom: number, joiners: readonly string[]): {joinFrom: number; wordFrom: number} | null {
+    let lower = text.toLowerCase()
+    let sorted = [...joiners].sort((a, b) => b.length - a.length)
+    for (let raw of sorted) {
+        let j = raw.trim().toLowerCase()
+        if (!j) continue
+        let wrapped = ` ${j} `
+        if (timeFrom >= wrapped.length && lower.slice(timeFrom - wrapped.length, timeFrom) == wrapped) {
+            return {joinFrom: timeFrom - wrapped.length, wordFrom: timeFrom - wrapped.length + 1}
+        }
+        let atStart = `${j} `
+        if (timeFrom == atStart.length && lower.slice(0, timeFrom) == atStart) {
+            return {joinFrom: 0, wordFrom: 0}
+        }
+    }
+    return null
+}
+
+function matchInvoker(text: string, end: number, tokens: InvokerToken[]): {from: number; spec: InvokerToken} | null {
+    let lower = text.toLowerCase()
+    for (let spec of tokens) {
         let from = end - spec.token.length
         if (from < 0) continue
-        if (text.slice(from, end).toLowerCase() != spec.token) continue
+        if (lower.slice(from, end) != spec.token) continue
         if (!isWordStart(text, from)) continue
         return {from, spec}
     }
     return null
 }
 
+function matchDate(text: string, end: number): {from: number; year: number; month: number; day: number} | "invalid" | null {
+    if (end < 8) return null
+    let from = end - 8
+    if (!isWordStart(text, from)) return null
+    let slice = text.slice(from, end)
+    let m = /^(\d{2})\.(\d{2})\.(\d{2})$/.exec(slice)
+    if (!m) return null
+    let day = Number(m[1])
+    let month = Number(m[2])
+    let year = 2000 + Number(m[3])
+    let dt = new Date(year, month - 1, day)
+    if (dt.getFullYear() != year || dt.getMonth() != month - 1 || dt.getDate() != day) return "invalid"
+    return {from, year, month, day}
+}
+
 type TimeMatch = {timeFrom: number; timeTo: number; hours: number; minutes: number}
 
 function findTimes(text: string): TimeMatch[] {
-    let twelve: TimeMatch[] = []
-    let re12 = /\b(1[0-2]|[1-9])(?::([0-5]\d))?[ \t]+(am|pm)\b/gi
-    let m: RegExpExecArray | null
-    while ((m = re12.exec(text))) {
-        let hour12 = Number(m[1])
-        let minutes = m[2] != null ? Number(m[2]) : 0
-        let hours = hour12 % 12
-        if (m[3]!.toLowerCase() == "pm") hours += 12
-        twelve.push({timeFrom: m.index, timeTo: m.index + m[0].length, hours, minutes})
-    }
-    let twenty: TimeMatch[] = []
+    let found: TimeMatch[] = []
     let re24 = /\b([01]?\d|2[0-3]):([0-5]\d)\b/g
+    let m: RegExpExecArray | null
     while ((m = re24.exec(text))) {
-        twenty.push({
+        found.push({
             timeFrom: m.index,
             timeTo: m.index + m[0].length,
             hours: Number(m[1]),
             minutes: Number(m[2]),
         })
     }
-    let byStart = new Map<number, TimeMatch>()
-    for (let t of twenty) byStart.set(t.timeFrom, t)
-    for (let t of twelve) byStart.set(t.timeFrom, t)
-    return [...byStart.values()].sort((a, b) => a.timeFrom - b.timeFrom)
+    return found
 }
 
-function dayDate(now: Date, spec: DaySpec, ahead: boolean) {
+function dayDate(now: Date, spec: InvokerToken, ahead: boolean) {
     if (spec.kind == "today") return new Date(now.getTime())
     if (spec.kind == "tomorrow") {
         let dt = new Date(now.getTime())
         dt.setDate(dt.getDate() + 1)
         return dt
     }
-    return weekdayDate(now, spec.dow, spec.next, ahead)
+    if (spec.kind == "next-week") {
+        let dt = new Date(now.getTime())
+        dt.setDate(dt.getDate() + 7)
+        return dt
+    }
+    return weekdayDate(now, spec.weekday, ahead)
 }
 
 function overlaps(from: number, to: number, hits: ScheduleParseHit[]) {
@@ -146,32 +184,36 @@ export function findSchedulePhrases(text: string, opts?: ScheduleParseOpts): Sch
     let getNow = opts?.now ?? defaultNow
     let localeOpt = opts?.locale ?? "en"
     let locale = typeof localeOpt == "function" ? localeOpt() : localeOpt
-    let pack: "en" | "ru" = String(locale).toLowerCase().startsWith("ru") ? "ru" : "en"
+    let pack = localePack(locale)
     let now = getNow()
     let nowSec = Math.floor(now.getTime() / 1000)
-    let days = pack == "ru" ? RU_DAYS : EN_DAYS
+    let invokers = flattenInvokers(resolveList(opts?.invokers, pack == "ru" ? RU_INVOKERS : EN_INVOKERS))
+    let joiners = resolveList(opts?.joiners, pack == "ru" ? RU_JOINERS : EN_JOINERS)
     let hits: ScheduleParseHit[] = []
 
     for (let t of findTimes(text)) {
         if (t.hours > 23) continue
-        let from = t.timeFrom
-        let spec: DaySpec | null = null
-        let joinAt = joinerStart(text, t.timeFrom, pack)
-        if (joinAt >= 0) {
-            let day = matchDay(text, joinAt, days)
-            if (day) {
-                from = day.from
-                spec = day.spec
-            }
-        }
-        if (!spec && !isWordStart(text, t.timeFrom)) continue
+        let join = joinerBefore(text, t.timeFrom, joiners)
+        if (!join) continue
+        let from = join.wordFrom
+        let invEnd = join.joinFrom == 0 ? 0 : join.joinFrom
+        let inv = matchInvoker(text, invEnd, invokers)
+        let date = inv ? null : matchDate(text, invEnd)
+        if (date == "invalid") continue
+        if (inv) from = inv.from
+        else if (date) from = date.from
         if (overlaps(from, t.timeTo, hits)) continue
 
         let todayAt = new Date(now.getTime())
         todayAt.setHours(t.hours, t.minutes, 0, 0)
         let ahead = Math.floor(todayAt.getTime() / 1000) > nowSec
-        let dt = spec ? dayDate(now, spec, ahead) : new Date(now.getTime())
-        if (!spec && !ahead) dt.setDate(dt.getDate() + 1)
+        let dt: Date
+        if (date) dt = new Date(date.year, date.month - 1, date.day)
+        else if (inv) dt = dayDate(now, inv.spec, ahead)
+        else {
+            dt = new Date(now.getTime())
+            if (!ahead) dt.setDate(dt.getDate() + 1)
+        }
         dt.setHours(t.hours, t.minutes, 0, 0)
         let scheduledTime = Math.floor(dt.getTime() / 1000)
         if (!(nowSec < scheduledTime && scheduledTime <= nowSec + YEAR_SECS)) continue

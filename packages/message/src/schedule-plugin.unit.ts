@@ -133,6 +133,8 @@ describe("scheduleQuery chip tooltip", () => {
         expect(chips[0]!.arrow).toBeFalsy()
         expect(chips[0]!.strictSide).toBe(true)
         expect(chips[0]!.above).toBe(true)
+        expect(chips[0]!.pos).toBe(docPosAtDumpOffset(state.doc, 24, "to"))
+        expect(typeof chips[0]!.create).toBe("function")
     })
 })
 
@@ -154,6 +156,15 @@ describe("scheduleQuery keymap", () => {
         let result = runKey(editor, "Enter")
         expect(result).not.toBe(false)
         expect(editor.state.doc.textContent()).toBe("ok got")
+    })
+
+    it("blurs a focused chip on ArrowDown without accepting", () => {
+        let editor = fakeEditor(stateFor("ok got tomorrow at 14:00"))
+        expect(runKey(editor, "ArrowUp")).toBe(true)
+        expect(runKey(editor, "ArrowDown")).toBe(true)
+        expect(editor.state.doc.textContent()).toBe("ok got tomorrow at 14:00")
+        expect(runKey(editor, "Enter")).toBe(false)
+        expect(editor.state.facet(Tooltip.show).filter(isScheduleChip).length).toBe(1)
     })
 
     it("hides the chip on Escape while unfocused and refocuses from hidden via ArrowUp", () => {

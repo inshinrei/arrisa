@@ -34,6 +34,7 @@ import {
     acceptScheduleQuery,
     type ScheduleQuery,
     type ScheduleQueryConfig,
+    type ScheduleInvoker,
 } from "@arrisa/message"
 
 let editor = Arrisa.create({
@@ -62,6 +63,8 @@ composeField({
     scheduleQuery: {
         now: () => new Date(),
         locale: "en",
+        invokers: [{kind: "tomorrow", words: ["tomorrow", "tmrw"]}],
+        joiners: ["at"],
         onAccept: (hit) => hostArmSchedule(hit),
     },
 })
@@ -100,7 +103,7 @@ insertMentionSpec(editor.state, {
 |------|---------|
 | Compose | `composeField`, `ComposeFieldConfig`, `messengerCompose`, `MessengerComposeConfig`, re-exports `messengerMarks`, `messengerSchema`, `markExclusivity` |
 | Mention query | `MentionQuery` (`from`/`to` dump offsets, `query`, `rect: ClientBox`), `detectMentionQuery(state)` (no rect; null if not a word-start `@query`) |
-| Schedule query | `composeField({scheduleQuery})` default off (`true` ≡ `scheduleQuery({})`). `ScheduleQuery` (`from`/`to` dump offsets, `phrase`, `scheduledTime` unix seconds, `label`, `rect`), `ScheduleQueryConfig`, `scheduleQuery(config?)`, `detectScheduleQuery(state)` (no rect), `scheduleQueryListener`, `acceptScheduleQuery`. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
+| Schedule query | `composeField({scheduleQuery})` default off (`true` ≡ `scheduleQuery({})`). `ScheduleQuery` (`from`/`to` dump offsets, `phrase`, `scheduledTime` unix seconds, `label`, `rect`), `ScheduleQueryConfig`, `ScheduleInvoker`, `scheduleQuery(config?)`, `detectScheduleQuery(state)` (no rect), `scheduleQueryListener`, `acceptScheduleQuery`. 24h `H:mm`/`HH:mm`. Default packs from `locale`; `invokers`/`joiners` replace them. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins. Chip is Arrisa Tooltip unless `onQuery` is set. |
 | Wire types | `FormattedText`, `MessageEntity`, flag/url/pre/blockquote/`UnorderedListEntity`/`OrderedListEntity`/mention/emoji/auto entity types, `entityInBounds`, predicates (`isAutoEntity`, `isAutoExclusive`, …), constructors (`preEntity`, `unorderedListEntity`, `orderedListEntity`, …) |
 | I/O | `docToFormattedText`, `formattedTextToDoc`, `materializeRuns`, option types |
 | Auto | `detectAutoEntities`, `mergeAutoEntities`, `AutoDetectOptions` |
@@ -126,7 +129,7 @@ insertMentionSpec(editor.state, {
 12. **`highlightCode(text, language?)`** — returns `CodeSpan[]` with UTF-16 indexes into `text`. Spans are a view. They are not part of `PreEntity` or the dump. Blocks over 32_000 UTF-16 units or 400 lines return `[]`. Doc comments set `emphasis: "bold"`. Roles: `kw-flow`, `kw-decl`, `modifier`, `type`, `function`, `property`, `string`, `interpolation`, `escape`, `number`, `constant`, `comment`, `directive`, `tag`, `attribute`, `regex`. Language ids are case-folded (`typescript` → `ts`, `javascript` → `js`, `python` → `py`, `kotlin` → `kt`, `yml` → `yaml`). A missing, empty, or unknown language does not add keywords.
 13. **Fences while typing** — `` `code` `` applies the inline code mark. A finished fence (one line `` ```code``` ``, one paragraph with line breaks, or a closing `` ``` `` paragraph after `` ``` `` / `` ```lang ``) becomes a code block when the schema can contain one. `` ``` `` followed by a space at the start of a block still creates an empty code block, and `` ```lang `` then space sets the language. A fence inside an existing code block does not run. Inline documents leave the backticks as text.
 14. **Markdown delimiter pairs** — `**`, `__`, `~~`, and `` ` `` apply the mark to the inner text and clear stored marks, so typing after the run is unmarked.
-15. **Schedule query is opt-in** — `composeField({scheduleQuery})` is off unless `true` or a config object is passed. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins (`detectScheduleQuery` is `null` while `detectMentionQuery` is open). Chip is Arrisa Tooltip unless `onQuery` is set. Phrase paint class is `.arrisa-schedule-phrase`. Chip label is `phrases.get(state, "schedule_suggestion")` with `{phrase}` replaced by `hit.label` (not PhraseSet `$1`). Hosts override with `phrases.translatePartial({schedule_suggestion: "Запланировать {phrase}"})`.
+15. **Schedule query is opt-in** — `composeField({scheduleQuery})` is off unless `true` or a config object is passed. Arrisa does not send; `onAccept` is the host arming hook. Mention query wins (`detectScheduleQuery` is `null` while `detectMentionQuery` is open). Chip is Arrisa Tooltip unless `onQuery` is set. Phrase paint class is `.arrisa-schedule-phrase`. Chip label is `phrases.get(state, "schedule_suggestion")` with `{phrase}` replaced by `hit.label` (not PhraseSet `$1`). Hosts override with `phrases.translatePartial({schedule_suggestion: "Запланировать {phrase}"})`. Clock is 24h only. v1 phrases: `at 14:00` (closest 24h), `tomorrow at 14:00`, `next week at 14:00` (+7 days), `{day} at 14:00` (closest in 7 days), `dd.mm.yy at 14:00`. `invokers` is `{kind: "today"|"tomorrow"|"next-week"|"weekday", words, weekday?}` and replaces the `locale` pack when set. `joiners` replaces `at` / `в`/`во`.
 
 ## What not to do
 

@@ -9,7 +9,9 @@ import {docPosAtIndex, dumpOffsetAtIndex} from "./dump-pos"
 import type {MessageEntity} from "./entities"
 import {detectMentionQuery} from "./mention-query"
 import {MentionName} from "./schema-elements"
-import {findSchedulePhrases} from "./schedule-parse"
+import {findSchedulePhrases, type ScheduleInvoker} from "./schedule-parse"
+
+export type {ScheduleInvoker}
 import {collectDumpSpans, docToFormattedText, type DumpIndex} from "./to-formatted"
 
 export type ScheduleQuery = {
@@ -25,6 +27,10 @@ export type ScheduleQueryConfig = {
     enabled?: (state: EditorState) => boolean
     now?: () => Date
     locale?: string | (() => string)
+    /** Replaces the default day-token pack for `locale`. */
+    invokers?: readonly ScheduleInvoker[] | (() => readonly ScheduleInvoker[])
+    /** Words between an invoker/date and the clock. Default en `at`, ru `в`/`во`. */
+    joiners?: readonly string[] | (() => readonly string[])
     onQuery?: (q: ScheduleQuery | null) => void
     onAccept?: (hit: Omit<ScheduleQuery, "rect">) => void
 }
@@ -55,8 +61,18 @@ export const scheduleChipField = EditorState.Field.define<ScheduleChip | null>({
 const skipEntityType = (type: string) =>
     type == "pre" || type == "code" || type == "text_url" || type == "custom_emoji" || type == "mention_name"
 
-function resolved(state: EditorState, opts?: Pick<ScheduleQueryConfig, "now" | "locale" | "enabled">) {
-    return opts ?? state.facet(scheduleQueryConfig)
+type DetectOpts = Pick<ScheduleQueryConfig, "now" | "locale" | "enabled" | "invokers" | "joiners">
+
+function resolved(state: EditorState, opts?: DetectOpts): DetectOpts {
+    let facet = state.facet(scheduleQueryConfig)
+    if (!opts) return facet
+    return {
+        enabled: opts.enabled ?? facet.enabled,
+        now: opts.now ?? facet.now,
+        locale: opts.locale ?? facet.locale,
+        invokers: opts.invokers ?? facet.invokers,
+        joiners: opts.joiners ?? facet.joiners,
+    }
 }
 
 function blockedAt(doc: Plot.Doc, pos: number) {
@@ -88,12 +104,17 @@ function phraseSkipped(doc: Plot.Doc, index: DumpIndex, from: number, to: number
  */
 export function detectSchedulePhrases(
     state: EditorState,
-    opts?: Pick<ScheduleQueryConfig, "now" | "locale" | "enabled">,
+    opts?: DetectOpts,
 ): Omit<ScheduleQuery, "rect">[] {
     let cfg = resolved(state, opts)
     if (cfg.enabled?.(state) === false) return []
     let index = collectDumpSpans(state.doc)
-    let parsed = findSchedulePhrases(index.text, {now: cfg.now, locale: cfg.locale})
+    let parsed = findSchedulePhrases(index.text, {
+        now: cfg.now,
+        locale: cfg.locale,
+        invokers: cfg.invokers,
+        joiners: cfg.joiners,
+    })
     if (!parsed.length) return []
     let entities = docToFormattedText(state.doc).entities ?? []
     let hits: Omit<ScheduleQuery, "rect">[] = []
@@ -110,7 +131,7 @@ export function detectSchedulePhrases(
  */
 export function detectScheduleQuery(
     state: EditorState,
-    opts?: Pick<ScheduleQueryConfig, "now" | "locale" | "enabled">,
+    opts?: DetectOpts,
 ): Omit<ScheduleQuery, "rect"> | null {
     let cfg = resolved(state, opts)
     if (cfg.enabled?.(state) === false) return null

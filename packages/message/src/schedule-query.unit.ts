@@ -6,7 +6,7 @@ import {Code, CodeBlock, Link, Paragraph} from "@arrisa/types"
 import {composeField} from "./compose-field"
 import {docPosAtDumpOffset} from "./dump-pos"
 import {formattedTextToDoc} from "./from-formatted"
-import {MentionName} from "./schema-elements"
+import {CustomEmoji, MentionName} from "./schema-elements"
 import {detectMentionQuery} from "./mention-query"
 import {
     detectSchedulePhrases,
@@ -193,6 +193,49 @@ describe("detectSchedulePhrases", () => {
 
     it("returns empty when enabled is false", () => {
         expect(detectSchedulePhrases(composeState("tomorrow at 14:00", 17), {now, enabled: () => false})).toEqual([])
+    })
+
+    it("still paints when the caret is past the phrase", () => {
+        let text = "tomorrow at 14:00 later"
+        expect(detectScheduleQuery(composeState(text, text.length), opts)).toBeNull()
+        expect(detectSchedulePhrases(composeState(text, text.length), opts)).toEqual([
+            {
+                from: 0,
+                to: 17,
+                phrase: "tomorrow at 14:00",
+                label: "tomorrow at 14:00",
+                scheduledTime: Math.floor(new Date(2026, 8, 27, 14, 0, 0, 0).getTime() / 1000),
+            },
+        ])
+    })
+
+    it("returns empty when the phrase is a custom emoji alt", () => {
+        let config = hostCompose()
+        let proto = EditorState.create({doc: "", config})
+        let doc = proto.schema.doc([
+            Paragraph.create([CustomEmoji.of({documentId: "e1", alt: "tomorrow at 14:00"})]),
+        ])
+        let pos = docPosAtDumpOffset(doc, 17, "to")
+        if (pos === false) throw new Error("bad caret")
+        let state = EditorState.create({doc, selection: EditorSelection.cursor(pos), config})
+        expect(detectScheduleQuery(state, opts)).toBeNull()
+        expect(detectSchedulePhrases(state, opts)).toEqual([])
+    })
+})
+
+describe("detectScheduleQuery opts merge", () => {
+    it("keeps facet locale when only now is passed", () => {
+        let config = [hostCompose(), scheduleQueryConfig.of({locale: "ru"})]
+        let proto = EditorState.create({doc: "", config})
+        let doc = formattedTextToDoc({text: "завтра в 14:00"}, proto.schema)
+        let pos = docPosAtDumpOffset(doc, 14, "to")
+        if (pos === false) throw new Error("bad caret")
+        let state = EditorState.create({
+            doc,
+            selection: EditorSelection.cursor(pos),
+            config,
+        })
+        expect(detectScheduleQuery(state, {now})?.phrase).toBe("завтра в 14:00")
     })
 })
 

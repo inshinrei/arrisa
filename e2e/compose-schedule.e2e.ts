@@ -31,6 +31,25 @@ test("typed complete phrase offers query, chip, and paint", async ({page}) => {
     await expect(phrasePaint(page)).toHaveText("tomorrow at 14:00")
 })
 
+test("joiner plus time offers the closest 24h clock", async ({page}) => {
+    await openCompose(page)
+    await composeBox(page).click()
+    await page.keyboard.type("at 14:00")
+    let q = await e2e(page, (api) => {
+        api.chatEditor.selectionRect()
+        return api.scheduleQuery()
+    })
+    expect(q).toBeTruthy()
+    expect(q.phrase).toBe("at 14:00")
+    let expected = new Date()
+    expected.setHours(14, 0, 0, 0)
+    if (Math.floor(expected.getTime() / 1000) <= Math.floor(Date.now() / 1000)) {
+        expected.setDate(expected.getDate() + 1)
+    }
+    expect(q.scheduledTime).toBe(Math.floor(expected.getTime() / 1000))
+    await expect(page.getByRole("button", {name: "Schedule at 14:00"})).toBeVisible()
+})
+
 test("incomplete clock is not a query", async ({page}) => {
     await openCompose(page)
     await composeBox(page).click()
@@ -40,7 +59,7 @@ test("incomplete clock is not a query", async ({page}) => {
         return api.scheduleQuery()
     })
     expect(q).toBeNull()
-    await expect(scheduleChip(page)).toHaveCount(0)
+    await expect(page.locator(".arrisa-schedule-chip")).toHaveCount(0)
 })
 
 test("clicking the chip accepts and deletes the phrase", async ({page}) => {

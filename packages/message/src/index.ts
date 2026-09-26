@@ -99,6 +99,7 @@ export {
     scheduleQueryListener,
     type ScheduleQuery,
     type ScheduleQueryConfig,
+    type ScheduleInvoker,
 } from "./schedule-query"
 export {scheduleQuery} from "./schedule-plugin"
 export {acceptScheduleQuery} from "./schedule-accept"

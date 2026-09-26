@@ -162,6 +162,16 @@ describe("composeField", () => {
         })
         expect(schedulePhrasePaint(state).length).toBeGreaterThan(0)
     })
+
+    it("paints schedule phrases when scheduleQuery is true", () => {
+        let state = scheduleComposeState("tomorrow at 16:00", {
+            floating: false,
+            placeholder: false,
+            markdown: false,
+            scheduleQuery: true,
+        })
+        expect(schedulePhrasePaint(state).length).toBeGreaterThan(0)
+    })
 })
 
 function wrapperClass(deco: Decoration.Range): string | null {
