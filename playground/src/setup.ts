@@ -12,7 +12,7 @@ import {
     horizontalRule,
     codeBlock,
 } from "@arrisa/schema"
-import {composeField, messengerCompose, type MentionQuery} from "@arrisa/message"
+import {composeField, messengerCompose, type MentionQuery, type ScheduleQuery} from "@arrisa/message"
 import {phrases} from "@arrisa/phrases"
 import type {LinkConfig, LinkPromptRequest} from "@arrisa/schema"
 import type {EditorState} from "@arrisa/state"
@@ -22,6 +22,9 @@ export type ChatEditorOptions = {
     submit?: "Enter" | "Shift-Enter"
     onMentionQuery?: (q: MentionQuery | null) => void
     extra?: EditorState.Extension
+    scheduleNow?: () => Date
+    scheduleLocale?: string
+    onScheduleAccept?: (hit: Omit<ScheduleQuery, "rect">) => void
 }
 
 /** History field + handlers so default keymap Mod-z/y hit real undo/redo. */
@@ -147,6 +150,11 @@ export function composeExtensions(
             hostElements: true,
             submit: options.submit,
             onMentionQuery: options.onMentionQuery,
+            scheduleQuery: {
+                now: options.scheduleNow ?? (() => new Date()),
+                locale: options.scheduleLocale ?? "en",
+                onAccept: options.onScheduleAccept,
+            },
         }),
         historyChrome(),
         Arrisa.label("Compose field"),

@@ -12,6 +12,7 @@ pnpm test:e2e                    # all e2e/*.e2e.ts
 pnpm test:e2e e2e/harness.e2e.ts
 pnpm test:e2e e2e/compose-submit.e2e.ts
 pnpm test:e2e e2e/compose-mention.e2e.ts
+pnpm test:e2e e2e/compose-schedule.e2e.ts
 ```
 
 The runner starts a dedicated `pnpm playground` on `http://127.0.0.1:5173` with `ARRISA_E2E=1` so Vite does not open a browser (`server.open: false`, `strictPort: true`). Locally it reuses a server already bound to that port unless `CI` is set.
@@ -32,6 +33,7 @@ When production files in a row change, run the specs in that row (or the full su
 | `packages/message/src/markdown*.ts`, `packages/message/src/paste-markdown.ts`, `packages/message/src/parse-markdown.ts` | `format-markdown.e2e.ts` |
 | `packages/message/src/to-formatted.ts`, `packages/message/src/from-formatted.ts`, `packages/message/src/entities.ts` | `format-heavy.e2e.ts`, `compose-mention.e2e.ts` |
 | `packages/message/src/compose-field.ts`, `packages/message/src/mention-query.ts`, `packages/message/src/insert.ts` | `compose-submit.e2e.ts`, `compose-mention.e2e.ts`, `format-*.e2e.ts` |
+| `packages/message/src/schedule-*.ts`, `packages/message/src/compose-field.ts` (`scheduleQuery`), `packages/phrases/src/catalogs/ui.ts` (`schedule_suggestion`) | `compose-schedule.e2e.ts` |
 | `packages/editor/src/dom/coords.ts`, `packages/command/src/motion.ts` | `caret-*.e2e.ts`, `codeblock-*.e2e.ts` |
 | `packages/schema/src/code-indent.ts`, `packages/schema/src/highlight-code.ts`, `packages/schema/src/code-block-paint.ts` | `codeblock-*.e2e.ts` |
 
@@ -43,6 +45,8 @@ When production files in a row change, run the specs in that row (or the full su
 |-------|------|
 | `chatEditor` | Mounted compose `Arrisa` |
 | `lastMentionQuery` | Last `onMentionQuery` payload, or `null` |
+| `lastScheduleAccept` | Last `onScheduleAccept` payload, or `null` |
+| `scheduleQuery()` | `detectScheduleQuery` of the compose state (no rect) |
 | `dump(opts?)` | `docToFormattedText` of the compose document |
 | `insertMention({userId, label, from?, to?})` | Dump-range or selection insert |
 | `insertText(text)` | `Command.dispatch` with `userEvent: "input.type"` |
@@ -58,6 +62,7 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 | `harness.e2e.ts` | `/?e2e=1` installs `__arrisaE2e` on the messenger tab |
 | `compose-submit.e2e.ts` | `submit: "Enter"` / `"Shift-Enter"` — send vs newline, dump stays after send |
 | `compose-mention.e2e.ts` | typed `@` query+rect, same-turn `insertText("@")`, dump-range `insertMention` with `mentionText`, `autoDetect` skip type `mention` |
+| `compose-schedule.e2e.ts` | typed datetime offer, chip, accept, Enter fall-through, ArrowUp+Enter, Escape hides chip, skip code, mention wins |
 | `caret.ts` | Shared `caretSnap` / `findText` / `clickDocPos` / `docPosCoords` / `typeFence` / word and select-all chords |
 | `format.ts` | Shared dump / `hasFlag` / `selectNeedle` (adjacent leaves, including mark splits) / `focusCompose` / `clickFormat` (overflow **More**) and mark chords |
 | `format-marks.e2e.ts` | Keyboard and toolbar mark toggles on a selected word; stacked bold+italic; mid-word slice |
@@ -77,6 +82,6 @@ Helpers: `openCompose(page)`, `composeBox(page)`, and `e2e(page, fn, arg?)` in `
 
 ## Assertions
 
-Assert **dump / mention query / caret `rect` outcomes**, not native `Selection` / `Range` geometry. `selectionRect` is flushed in the same turn as dispatch.
+Assert **dump / mention query / schedule query / chip DOM / `onAccept` / caret `rect` outcomes**, not native `Selection` / `Range` geometry. `selectionRect` is flushed in the same turn as dispatch.
 
 Do not put host-product names in specs, helpers, or this file.

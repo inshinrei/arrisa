@@ -5,10 +5,12 @@ import {Command, insertText as insertTextCommand} from "@arrisa/command"
 import {serialize} from "@arrisa/doc"
 import {KeyBinding, type Arrisa} from "@arrisa/editor"
 import {
+    detectScheduleQuery,
     docToFormattedText,
     insertMention as insertMentionCommand,
     type FormattedText,
     type MentionQuery,
+    type ScheduleQuery,
     type ToFormattedOptions,
 } from "@arrisa/message"
 import {EditorState} from "@arrisa/state"
@@ -17,11 +19,13 @@ import {createChatEditor, createDocEditor, playgroundLinkPrompt, type ChatEditor
 type ArrisaE2e = {
     chatEditor: Arrisa
     lastMentionQuery: MentionQuery | null
+    lastScheduleAccept: Omit<ScheduleQuery, "rect"> | null
     dump: (opts?: ToFormattedOptions) => FormattedText
     insertMention: (p: {userId: string; label: string; from?: number; to?: number}) => boolean
     insertText: (text: string) => boolean
     remountCompose: (opts: {submit?: "Enter" | "Shift-Enter"}) => void
     sendLog: string[]
+    scheduleQuery: () => ReturnType<typeof detectScheduleQuery>
 }
 
 let e2eMode = new URLSearchParams(location.search).get("e2e") == "1"
@@ -40,9 +44,13 @@ function e2eMentionQuery(q: MentionQuery | null) {
     if (e2eApi) e2eApi.lastMentionQuery = q
 }
 
+function e2eScheduleAccept(hit: Omit<ScheduleQuery, "rect">) {
+    if (e2eApi) e2eApi.lastScheduleAccept = hit
+}
+
 function chatOptions(extra?: EditorState.Extension, submit?: "Enter" | "Shift-Enter"): ChatEditorOptions {
     if (!e2eMode) return extra ? {extra} : {}
-    return {submit, onMentionQuery: e2eMentionQuery, extra}
+    return {submit, onMentionQuery: e2eMentionQuery, onScheduleAccept: e2eScheduleAccept, extra}
 }
 
 let docEditor = createDocEditor(docMount)
@@ -173,10 +181,15 @@ function e2eInsertMention(p: {userId: string; label: string; from?: number; to?:
     return ok
 }
 
+function e2eScheduleQuery() {
+    return detectScheduleQuery(chatEditor.state)
+}
+
 function remountCompose(opts: {submit?: "Enter" | "Shift-Enter"}) {
     if (e2eApi) {
         e2eApi.sendLog.length = 0
         e2eApi.lastMentionQuery = null
+        e2eApi.lastScheduleAccept = null
     }
     let submit = opts.submit
     let extra: EditorState.Extension | undefined
@@ -202,11 +215,13 @@ if (e2eMode) {
     e2eApi = {
         chatEditor,
         lastMentionQuery: null,
+        lastScheduleAccept: null,
         dump: e2eDump,
         insertMention: e2eInsertMention,
         insertText: e2eInsertText,
         remountCompose,
         sendLog: [],
+        scheduleQuery: e2eScheduleQuery,
     }
     ;(window as any).__arrisaE2e = e2eApi
     setTab("chat")
