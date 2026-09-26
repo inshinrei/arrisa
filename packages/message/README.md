@@ -374,7 +374,7 @@ scheduleQuery({
 detectScheduleQuery(state) // {from, to, phrase, scheduledTime, label} | null
 ```
 
-`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and delivers `onAccept`.
+`from` / `to` are UTF-16 dump offsets. `scheduledTime` is unix seconds. `detectScheduleQuery` is the pure detector (no `rect`). `scheduleQueryListener` emits `ScheduleQuery` (with `rect`) for custom chip hosts. `acceptScheduleQuery` deletes the caret-tied phrase (collapsing a doubled space) and emits `scheduleAccepted`; the plugin `updateListener` calls `onAccept`.
 
 ### Code token roles
 

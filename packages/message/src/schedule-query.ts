@@ -3,7 +3,7 @@
  */
 import {Node, type Plot} from "@arrisa/doc"
 import {Arrisa, type ClientBox} from "@arrisa/editor"
-import {EditorState} from "@arrisa/state"
+import {EditorState, Transaction} from "@arrisa/state"
 import {Code} from "@arrisa/types"
 import {docPosAtIndex, dumpOffsetAtIndex} from "./dump-pos"
 import type {MessageEntity} from "./entities"
@@ -31,6 +31,25 @@ export type ScheduleQueryConfig = {
 
 export const scheduleQueryConfig = EditorState.Facet.define<ScheduleQueryConfig, ScheduleQueryConfig>({
     combine: (values) => values[0] ?? {},
+})
+
+type ScheduleChip = "visible" | "focused" | "hidden"
+
+export const setScheduleChip = Transaction.Effect.define<ScheduleChip>()
+
+export const scheduleChipField = EditorState.Field.define<ScheduleChip | null>({
+    create(state) {
+        return detectScheduleQuery(state) ? "visible" : null
+    },
+    update(value, tr) {
+        let hit = detectScheduleQuery(tr.state)
+        if (!hit) return null
+        let prev = detectScheduleQuery(tr.startState)
+        let same = !!prev && prev.from == hit.from && prev.to == hit.to
+        let mode: ScheduleChip = same && value ? value : "visible"
+        if (same) for (let e of tr.effects) if (e.is(setScheduleChip)) mode = e.value
+        return mode
+    },
 })
 
 const skipEntityType = (type: string) =>
@@ -128,8 +147,19 @@ export function scheduleQueryListener(
     opts?: ScheduleQueryConfig,
 ): EditorState.Extension {
     return Arrisa.updateListener.of((update) => {
-        if (!update.docChanged && !update.selectionSet && !update.focusChanged) return
+        let mode = update.state.field(scheduleChipField, false)
+        if (
+            !update.docChanged &&
+            !update.selectionSet &&
+            !update.focusChanged &&
+            mode === update.startState.field(scheduleChipField, false)
+        )
+            return
         if (!update.editor.hasFocus) {
+            cb(null)
+            return
+        }
+        if (mode === "hidden" || mode === null) {
             cb(null)
             return
         }

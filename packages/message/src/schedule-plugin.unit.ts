@@ -62,8 +62,32 @@ function stateFor(text: string, caretDump = text.length, extra: ScheduleQueryCon
 function fakeEditor(state: EditorState) {
     let editor = {
         state,
+        hasFocus: true,
+        selectionRect: () => ({top: 12, left: 8, width: 0, height: 16}),
         dispatch(...specs: Transaction.Spec[]) {
-            for (let spec of specs) editor.state = editor.state.update(spec).state
+            for (let spec of specs) {
+                let startState = editor.state
+                let tr = editor.state.update(spec)
+                editor.state = tr.state
+                let update = {
+                    editor,
+                    startState,
+                    state: tr.state,
+                    transactions: [tr],
+                    get docChanged() {
+                        return tr.docChanged
+                    },
+                    get selectionSet() {
+                        return !!tr.selection
+                    },
+                    get focusChanged() {
+                        return false
+                    },
+                }
+                for (let listener of editor.state.facet(Arrisa.updateListener)) {
+                    listener(update as unknown as Arrisa.Update)
+                }
+            }
         },
     }
     return editor
@@ -143,6 +167,37 @@ describe("scheduleQuery keymap", () => {
         expect(editor.state.facet(Tooltip.show).filter(isScheduleChip).length).toBe(1)
         expect(runKey(editor, "Enter")).not.toBe(false)
         expect(editor.state.doc.textContent()).toBe("ok got")
+    })
+})
+
+describe("scheduleQuery onQuery", () => {
+    it("emits null on Escape hide while paint stays", () => {
+        let seen: Array<ScheduleQuery | null> = []
+        let editor = fakeEditor(
+            stateFor("ok got tomorrow at 14:00", undefined, {onQuery: (q) => seen.push(q)}),
+        )
+        editor.dispatch({selection: editor.state.selection})
+        expect(seen.at(-1)).toMatchObject({phrase: "tomorrow at 14:00"})
+        expect(runKey(editor, "Escape")).toBe(true)
+        expect(seen.at(-1)).toBeNull()
+        expect(schedulePaint(editor.state).length).toBe(1)
+    })
+
+    it("emits a query again after ArrowUp from hidden", () => {
+        let seen: Array<ScheduleQuery | null> = []
+        let editor = fakeEditor(
+            stateFor("ok got tomorrow at 14:00", undefined, {onQuery: (q) => seen.push(q)}),
+        )
+        expect(runKey(editor, "Escape")).toBe(true)
+        expect(seen.at(-1)).toBeNull()
+        expect(runKey(editor, "ArrowUp")).toBe(true)
+        expect(seen.at(-1)).toMatchObject({phrase: "tomorrow at 14:00"})
+    })
+
+    it("falls through a second Escape while already hidden", () => {
+        let editor = fakeEditor(stateFor("ok got tomorrow at 14:00", undefined, {onQuery: () => {}}))
+        expect(runKey(editor, "Escape")).toBe(true)
+        expect(runKey(editor, "Escape")).toBe(false)
     })
 })
 

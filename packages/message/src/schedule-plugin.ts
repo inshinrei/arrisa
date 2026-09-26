@@ -4,39 +4,22 @@
 import {Command} from "@arrisa/command"
 import {Arrisa, Decoration, KeyBinding, RangeSet, Tooltip} from "@arrisa/editor"
 import {phrases} from "@arrisa/phrases"
-import {EditorState, Transaction} from "@arrisa/state"
+import {EditorState} from "@arrisa/state"
 import {docPosAtDumpOffset} from "./dump-pos"
 import {acceptScheduleQuery, scheduleAccepted} from "./schedule-accept"
 import {
     detectSchedulePhrases,
     detectScheduleQuery,
+    scheduleChipField,
     scheduleQueryConfig,
     scheduleQueryListener,
+    setScheduleChip,
     type ScheduleQueryConfig,
 } from "./schedule-query"
-
-type ScheduleChip = "visible" | "focused" | "hidden"
 
 const schedulePhraseDeco = Decoration.Range.wrapper("span", {
     attributes: {class: "arrisa-schedule-phrase"},
     inclusive: "start",
-})
-
-const setScheduleChip = Transaction.Effect.define<ScheduleChip>()
-
-const scheduleChipField = EditorState.Field.define<ScheduleChip | null>({
-    create(state) {
-        return detectScheduleQuery(state) ? "visible" : null
-    },
-    update(value, tr) {
-        let hit = detectScheduleQuery(tr.state)
-        if (!hit) return null
-        let prev = detectScheduleQuery(tr.startState)
-        let same = !!prev && prev.from == hit.from && prev.to == hit.to
-        let mode: ScheduleChip = same && value ? value : "visible"
-        if (same) for (let e of tr.effects) if (e.is(setScheduleChip)) mode = e.value
-        return mode
-    },
 })
 
 function paintSchedulePhrases(state: EditorState) {
@@ -63,7 +46,7 @@ const createScheduleChip = (editor: Arrisa): Tooltip.View => {
     let dom = document.createElement("button")
     dom.type = "button"
     dom.className = "arrisa-schedule-chip"
-    let sync = () => {
+    const sync = () => {
         let hit = detectScheduleQuery(editor.state)
         let label = hit
             ? phrases.get(editor.state, "schedule_suggestion").split("{phrase}").join(hit.label)
@@ -125,12 +108,12 @@ const blurScheduleChip: Command = (target) => {
 const escapeScheduleChip: Command = (target) => {
     let editor = target as unknown as Arrisa
     let mode = editor.state.field(scheduleChipField, false)
-    if (!mode) return false
+    if (!mode || mode == "hidden") return false
     if (mode == "focused") {
         editor.dispatch({effects: setScheduleChip.of("visible")})
         return true
     }
-    if (mode != "hidden") editor.dispatch({effects: setScheduleChip.of("hidden")})
+    editor.dispatch({effects: setScheduleChip.of("hidden")})
     return true
 }
 
